@@ -1,0 +1,9 @@
+# Ignore environment variables file
+.env
+
+# Ignore cookies file in the info directory
+info/cookies
+
+# Python cache directories
+__pycache__/
+*/__pycache__

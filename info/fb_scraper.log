@@ -1,0 +1,404 @@
+2025-05-02 05:56:30,254 - INFO - Loaded cookies from file
+2025-05-02 05:56:30,320 - INFO - Starting Facebook login process...
+2025-05-02 05:56:36,136 - INFO - Already logged in via cookies
+2025-05-02 05:56:36,136 - INFO - Navigating to https://www.facebook.com
+2025-05-02 05:56:38,825 - INFO - Initialized result files: collected_data\facebook_posts_20250502_055629.csv
+2025-05-02 05:56:38,888 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A04088009C290000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 05:56:58,867 - INFO - Feed found using selector: div.x1lliihq
+2025-05-02 05:56:58,867 - INFO - Starting to collect posts continuously
+2025-05-02 05:57:13,083 - INFO - [1] Prantikk News             |            | বেশ কয়েক মাস ধরেই দেশের শিক্ষাপ্রতিষ্ঠানগুলোতে মিছ
+2025-05-02 05:58:27,711 - INFO - [2] The Internet Today🌿 Dhaka | https://ww | https://www.facebook.com/share/p/18p3cyfGkn/ April
+2025-05-02 05:58:27,711 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 05:58:27,711 - INFO - Runtime: 0:01:58
+2025-05-02 05:58:27,711 - INFO - Posts collected: 2
+2025-05-02 05:58:27,711 - INFO - Posts skipped: 1132
+2025-05-02 05:58:27,711 - INFO - Unique authors: 2
+2025-05-02 05:58:27,712 - INFO - Page loads: 1
+2025-05-02 05:58:27,712 - INFO - Scrolls: 0
+2025-05-02 05:58:27,712 - INFO - Posts per hour: 61.0
+2025-05-02 05:58:27,712 - INFO - Retries: 0
+2025-05-02 05:58:27,712 - INFO - Throttles: 0
+2025-05-02 05:58:27,712 - INFO - Last CSV update: 0.0s ago
+2025-05-02 05:58:27,714 - INFO - ---------------------------
+2025-05-02 05:59:41,350 - INFO - [3] NDC Version               | All reacti | FacebookFacebookFacebookFacebookFacebookFacebookFa
+2025-05-02 05:59:41,350 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 05:59:41,350 - INFO - Runtime: 0:03:11
+2025-05-02 05:59:41,350 - INFO - Posts collected: 3
+2025-05-02 05:59:41,350 - INFO - Posts skipped: 2170
+2025-05-02 05:59:41,350 - INFO - Unique authors: 4
+2025-05-02 05:59:41,350 - INFO - Page loads: 1
+2025-05-02 05:59:41,350 - INFO - Scrolls: 1
+2025-05-02 05:59:41,350 - INFO - Posts per hour: 56.3
+2025-05-02 05:59:41,350 - INFO - Retries: 0
+2025-05-02 05:59:41,350 - INFO - Throttles: 0
+2025-05-02 05:59:41,366 - INFO - Last CSV update: 0.0s ago
+2025-05-02 05:59:41,366 - INFO - ---------------------------
+2025-05-02 06:02:33,738 - INFO - [4] Ahnaf Yeanat Tazwar       |            | Last stage of neoliberal capitalism is Jatra selli
+2025-05-02 06:02:33,738 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 06:02:33,738 - INFO - Runtime: 0:06:04
+2025-05-02 06:02:33,746 - INFO - Posts collected: 4
+2025-05-02 06:02:33,746 - INFO - Posts skipped: 4224
+2025-05-02 06:02:33,746 - INFO - Unique authors: 5
+2025-05-02 06:02:33,746 - INFO - Page loads: 1
+2025-05-02 06:02:33,746 - INFO - Scrolls: 2
+2025-05-02 06:02:33,746 - INFO - Posts per hour: 39.5
+2025-05-02 06:02:33,746 - INFO - Retries: 0
+2025-05-02 06:02:33,746 - INFO - Throttles: 0
+2025-05-02 06:02:33,746 - INFO - Last CSV update: 0.0s ago
+2025-05-02 06:02:33,746 - INFO - ---------------------------
+2025-05-02 06:02:37,152 - INFO - Received shutdown signal, finishing current tasks...
+2025-05-02 06:02:37,205 - ERROR - Error parsing post: ElementHandle.get_attribute: Target page, context or browser has been closed
+2025-05-02 06:02:37,213 - ERROR - An error occurred: ElementHandle.query_selector: Connection closed while reading from the driver
+2025-05-02 06:02:37,219 - ERROR - Failed to save cookies: BrowserContext.cookies: Connection closed while reading from the driver
+2025-05-02 06:09:22,537 - INFO - Loaded cookies from file
+2025-05-02 06:09:22,608 - INFO - Starting Facebook login process...
+2025-05-02 06:09:25,522 - INFO - Already logged in via cookies
+2025-05-02 06:09:25,522 - INFO - Navigating to https://www.facebook.com
+2025-05-02 06:09:27,947 - INFO - Initialized result files: collected_data\facebook_posts_20250502_060921.csv
+2025-05-02 06:09:29,074 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A0F085008C100000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 06:09:47,990 - INFO - Feed found using selector: div.x1lliihq
+2025-05-02 06:09:47,997 - INFO - Starting to collect posts continuously
+2025-05-02 06:09:49,163 - INFO - [1]                           |            | [No content]                                      
+2025-05-02 06:09:49,344 - INFO - [2]                           |            | [No content]                                      
+2025-05-02 06:09:49,519 - INFO - [3]                           |            | [No content]                                      
+2025-05-02 06:09:49,691 - INFO - [4]                           |            | [No content]                                      
+2025-05-02 06:09:49,855 - INFO - [5]                           |            | [No content]                                      
+2025-05-02 06:09:50,009 - INFO - [6]                           |            | [No content]                                      
+2025-05-02 06:09:50,155 - INFO - [7]                           |            | [No content]                                      
+2025-05-02 06:09:50,294 - INFO - [8]                           |            | [No content]                                      
+2025-05-02 06:09:54,844 - INFO - [9] See all                   |            | [No content]                                      
+2025-05-02 06:09:55,529 - INFO - [10] See all                   |            | [No content]                                      
+2025-05-02 06:09:56,713 - INFO - [11] See all                   |            | [No content]                                      
+2025-05-02 06:10:05,330 - INFO - [12] Mishkat Alvi              | 5h         | Jesse, what the fuck are you talking about? Bro's 
+2025-05-02 06:10:06,675 - INFO - [13] Tazkia Malik              |            | [No content]                                      
+2025-05-02 06:10:07,158 - INFO - [14] Tazkia Malik              |            | [No content]                                      
+2025-05-02 06:10:08,100 - INFO - [15]                           |            | [No content]                                      
+2025-05-02 06:10:08,476 - INFO - [16] Tazkia Malik              |            | [No content]                                      
+2025-05-02 06:10:08,920 - INFO - [17] Afia Lubaina              |            | [No content]                                      
+2025-05-02 06:10:09,375 - INFO - [18] Bonoshree Dutta           |            | [No content]                                      
+2025-05-02 06:10:09,810 - INFO - [19] Abir Hassan Tamim         |            | [No content]                                      
+2025-05-02 06:10:10,240 - INFO - [20] Pakistan Super League     |            | [No content]                                      
+2025-05-02 06:10:10,672 - INFO - [21] Shahriar Sadman Mahmud Ji |            | [No content]                                      
+2025-05-02 06:10:11,175 - INFO - [22] Sakif Naieb Raiyan        |            | [No content]                                      
+2025-05-02 06:10:11,600 - INFO - [23] Mercedes-AMG Petronas F1  |            | [No content]                                      
+2025-05-02 06:10:12,020 - INFO - [24] Philosophy Matters        |            | [No content]                                      
+2025-05-02 06:10:12,448 - INFO - [25] Abed Shah Amin            |            | [No content]                                      
+2025-05-02 06:10:13,065 - INFO - [26] Mishkat Alvi              | 5h         | Jesse, what the fuck are you talking about? Bro's 
+2025-05-02 06:10:14,020 - INFO - [27] Mishkat Alvi              | 5h         | Jesse, what the fuck are you talking about? Bro's 
+2025-05-02 06:10:14,410 - INFO - [28] Mishkat Alvi              |            | [No content]                                      
+2025-05-02 06:10:15,045 - INFO - [29] Mishkat Alvi              |            | [No content]                                      
+2025-05-02 06:10:18,834 - INFO - [30] See all                   | 6d         | ConfirmDelete ConfirmDelete                       
+2025-05-02 06:10:19,390 - INFO - [31] See all                   | 6d         | ConfirmDelete ConfirmDelete                       
+2025-05-02 06:10:29,641 - INFO - [32] https://www.facebook.com/ |            | Kawser mamar soda was really disappointing Kawser 
+2025-05-02 06:10:32,176 - INFO - [33] https://www.facebook.com/ |            | Kawser mamar soda was really disappointing Kawser 
+2025-05-02 06:10:52,171 - INFO - [34] https://www.facebook.com/ |            | https://www.facebook.com/share/p/18p3cyfGkn/      
+2025-05-02 06:10:52,171 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 06:10:52,171 - INFO - Runtime: 0:01:30
+2025-05-02 06:10:52,171 - INFO - Posts collected: 34
+2025-05-02 06:10:52,171 - INFO - Posts skipped: 1183
+2025-05-02 06:10:52,171 - INFO - Unique authors: 14
+2025-05-02 06:10:52,171 - INFO - Page loads: 1
+2025-05-02 06:10:52,171 - INFO - Scrolls: 0
+2025-05-02 06:10:52,171 - INFO - Posts per hour: 1356.5
+2025-05-02 06:10:52,171 - INFO - Retries: 0
+2025-05-02 06:10:52,171 - INFO - Throttles: 0
+2025-05-02 06:10:52,171 - INFO - Last CSV update: 0.0s ago
+2025-05-02 06:10:52,171 - INFO - ---------------------------
+2025-05-02 06:10:52,572 - INFO - [35] https://www.facebook.com/ |            | https://www.facebook.com/share/p/18p3cyfGkn/      
+2025-05-02 06:10:53,046 - INFO - [36] https://www.facebook.com/ |            | https://www.facebook.com/share/p/18p3cyfGkn/      
+2025-05-02 06:10:53,893 - INFO - [37]                           |            | [No content]                                      
+2025-05-02 06:11:04,838 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A0C085008C100000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 06:11:05,686 - INFO - [38]                           |            | [No content]                                      
+2025-05-02 06:11:05,848 - INFO - [39]                           |            | [No content]                                      
+2025-05-02 06:11:05,998 - INFO - [40]                           |            | [No content]                                      
+2025-05-02 06:11:06,292 - INFO - [41]                           |            | [No content]                                      
+2025-05-02 06:11:06,586 - INFO - [42]                           |            | [No content]                                      
+2025-05-02 06:11:06,870 - INFO - [43]                           |            | [No content]                                      
+2025-05-02 06:11:07,106 - INFO - [44]                           |            | [No content]                                      
+2025-05-02 06:11:07,354 - INFO - [45]                           |            | [No content]                                      
+2025-05-02 06:11:33,217 - ERROR - Error parsing post: invalid literal for int() with base 10: '5.3'
+2025-05-02 06:11:34,202 - ERROR - Error parsing post: invalid literal for int() with base 10: '5.3'
+2025-05-02 06:11:35,272 - ERROR - Error parsing post: invalid literal for int() with base 10: '5.3'
+2025-05-02 06:11:36,282 - ERROR - Error parsing post: invalid literal for int() with base 10: '5.3'
+2025-05-02 06:11:58,130 - INFO - [46] WorldQuant Careers        |            | What are you waiting for! WorldQuant's Internation
+2025-05-02 06:11:58,130 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 06:11:58,130 - INFO - Runtime: 0:02:36
+2025-05-02 06:11:58,130 - INFO - Posts collected: 46
+2025-05-02 06:11:58,132 - INFO - Posts skipped: 1865
+2025-05-02 06:11:58,132 - INFO - Unique authors: 15
+2025-05-02 06:11:58,132 - INFO - Page loads: 1
+2025-05-02 06:11:58,132 - INFO - Scrolls: 1
+2025-05-02 06:11:58,132 - INFO - Posts per hour: 1060.2
+2025-05-02 06:11:58,132 - INFO - Retries: 0
+2025-05-02 06:11:58,133 - INFO - Throttles: 0
+2025-05-02 06:11:58,133 - INFO - Last CSV update: 0.0s ago
+2025-05-02 06:11:58,133 - INFO - ---------------------------
+2025-05-02 06:12:00,824 - INFO - [47] WorldQuant Careers        |            | What are you waiting for! WorldQuant's Internation
+2025-05-02 06:12:02,431 - INFO - [48] WorldQuant Careers        |            | [No content]                                      
+2025-05-02 06:12:03,556 - INFO - [49] WorldQuant Careers        |            | [No content]                                      
+2025-05-02 06:12:07,723 - INFO - [50] See all                   |            | [No content]                                      
+2025-05-02 06:12:10,753 - INFO - [51] See all                   |            | [No content]                                      
+2025-05-02 06:12:43,094 - INFO - Received shutdown signal, finishing current tasks...
+2025-05-02 06:12:43,146 - ERROR - An error occurred: ElementHandle.query_selector: Target page, context or browser has been closed
+2025-05-02 06:12:43,154 - ERROR - Failed to save cookies: BrowserContext.cookies: Target page, context or browser has been closed
+2025-05-02 06:19:04,887 - INFO - Loaded cookies from file
+2025-05-02 06:19:04,944 - INFO - Starting Facebook login process...
+2025-05-02 06:19:08,706 - INFO - Already logged in via cookies
+2025-05-02 06:19:08,707 - INFO - Navigating to https://www.facebook.com
+2025-05-02 06:19:11,368 - INFO - Initialized result files: collected_data\facebook_posts_20250502_061904.csv
+2025-05-02 06:19:11,775 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A0A08500245C0000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 06:19:31,405 - INFO - Feed found using selector: div.x1lliihq
+2025-05-02 06:19:31,406 - INFO - Starting to collect posts continuously
+2025-05-02 06:22:10,362 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A0708500245C0000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 06:22:34,506 - INFO - Received shutdown signal, finishing current tasks...
+2025-05-02 06:22:34,536 - ERROR - An error occurred: ElementHandle.query_selector: Target page, context or browser has been closed
+2025-05-02 06:22:34,543 - ERROR - Failed to save cookies: BrowserContext.cookies: Target page, context or browser has been closed
+2025-05-02 06:23:24,802 - INFO - Loaded cookies from file
+2025-05-02 06:23:24,866 - INFO - Starting Facebook login process...
+2025-05-02 06:23:27,807 - INFO - Already logged in via cookies
+2025-05-02 06:23:27,807 - INFO - Navigating to https://www.facebook.com
+2025-05-02 06:23:32,066 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A00089005C4D0000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 06:23:32,471 - INFO - Initialized result files: collected_data\facebook_posts_20250502_062324.csv
+2025-05-02 06:23:52,502 - INFO - Feed found using selector: div.x1lliihq
+2025-05-02 06:23:52,506 - INFO - Starting to collect posts continuously
+2025-05-02 06:24:38,256 - INFO - Received shutdown signal, finishing current tasks...
+2025-05-02 06:24:38,333 - ERROR - Error parsing post: ElementHandle.get_attribute: Target page, context or browser has been closed
+2025-05-02 06:24:38,333 - ERROR - An error occurred: ElementHandle.query_selector: Target page, context or browser has been closed
+2025-05-02 06:24:38,349 - ERROR - Failed to save cookies: BrowserContext.cookies: Connection closed while reading from the driver
+2025-05-02 06:39:53,098 - INFO - Loaded cookies from file
+2025-05-02 06:39:53,165 - INFO - Starting Facebook login process...
+2025-05-02 06:39:59,052 - INFO - Already logged in via cookies
+2025-05-02 06:39:59,052 - INFO - Navigating to https://www.facebook.com
+2025-05-02 06:40:02,333 - INFO - Initialized result files: collected_data\facebook_posts_20250502_063952.csv
+2025-05-02 06:40:02,350 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A0F0A7008C600000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 06:40:22,375 - INFO - Feed found using selector: div.x1lliihq
+2025-05-02 06:40:22,375 - INFO - Starting to collect posts continuously
+2025-05-02 06:41:14,563 - INFO - [1] Screenshots With or Witho |            | AbrarTQtHKYrxOBTHRlM2A8qE4Sdd1sLmwWFjIqVTe7oRY1EeQ
+2025-05-02 06:43:55,080 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A0F0A7008C600000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 06:45:46,685 - INFO - [2] WGT Golf                  |            | Available on Windows & macOS Just downloaded WGT G
+2025-05-02 06:45:46,685 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 06:45:46,685 - INFO - Runtime: 0:05:54
+2025-05-02 06:45:46,685 - INFO - Posts collected: 2
+2025-05-02 06:45:46,686 - INFO - Posts skipped: 1649
+2025-05-02 06:45:46,686 - INFO - Unique authors: 2
+2025-05-02 06:45:46,686 - INFO - Page loads: 1
+2025-05-02 06:45:46,686 - INFO - Scrolls: 1
+2025-05-02 06:45:46,686 - INFO - Posts per hour: 20.3
+2025-05-02 06:45:46,686 - INFO - Retries: 0
+2025-05-02 06:45:46,686 - INFO - Throttles: 0
+2025-05-02 06:45:46,686 - INFO - Last CSV update: 0.0s ago
+2025-05-02 06:45:46,686 - INFO - ---------------------------
+2025-05-02 06:46:08,819 - INFO - [3] Mahmud Care International |            | Just downloaded WGT Golf and wow—super realistic g
+2025-05-02 06:46:14,579 - INFO - Received shutdown signal, finishing current tasks...
+2025-05-02 06:46:14,607 - ERROR - Error parsing post: ElementHandle.query_selector: Target page, context or browser has been closed
+2025-05-02 06:46:14,611 - ERROR - An error occurred: ElementHandle.query_selector: Target page, context or browser has been closed
+2025-05-02 06:46:14,616 - ERROR - Failed to save cookies: BrowserContext.cookies: Target page, context or browser has been closed
+2025-05-02 06:48:10,116 - INFO - Loaded cookies from file
+2025-05-02 06:48:10,190 - INFO - Starting Facebook login process...
+2025-05-02 06:48:13,622 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A060A60044280000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 06:48:14,282 - INFO - Already logged in via cookies
+2025-05-02 06:48:14,282 - INFO - Navigating to https://www.facebook.com
+2025-05-02 06:48:17,688 - INFO - Initialized result files: collected_data\facebook_posts_20250502_064809.csv
+2025-05-02 06:48:37,724 - INFO - Feed found using selector: div.x1lliihq
+2025-05-02 06:48:37,724 - INFO - Starting to collect posts continuously
+2025-05-02 06:48:53,979 - INFO - [1] Mishkat Alvi              | 1d         | এত ভাল ডিফেন্স এনালিস্ট যে প্রোফাইল পিকে যে দেশের 
+2025-05-02 06:49:04,393 - INFO - [2] Mishkat Alvi              | 1d         | এত ভাল ডিফেন্স এনালিস্ট যে প্রোফাইল পিকে যে দেশের 
+2025-05-02 06:49:05,450 - INFO - [3] Mishkat Alvi              | 1d         | এত ভাল ডিফেন্স এনালিস্ট যে প্রোফাইল পিকে যে দেশের 
+2025-05-02 06:49:11,738 - INFO - [4] See all                   | 6d         | ConfirmDelete ConfirmDelete                       
+2025-05-02 06:49:12,266 - INFO - [5] See all                   | 6d         | ConfirmDelete ConfirmDelete                       
+2025-05-02 06:49:22,598 - INFO - [6] https://www.facebook.com/ |            | Kawser mamar soda was really disappointing Kawser 
+2025-05-02 06:49:25,158 - INFO - [7] https://www.facebook.com/ |            | Kawser mamar soda was really disappointing Kawser 
+2025-05-02 06:49:49,133 - INFO - [8] https://www.facebook.com/ |            | https://www.facebook.com/share/p/18p3cyfGkn/      
+2025-05-02 06:49:49,133 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 06:49:49,133 - INFO - Runtime: 0:01:39
+2025-05-02 06:49:49,133 - INFO - Posts collected: 8
+2025-05-02 06:49:49,133 - INFO - Posts skipped: 1117
+2025-05-02 06:49:49,133 - INFO - Unique authors: 14
+2025-05-02 06:49:49,133 - INFO - Page loads: 1
+2025-05-02 06:49:49,133 - INFO - Scrolls: 0
+2025-05-02 06:49:49,133 - INFO - Posts per hour: 289.2
+2025-05-02 06:49:49,133 - INFO - Retries: 0
+2025-05-02 06:49:49,133 - INFO - Throttles: 0
+2025-05-02 06:49:49,133 - INFO - Last CSV update: 0.0s ago
+2025-05-02 06:49:49,133 - INFO - ---------------------------
+2025-05-02 06:49:49,539 - INFO - [9] https://www.facebook.com/ |            | https://www.facebook.com/share/p/18p3cyfGkn/      
+2025-05-02 06:49:50,044 - INFO - [10] https://www.facebook.com/ |            | https://www.facebook.com/share/p/18p3cyfGkn/      
+2025-05-02 06:50:12,525 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:13,134 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:13,690 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:14,280 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:32,470 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:32,665 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:32,880 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:33,080 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:33,282 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:33,580 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:33,786 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:33,970 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:34,161 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:34,345 - ERROR - Error parsing post: invalid literal for int() with base 10: '4.5'
+2025-05-02 06:50:35,970 - INFO - Received shutdown signal, finishing current tasks...
+2025-05-02 06:50:36,002 - ERROR - An error occurred: ElementHandle.query_selector: Target page, context or browser has been closed
+2025-05-02 06:50:36,010 - ERROR - Failed to save cookies: BrowserContext.cookies: Target page, context or browser has been closed
+2025-05-02 07:00:43,982 - INFO - Loaded cookies from file
+2025-05-02 07:00:44,035 - INFO - Starting Facebook login process...
+2025-05-02 07:00:52,483 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A0B08500B41C0000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 07:00:52,595 - INFO - Already logged in via cookies
+2025-05-02 07:00:52,595 - INFO - Navigating to https://www.facebook.com
+2025-05-02 07:00:54,785 - INFO - Initialized result files: collected_data\facebook_posts_20250502_070043.csv
+2025-05-02 07:01:14,826 - INFO - Feed found using selector: div.x1lliihq
+2025-05-02 07:01:14,833 - INFO - Starting to collect posts continuously
+2025-05-02 07:01:32,916 - INFO - [1] ML Corvidelle             | Shared wit | This isn't about your country's individual labor d
+2025-05-02 07:01:58,796 - INFO - [2] ML Corvidelle             |            | EDIT:…See more EDIT:…See more EDIT:…See more EDIT:
+2025-05-02 07:01:58,927 - INFO - [3] ----Le-a---r--n---M----o- |            | AbrarEDIT: The point of this is that the revolutio
+2025-05-02 07:01:59,386 - INFO - [4] ----Le-a---r--n---M----o- |            | AbrarEDIT: The point of this is that the revolutio
+2025-05-02 07:02:04,997 - INFO - [5] See all                   | 6d         | ConfirmDelete ConfirmDelete                       
+2025-05-02 07:02:05,994 - INFO - [6] See all                   | 6d         | ConfirmDelete ConfirmDelete                       
+2025-05-02 07:02:24,099 - INFO - [7] Unknown Author            |            | therap e apply korar moto weather Nah, therap valo
+2025-05-02 07:02:24,099 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 07:02:24,099 - INFO - Runtime: 0:01:40
+2025-05-02 07:02:24,099 - INFO - Posts collected: 7
+2025-05-02 07:02:24,099 - INFO - Posts skipped: 681
+2025-05-02 07:02:24,099 - INFO - Unique authors: 15
+2025-05-02 07:02:24,099 - INFO - Page loads: 1
+2025-05-02 07:02:24,099 - INFO - Scrolls: 0
+2025-05-02 07:02:24,099 - INFO - Posts per hour: 250.4
+2025-05-02 07:02:24,099 - INFO - Retries: 0
+2025-05-02 07:02:24,099 - INFO - Throttles: 0
+2025-05-02 07:02:24,099 - INFO - Last CSV update: 0.0s ago
+2025-05-02 07:02:24,099 - INFO - ---------------------------
+2025-05-02 07:02:27,974 - INFO - [8] Unknown Author            |            | therap e apply korar moto weather Nah, therap valo
+2025-05-02 07:02:39,352 - INFO - [9] Unknown Author            |            | Shared link: https://www.facebook.com/share/p/18p3
+2025-05-02 07:02:39,918 - INFO - [10] Unknown Author            |            | Shared link: https://www.facebook.com/share/p/18p3
+2025-05-02 07:02:40,527 - INFO - [11] Unknown Author            |            | Shared link: https://www.facebook.com/share/p/18p3
+2025-05-02 07:03:31,844 - INFO - [12] Google Ads                |            | Grow your business with GoogleAdvertise with Googl
+2025-05-02 07:03:31,844 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 07:03:31,844 - INFO - Runtime: 0:02:48
+2025-05-02 07:03:31,844 - INFO - Posts collected: 12
+2025-05-02 07:03:31,844 - INFO - Posts skipped: 1545
+2025-05-02 07:03:31,844 - INFO - Unique authors: 16
+2025-05-02 07:03:31,844 - INFO - Page loads: 1
+2025-05-02 07:03:31,844 - INFO - Scrolls: 3
+2025-05-02 07:03:31,844 - INFO - Posts per hour: 256.6
+2025-05-02 07:03:31,844 - INFO - Retries: 0
+2025-05-02 07:03:31,844 - INFO - Throttles: 0
+2025-05-02 07:03:31,844 - INFO - Last CSV update: 0.0s ago
+2025-05-02 07:03:31,844 - INFO - ---------------------------
+2025-05-02 07:03:34,115 - INFO - [13] Google Ads                |            | Grow your business with GoogleAdvertise with Googl
+2025-05-02 07:03:36,599 - INFO - [14] ---S-ig----n-u-----p-     |            | Grow your business with GoogleAdvertise with Googl
+2025-05-02 07:03:37,109 - INFO - [15] ---S-ig----n-u-----p-     |            | Grow your business with GoogleAdvertise with Googl
+2025-05-02 07:03:51,175 - INFO - [16] See all                   | 6d         | ConfirmDelete ConfirmDelete                       
+2025-05-02 07:05:05,229 - INFO - Received shutdown signal, finishing current tasks...
+2025-05-02 07:05:05,270 - ERROR - An error occurred: ElementHandle.query_selector: Target page, context or browser has been closed
+2025-05-02 07:05:05,274 - ERROR - Failed to save cookies: BrowserContext.cookies: Target page, context or browser has been closed
+2025-05-02 07:26:53,657 - INFO - Loaded cookies from file
+2025-05-02 07:26:53,710 - INFO - Starting Facebook login process...
+2025-05-02 07:27:00,182 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A04089003C660000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 07:27:00,352 - INFO - Already logged in via cookies
+2025-05-02 07:27:00,353 - INFO - Navigating to https://www.facebook.com
+2025-05-02 07:27:04,238 - INFO - Initialized result files: collected_data\facebook_posts_20250502_072653.csv
+2025-05-02 07:27:24,269 - INFO - Feed found using selector: div.x1lliihq
+2025-05-02 07:27:24,269 - INFO - Starting to collect posts (target: 10)
+2025-05-02 07:27:32,722 - INFO - [1] Tazkia Malik              | Shared wit | Abrar95cPHwqN8vk3qqEZQHImEAifjnIqTDWCe0mPf5H0 Like
+2025-05-02 07:27:41,838 - INFO - [2] Crys Alexandria           |            | Abrar95cPHwqN8vk3qqEZQHImEAifjnIqTDWCe0mPf5H0     
+2025-05-02 07:27:45,667 - INFO - [3] See all                   | 6d         | ConfirmDelete ConfirmDelete                       
+2025-05-02 07:27:46,370 - INFO - [4] See all                   | 6d         | ConfirmDelete ConfirmDelete                       
+2025-05-02 07:27:59,529 - INFO - [5] Unknown Author            |            | Kawser mamar soda was really disappointing Kawser 
+2025-05-02 07:28:02,911 - INFO - [6] Unknown Author            |            | Kawser mamar soda was really disappointing Kawser 
+2025-05-02 07:28:20,231 - INFO - [7] Unknown Author            |            | Shared link: https://www.facebook.com/share/p/18p3
+2025-05-02 07:28:20,591 - INFO - [8] Unknown Author            |            | Shared link: https://www.facebook.com/share/p/18p3
+2025-05-02 07:28:21,038 - INFO - [9] Unknown Author            |            | Shared link: https://www.facebook.com/share/p/18p3
+2025-05-02 07:28:46,187 - INFO - [10] IELTS - British Council B | Rat Art    | Choose IELTS - trusted by the world, designed for 
+2025-05-02 07:28:46,187 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 07:28:46,187 - INFO - Runtime: 0:01:53
+2025-05-02 07:28:46,187 - INFO - Posts collected: 10
+2025-05-02 07:28:46,187 - INFO - Posts skipped: 1499
+2025-05-02 07:28:46,187 - INFO - Unique authors: 15
+2025-05-02 07:28:46,187 - INFO - Page loads: 1
+2025-05-02 07:28:46,187 - INFO - Scrolls: 1
+2025-05-02 07:28:46,187 - INFO - Posts per hour: 318.6
+2025-05-02 07:28:46,187 - INFO - Retries: 0
+2025-05-02 07:28:46,187 - INFO - Throttles: 0
+2025-05-02 07:28:46,187 - INFO - Last CSV update: 0.0s ago
+2025-05-02 07:28:46,187 - INFO - ---------------------------
+2025-05-02 07:29:04,828 - INFO - [11] IELTS - British Council B |            | Choose IELTS - trusted by the world, designed for 
+2025-05-02 07:29:06,934 - INFO - [12] IELTS - British Council B |            | Choose IELTS - trusted by the world, designed for 
+2025-05-02 07:30:06,316 - INFO - Reached target of 10 posts - scraping complete
+2025-05-02 07:30:06,316 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 07:30:06,316 - INFO - Runtime: 0:03:13
+2025-05-02 07:30:06,317 - INFO - Posts collected: 12
+2025-05-02 07:30:06,317 - INFO - Posts skipped: 2661
+2025-05-02 07:30:06,317 - INFO - Unique authors: 16
+2025-05-02 07:30:06,317 - INFO - Page loads: 1
+2025-05-02 07:30:06,317 - INFO - Scrolls: 4
+2025-05-02 07:30:06,317 - INFO - Posts per hour: 223.7
+2025-05-02 07:30:06,317 - INFO - Retries: 0
+2025-05-02 07:30:06,317 - INFO - Throttles: 0
+2025-05-02 07:30:06,317 - INFO - Last CSV update: 59.4s ago
+2025-05-02 07:30:06,317 - INFO - ---------------------------
+2025-05-02 07:30:06,317 - INFO - Scraping complete. Collected 12 posts.
+2025-05-02 07:30:06,317 - INFO - Saved cookies to file
+2025-05-02 07:30:06,417 - INFO - Browser closed
+2025-05-02 07:30:30,128 - INFO - Loaded cookies from file
+2025-05-02 07:30:30,180 - INFO - Starting Facebook login process...
+2025-05-02 07:30:33,294 - INFO - Already logged in via cookies
+2025-05-02 07:30:33,294 - INFO - Navigating to https://www.facebook.com
+2025-05-02 07:30:36,253 - INFO - Initialized result files: collected_data\facebook_posts_20250502_073029.csv
+2025-05-02 07:30:36,760 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A020860054010000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-02 07:30:56,287 - INFO - Feed found using selector: div.x1lliihq
+2025-05-02 07:30:56,287 - INFO - Starting to collect posts (target: 15)
+2025-05-02 07:31:14,176 - INFO - [1] Nishat Tasnim             | 10h        | So apparently, a dude was living his Fifty Shades 
+2025-05-02 07:31:14,604 - INFO - [2] Nishat Tasnim             | 10h        | So apparently, a dude was living his Fifty Shades 
+2025-05-02 07:31:16,624 - INFO - [3] Tashdeed B.               |            | So apparently, a dude was living his Fifty Shades 
+2025-05-02 07:31:19,342 - INFO - [4] Ishrak Alam               | 10h        | you n pipi getting arrested typa shi Ishrak Alamdo
+2025-05-02 07:31:20,272 - INFO - [5] Ishrak Alam               | 10h        | Ishrak Alamdon't expose Nishat TasnimIshrak Alamdo
+2025-05-02 07:31:53,634 - INFO - [6] The Internet Today🌿 Dhaka | https://ww | https://www.facebook.com/share/p/18p3cyfGkn/ April
+2025-05-02 07:32:18,884 - INFO - [7] Nishat Tasnim             | 10h        | So apparently, a dude was living his Fifty Shades 
+2025-05-02 07:32:18,884 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 07:32:18,884 - INFO - Runtime: 0:01:49
+2025-05-02 07:32:18,884 - INFO - Posts collected: 7
+2025-05-02 07:32:18,884 - INFO - Posts skipped: 1738
+2025-05-02 07:32:18,884 - INFO - Unique authors: 5
+2025-05-02 07:32:18,884 - INFO - Page loads: 1
+2025-05-02 07:32:18,884 - INFO - Scrolls: 2
+2025-05-02 07:32:18,884 - INFO - Posts per hour: 230.7
+2025-05-02 07:32:18,884 - INFO - Retries: 0
+2025-05-02 07:32:18,884 - INFO - Throttles: 0
+2025-05-02 07:32:18,884 - INFO - Last CSV update: 0.0s ago
+2025-05-02 07:32:18,884 - INFO - ---------------------------
+2025-05-02 07:32:28,149 - INFO - [8] https://abcnews.link/QFGa |            | HAPPENING NOW: Former Vice President Kamala Harris
+2025-05-02 07:32:33,299 - INFO - [9] BUP ইজ BUP                |            | The BUP Shuttle Service was launced to ensure safe
+2025-05-02 07:32:40,385 - INFO - [10] নিঘাত রৌদ্র               |            | ★ প্যালেস্টাইন, ইউক্রেনসহ তৃতীয় সাম্রাজ্যবাদী যুদ্
+2025-05-02 07:33:38,900 - INFO - [11] Nishat Tasnim             | 10h        | So apparently, a dude was living his Fifty Shades 
+2025-05-02 07:33:38,900 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 07:33:38,900 - INFO - Runtime: 0:03:09
+2025-05-02 07:33:38,900 - INFO - Posts collected: 11
+2025-05-02 07:33:38,900 - INFO - Posts skipped: 3613
+2025-05-02 07:33:38,900 - INFO - Unique authors: 8
+2025-05-02 07:33:38,900 - INFO - Page loads: 1
+2025-05-02 07:33:38,900 - INFO - Scrolls: 3
+2025-05-02 07:33:38,916 - INFO - Posts per hour: 209.3
+2025-05-02 07:33:38,916 - INFO - Retries: 0
+2025-05-02 07:33:38,916 - INFO - Throttles: 0
+2025-05-02 07:33:38,916 - INFO - Last CSV update: 0.0s ago
+2025-05-02 07:33:38,916 - INFO - ---------------------------
+2025-05-02 07:35:11,077 - INFO - [12] Nishat Tasnim             | 10h        | So apparently, a dude was living his Fifty Shades 
+2025-05-02 07:35:11,077 - INFO - --- SCRAPER STATISTICS ---
+2025-05-02 07:35:11,080 - INFO - Runtime: 0:04:41
+2025-05-02 07:35:11,080 - INFO - Posts collected: 12
+2025-05-02 07:35:11,080 - INFO - Posts skipped: 5485
+2025-05-02 07:35:11,080 - INFO - Unique authors: 8
+2025-05-02 07:35:11,080 - INFO - Page loads: 1
+2025-05-02 07:35:11,080 - INFO - Scrolls: 4
+2025-05-02 07:35:11,080 - INFO - Posts per hour: 153.5
+2025-05-02 07:35:11,080 - INFO - Retries: 0
+2025-05-02 07:35:11,080 - INFO - Throttles: 0
+2025-05-02 07:35:11,080 - INFO - Last CSV update: 0.0s ago
+2025-05-02 07:35:11,080 - INFO - ---------------------------
+2025-05-02 07:35:27,474 - INFO - Received shutdown signal, finishing current tasks...
+2025-05-02 07:35:27,531 - ERROR - Error parsing post: ElementHandle.inner_html: Target page, context or browser has been closed
+Call log:
+  - waiting for locator(":scope")
+
+2025-05-02 07:35:27,533 - ERROR - An error occurred: ElementHandle.query_selector: Target page, context or browser has been closed
+2025-05-02 07:35:27,538 - ERROR - Failed to save cookies: BrowserContext.cookies: Target page, context or browser has been closed
