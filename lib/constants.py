@@ -2,8 +2,8 @@ from datetime import datetime
 from pathlib import Path
 
 COOKIES_FILE = Path("info\cookies.json")
-SCROLL_PAUSE = (0.5, 1.2)  # (min, max) seconds between scrolls, slightly faster
-SCROLL_RANDOM_DELAY = (2.5, 7.0)  # Occasional longer pauses to appear human-like
+SCROLL_PAUSE = (0.2, 0.6)  # (min, max) seconds between scrolls, slightly faster
+SCROLL_RANDOM_DELAY = (0.5, 1.5)  # Occasional longer pauses to appear human-like
 RETRY_DELAY = (1.0, 3.0)  # (min, max) seconds between retries
 MAX_RETRIES = 3
 RESULTS_DIR = Path("collected_data")
@@ -24,6 +24,10 @@ POST_SELECTORS = [
     "div.x1lliihq div.x1pi30zi",  # Common feed container
     "[aria-posinset]",  # Feed items with position
     "div.xdj266r:not([aria-hidden='true'])",  # Posts with content not hidden
+    # Add these to POST_SELECTORS in constants.py
+    "div[role='article'].html-div",
+    "div.x1yztbdb.xh8yej3",
+    "div.xdj266r.x11i5rnm.xat24cr",
 ]
 
 # Block UI elements that are commonly mistaken for posts

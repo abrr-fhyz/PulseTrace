@@ -402,3 +402,74 @@ Call log:
 
 2025-05-02 07:35:27,533 - ERROR - An error occurred: ElementHandle.query_selector: Target page, context or browser has been closed
 2025-05-02 07:35:27,538 - ERROR - Failed to save cookies: BrowserContext.cookies: Target page, context or browser has been closed
+2025-05-17 21:53:27,064 - INFO - Loaded cookies from file
+2025-05-17 21:53:27,209 - INFO - Starting Facebook login process...
+2025-05-17 21:53:30,016 - ERROR - Login error: Page.goto: Target page, context or browser has been closed
+Call log:
+  - navigating to "https://www.facebook.com/login", waiting until "load"
+
+2025-05-17 21:53:30,016 - ERROR - Failed to log in to Facebook
+2025-05-17 21:53:30,059 - INFO - Saved cookies to file
+2025-05-17 21:53:30,447 - INFO - Browser closed
+2025-05-17 21:53:44,908 - INFO - Loaded cookies from file
+2025-05-17 21:53:44,965 - INFO - Starting Facebook login process...
+2025-05-17 21:53:51,304 - WARNING - Potential security alert in console: [GroupMarkerNotSet(crbug.com/242999)!:A060A4004C720000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+2025-05-17 21:53:52,227 - INFO - Already logged in via cookies
+2025-05-17 21:53:52,227 - INFO - Navigating to https://www.facebook.com
+2025-05-17 21:53:56,704 - INFO - Initialized result files: collected_data\facebook_posts_20250517_215338.csv
+2025-05-17 21:54:16,756 - INFO - Feed found using selector: div.x1lliihq
+2025-05-17 21:54:16,756 - INFO - Starting to collect posts continuously
+2025-05-17 21:55:43,974 - INFO - [1] Pritam Chakraborty        |            | কুইজ: এই দুইজনের মধ্যে কে বড় চোদু? FacebookFacebo
+2025-05-17 21:55:43,974 - INFO - --- SCRAPER STATISTICS ---
+2025-05-17 21:55:43,974 - INFO - Runtime: 0:02:05
+2025-05-17 21:55:43,974 - INFO - Posts collected: 1
+2025-05-17 21:55:43,974 - INFO - Posts skipped: 2071
+2025-05-17 21:55:43,974 - INFO - Unique authors: 1
+2025-05-17 21:55:43,974 - INFO - Page loads: 1
+2025-05-17 21:55:43,974 - INFO - Scrolls: 1
+2025-05-17 21:55:43,974 - INFO - Posts per hour: 28.8
+2025-05-17 21:55:43,974 - INFO - Retries: 0
+2025-05-17 21:55:43,974 - INFO - Throttles: 0
+2025-05-17 21:55:43,974 - INFO - Last CSV update: 0.0s ago
+2025-05-17 21:55:43,974 - INFO - ---------------------------
+2025-05-17 21:59:16,188 - INFO - Received shutdown signal, finishing current tasks...
+2025-05-17 21:59:16,223 - ERROR - Error parsing post: ElementHandle.inner_html: Target page, context or browser has been closed
+Call log:
+  - waiting for locator(":scope")
+
+2025-05-17 21:59:16,239 - ERROR - An error occurred: ElementHandle.query_selector: Target page, context or browser has been closed
+2025-05-17 21:59:16,249 - ERROR - Failed to save cookies: BrowserContext.cookies: Target page, context or browser has been closed
+2025-05-17 21:59:22,811 - INFO - Loaded cookies from file
+2025-05-17 21:59:22,971 - INFO - Starting Facebook login process...
+2025-05-17 21:59:28,392 - INFO - Already logged in via cookies
+2025-05-17 21:59:28,400 - INFO - Navigating to https://www.facebook.com
+2025-05-17 21:59:30,724 - INFO - Initialized result files: collected_data\facebook_posts_20250517_215922.csv
+2025-05-17 21:59:50,755 - INFO - Feed found using selector: div.x1lliihq
+2025-05-17 21:59:50,755 - INFO - Starting to collect posts continuously
+2025-05-17 22:02:11,473 - INFO - [1] IPL - Indian Premier Leag |            | UpdateT…See more FacebookFacebookFacebookFacebookF
+2025-05-17 22:02:11,473 - INFO - --- SCRAPER STATISTICS ---
+2025-05-17 22:02:11,473 - INFO - Runtime: 0:02:49
+2025-05-17 22:02:11,473 - INFO - Posts collected: 1
+2025-05-17 22:02:11,475 - INFO - Posts skipped: 2071
+2025-05-17 22:02:11,475 - INFO - Unique authors: 1
+2025-05-17 22:02:11,475 - INFO - Page loads: 1
+2025-05-17 22:02:11,475 - INFO - Scrolls: 1
+2025-05-17 22:02:11,475 - INFO - Posts per hour: 21.3
+2025-05-17 22:02:11,475 - INFO - Retries: 0
+2025-05-17 22:02:11,475 - INFO - Throttles: 0
+2025-05-17 22:02:11,475 - INFO - Last CSV update: 0.0s ago
+2025-05-17 22:02:11,475 - INFO - ---------------------------
+2025-05-17 22:02:28,254 - INFO - [2] CODEPINK:  Women For Peac |            | FacebookFacebookFacebookFacebookFacebookFacebookFa
+2025-05-17 22:04:36,799 - INFO - Received shutdown signal, finishing current tasks...
+2025-05-17 22:04:36,872 - ERROR - An error occurred: ElementHandle.query_selector: Target page, context or browser has been closed
+2025-05-17 22:04:36,887 - ERROR - Failed to save cookies: BrowserContext.cookies: Target page, context or browser has been closed
+2025-05-17 22:10:56,329 - INFO - Loaded cookies from file
+2025-05-17 22:10:56,451 - INFO - Starting Facebook login process...
+2025-05-17 22:10:59,879 - INFO - Already logged in via cookies
+2025-05-17 22:10:59,880 - INFO - Navigating to https://www.facebook.com
+2025-05-17 22:11:02,418 - INFO - Initialized result files: collected_data\facebook_posts_20250517_221055.csv
+2025-05-17 22:11:22,455 - INFO - Feed found using selector: div.x1lliihq
+2025-05-17 22:11:22,457 - INFO - Starting to collect posts continuously
+2025-05-17 22:13:40,401 - ERROR - An error occurred: ElementHandle.query_selector: Target page, context or browser has been closed
+2025-05-17 22:13:40,405 - INFO - Saved cookies to file
+2025-05-17 22:13:40,741 - INFO - Browser closed

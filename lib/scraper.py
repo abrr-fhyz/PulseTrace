@@ -712,7 +712,13 @@ class FacebookScraper:
                 "div[dir='auto']:not([class*='comment'])",
                 "div.xdj266r",
                 "div.x11i5rnm",
-                "div[role='article'] div[dir='auto']:not([aria-hidden='true'])"
+                "div[role='article'] div[dir='auto']:not([aria-hidden='true'])",
+                # Add these to content_selectors in parse_post method
+                "div.html-div.xdj266r.x11i5rnm.xat24cr.x1mh8g0r",
+                "span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6",
+                "div[data-ad-comet-preview='message']",
+                "div[dir='auto']:not([class*='comment']):not([aria-label])",
+                "span.x1lliihq.x6ikm8r.x10wlt62.x1n2onr6"
             ]
             
             for selector in content_selectors:

@@ -2,7 +2,7 @@
 .env
 
 # Ignore cookies file in the info directory
-info/cookies
+info/cookies.json
 
 # Python cache directories
 __pycache__/
