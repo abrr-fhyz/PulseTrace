@@ -1,4 +1,4 @@
-Save cookies.json in info
+Save cookies.json in "info" directory
 Keep .env in root level.
 
 .env format:
@@ -14,4 +14,6 @@ To start scraping:
 To process screenshots:
 `python process.py`
 
-Check logs in info.
+Check logs in info directory during/after scraping.
+Images will be saved to Screenshots.
+Data will be saved in Data.
