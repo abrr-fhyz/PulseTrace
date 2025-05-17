@@ -1,0 +1,15 @@
+# Ignore environment variables file
+.env
+
+# Ignore cookies file in the info directory
+info/cookies.json
+
+# Python cache directories
+__pycache__/
+*/__pycache__
+
+# All images inside screenshots directory
+screenshots/*
+
+# All files inside data directory
+data/*
