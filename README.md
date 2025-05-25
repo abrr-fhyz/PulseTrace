@@ -11,16 +11,16 @@ FACEBOOK_EMAIL=
 FACEBOOK_PASSWORD=
 OPENAI_API_KEY=
 ```
-#FrontEnd Usage
+## FrontEnd Usage
     Start backend server with  `python server.py`
     Navigate to Dashboard at localhost:5000.
 
-#Commands:
+## Commands:
     scrape      - Scrape Facebook posts and take screenshots
     process     - Analyze screenshots using GPT
     summarize   - Generate summary analysis of posts
 
-#Examples:
+## Examples:
     `python main.py scrape --headless`
     `python main.py process`
     `python main.py summarize`
