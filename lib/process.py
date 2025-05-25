@@ -2,7 +2,8 @@ from lib.catalogue import FacebookScreenshotAnalyzer
 import os
 from dotenv import load_dotenv
 
-if __name__ == "__main__":
+def main():
+    """Main function for process module."""
     print("Starting Facebook screenshot analysis...")
     try:
         load_dotenv()
@@ -10,5 +11,10 @@ if __name__ == "__main__":
         analyzer = FacebookScreenshotAnalyzer(api_key)
         analyzer.process_screenshots()
         print("Analysis complete!")
+        return 0
     except Exception as e:
         print(f"Fatal error in main process: {e}")
+        return 1
+
+if __name__ == "__main__":
+    exit(main())

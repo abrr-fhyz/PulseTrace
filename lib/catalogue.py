@@ -31,6 +31,35 @@ class FacebookScreenshotAnalyzer:
             print(f"Error encoding image {image_path}: {e}")
             return ""
 
+    def extract_json_from_text(self, text):
+        """Extract JSON from text that might contain other content."""
+        # Try to find JSON object in the text
+        json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+        matches = re.findall(json_pattern, text, re.DOTALL)
+        
+        for match in matches:
+            try:
+                return json.loads(match)
+            except json.JSONDecodeError:
+                continue
+        
+        # If no valid JSON found, return None
+        return None
+
+    def create_fallback_structure(self, filename, error_msg=""):
+        """Create a fallback data structure when parsing fails."""
+        return {
+            "author": "",
+            "shared_by": "",
+            "post_content": "",
+            "reactions": "",
+            "comments": "",
+            "shares": "",
+            "image_description": "",
+            "filename": filename,
+            "error": error_msg if error_msg else "Failed to extract data"
+        }
+
     def analyze_screenshot(self, image_path):
         """Analyze Facebook screenshot using OpenAI Vision."""
         filename = os.path.basename(image_path)
@@ -40,7 +69,7 @@ class FacebookScreenshotAnalyzer:
             # Verify the file exists and can be read
             if not os.path.exists(image_path):
                 print(f"File not found: {image_path}")
-                return {"error": "File not found", "filename": filename}
+                return self.create_fallback_structure(filename, "File not found")
                 
             # Get file size to check if it's reasonable
             file_size = os.path.getsize(image_path) / (1024 * 1024)  # Size in MB
@@ -52,134 +81,83 @@ class FacebookScreenshotAnalyzer:
             # Convert image to base64
             base64_image = self.get_image_base64(image_path)
             if not base64_image:
-                return {"error": "Failed to encode image", "filename": filename}
+                return self.create_fallback_structure(filename, "Failed to encode image")
             
             print(f"Image encoded successfully, sending to API...")
             
-            # First try: see if we can get valid JSON directly
-            try:
-                response = self.client.chat.completions.create(
-                    model="o4-mini",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are a data extraction assistant. Extract information from Facebook screenshots and return only valid JSON."
-                        },
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": "Extract the following from this Facebook screenshot and return ONLY a valid JSON object:\n\n"
-                                                      "{\n"
-                                                      "  \"author\": \"name of original poster\",\n"
-                                                      "  \"shared_by\": \"name of person who shared (if applicable, otherwise empty string)\",\n"
-                                                      "  \"post_content\": \"text content of post\",\n"
-                                                      "  \"reactions\": \"number and types of reactions\",\n"
-                                                      "  \"comments\": \"number of comments\",\n"
-                                                      "  \"shares\": \"number of shares if visible\",\n"
-                                                      "  \"image_description\": \"description of any images in post\"\n"
-                                                      "}\n\n"
-                                                      "Return ONLY the JSON with no additional text or formatting."},
-                                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}
-                            ]
-                        }
-                    ],
-                    max_completion_tokens=1000
-                )
-                
-                # Debug the complete response object
-                print(f"API Response received. Status: {response.model_dump()['object']}")
-                
-                # Check if we got a valid content response
-                content = response.choices[0].message.content
-                if not content:
-                    print("Warning: Empty content received from API")
-                    content = ""
-                else:
+            # Try API call with guaranteed JSON parsing
+            models_to_try = ["gpt-4o-mini", "gpt-4o"]
+            
+            for model in models_to_try:
+                try:
+                    print(f"Trying with model: {model}")
+                    response = self.client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are a data extraction assistant. Extract information from Facebook screenshots and return ONLY valid JSON."
+                            },
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": "Extract the following from this Facebook screenshot and return ONLY a valid JSON object:\n\n"
+                                                          "{\n"
+                                                          "  \"author\": \"name of original poster\",\n"
+                                                          "  \"shared_by\": \"name of person who shared (if applicable, otherwise empty string)\",\n"
+                                                          "  \"post_content\": \"text content of post if any, otherwise empty string\",\n"
+                                                          "  \"reactions\": \"number and types of reactions, if visible\",\n"
+                                                          "  \"comments\": \"number of comments, if visible\",\n"
+                                                          "  \"shares\": \"number of shares if visible\",\n"
+                                                          "  \"image_description\": \"description of any images in the post itself if present, otherwise leave empty\"\n"
+                                                          "}\n\n"
+                                                          "Return ONLY the JSON in THIS SPECIFIC FORMAT with NO ADDITIONAL text or formatting."},
+                                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}
+                                ]
+                            }
+                        ],
+                        max_completion_tokens=1000
+                    )
+                    
+                    # Get response content
+                    content = response.choices[0].message.content
+                    if not content:
+                        print("Warning: Empty content received from API")
+                        continue
+                    
                     content = content.strip()
                     print(f"Response content (first 100 chars): {content[:100]}...")
-                
-                # Try to parse as JSON directly
-                try:
-                    result = json.loads(content)
-                    print("Successfully parsed JSON response")
-                    result["filename"] = filename
-                    return result
-                except json.JSONDecodeError as e:
-                    print(f"Initial JSON parsing failed: {e}")
-                    # Continue to fallback methods
-            
-            except Exception as api_error:
-                print(f"API call error: {api_error}")
-                # Try with a simpler approach
-            
-            # Second try: Use a simpler prompt and manually extract fields
-            print("Trying simplified approach...")
-            
-            # Create a basic structured response
-            structured_data = {
-                "author": "",
-                "shared_by": "",
-                "post_content": "",
-                "reactions": "",
-                "comments": "",
-                "shares": "",
-                "image_description": "",
-                "filename": filename
-            }
-            
-            # Try a simpler API call
-            try:
-                simple_response = self.client.chat.completions.create(
-                    model="o4-mini",
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": "Describe this Facebook post screenshot. Include who posted it, any text content, reactions, comments, and description of images."},
-                                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}
-                            ]
-                        }
-                    ],
-                    max_completion_tokens=1000
-                )
-                
-                simple_content = simple_response.choices[0].message.content
-                print(f"Simple response received (first 100 chars): {simple_content[:100]}...")
-                
-                # Use regex to extract information
-                author_match = re.search(r"(?:posted|shared) by[:\s]+([^,.\n]+)", simple_content, re.IGNORECASE)
-                if author_match:
-                    structured_data["author"] = author_match.group(1).strip()
                     
-                content_match = re.search(r"content[:\s]+\"([^\"]+)\"", simple_content, re.IGNORECASE)
-                if content_match:
-                    structured_data["post_content"] = content_match.group(1).strip()
-                    
-                reactions_match = re.search(r"(\d+)\s+(?:reactions|likes)", simple_content, re.IGNORECASE)
-                if reactions_match:
-                    structured_data["reactions"] = reactions_match.group(1).strip()
-                    
-                comments_match = re.search(r"(\d+)\s+comments", simple_content, re.IGNORECASE)
-                if comments_match:
-                    structured_data["comments"] = comments_match.group(1).strip()
+                    # Try to parse as JSON directly first
+                    try:
+                        result = json.loads(content)
+                        print("Successfully parsed JSON response directly")
+                        result["filename"] = filename
+                        return result
+                    except json.JSONDecodeError:
+                        print("Direct JSON parsing failed, trying to extract JSON from text")
+                        
+                        # Try to extract JSON from the text
+                        extracted_json = self.extract_json_from_text(content)
+                        if extracted_json:
+                            print("Successfully extracted JSON from text")
+                            extracted_json["filename"] = filename
+                            return extracted_json
+                        else:
+                            print("Failed to extract JSON from text, continuing to next model")
+                            continue
                 
-                # Add the raw description as image description
-                structured_data["image_description"] = simple_content
-                
-                print(f"Extracted data from simple approach: {structured_data}")
-                return structured_data
-                
-            except Exception as simple_error:
-                print(f"Simple approach error: {simple_error}")
-                structured_data["error"] = f"API error: {str(simple_error)}"
-                return structured_data
+                except Exception as api_error:
+                    print(f"API call error with {model}: {api_error}")
+                    continue
+            
+            # If all models failed, return fallback structure
+            print("All API attempts failed, returning fallback structure")
+            return self.create_fallback_structure(filename, "All API attempts failed")
         
         except Exception as e:
             print(f"Critical error analyzing image: {str(e)}")
-            return {
-                "error": f"Error analyzing image: {str(e)}",
-                "filename": filename
-            }
+            return self.create_fallback_structure(filename, f"Critical error: {str(e)}")
 
     def save_json(self, data, filepath):
         """Save data as JSON file."""
@@ -243,4 +221,3 @@ class FacebookScreenshotAnalyzer:
         print(f"\nProcessed {len(all_data)} screenshots. Results saved to {final_json_path}")
         
         return all_data
-

@@ -1,19 +1,26 @@
 Save cookies.json in "info" directory
 Keep .env in root level.
 
-.env format:
+Check logs in info directory during/after scraping.
+Images will be saved to Screenshots.
+Data will be saved in data direvctory.
+
+.env file format:
 ```
 FACEBOOK_EMAIL=
 FACEBOOK_PASSWORD=
 OPENAI_API_KEY=
 ```
+#FrontEnd Usage
+    Start backend server with  `python server.py`
+    Navigate to Dashboard at localhost:5000.
 
-To start scraping:
-`python scrape.py --headless`
+#Commands:
+    scrape      - Scrape Facebook posts and take screenshots
+    process     - Analyze screenshots using GPT
+    summarize   - Generate summary analysis of posts
 
-To process screenshots:
-`python process.py`
-
-Check logs in info directory during/after scraping.
-Images will be saved to Screenshots.
-Data will be saved in Data.
+#Examples:
+    `python main.py scrape --headless`
+    `python main.py process`
+    `python main.py summarize`

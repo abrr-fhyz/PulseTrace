@@ -262,8 +262,35 @@ class FacebookScreenshotScraper:
         
         # Short pause to allow content to load
         await asyncio.sleep(random.uniform(0.3, 0.8))
+    
+    async def search_political_posts(self, search_keywords: list):
+        """Navigate to Facebook search and search for political posts using multiple keywords."""
+        try:
+            # Join keywords with OR operator for broader search
+            search_query = " OR ".join([f'"{keyword}"' for keyword in search_keywords[:5]])  # Limit to first 5 keywords for URL length
+            logger.info(f"Searching for political posts with query: '{search_query}'")
+            
+            # Construct search URL - Facebook's search URL pattern
+            import urllib.parse
+            encoded_query = urllib.parse.quote(search_query)
+            search_url = f"https://www.facebook.com/search/posts/?q={encoded_query}"
+            
+            await self.page.goto(search_url, timeout=60000)
+            await asyncio.sleep(random.uniform(2, 4))  # Wait for search results to load
+            
+            # Wait for search results to appear
+            try:
+                await self.page.wait_for_selector("div[role='article']", timeout=15000)
+                logger.info("Search results loaded successfully")
+            except PWTimeout:
+                logger.warning("Search results took too long to load, continuing anyway...")
+                
+        except Exception as e:
+            logger.error(f"Error during search: {e}")
+            # Fall back to homepage if search fails
+            await self.page.goto("https://www.facebook.com", timeout=60000)
         
-    async def capture_visible_posts(self):
+    async def capture_visible_posts(self, political_keywords: list = None):
         """Capture screenshots of all currently visible posts on the page."""
         # More specific selectors for actual posts, excluding UI elements
         post_selectors = [
@@ -284,6 +311,20 @@ class FacebookScreenshotScraper:
                 if not size or size['width'] < 300 or size['height'] < 100:
                     logger.debug(f"Skipping small element: {size}")
                     continue
+                
+                # If political keywords are provided, check post content
+                if political_keywords:
+                    post_text = await post.evaluate("""
+                        (el) => {
+                            return el.innerText ? el.innerText.toLowerCase() : '';
+                        }
+                    """)
+                    
+                    # Check if any political keyword is in the post (case-insensitive)
+                    contains_political = any(keyword.lower() in post_text for keyword in political_keywords)
+                    if not contains_political:
+                        logger.debug("Skipping non-political post")
+                        continue
                 
                 # Check if post is in viewport
                 in_viewport = await self.page.evaluate("""
@@ -370,7 +411,8 @@ class FacebookScreenshotScraper:
                 
                 # Take screenshot of just this post
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f"{self.session_id}_{self.posts_captured}_{post_id_hash}.png"
+                prefix = "political_" if political_keywords else ""
+                filename = f"{prefix}{self.session_id}_{self.posts_captured}_{post_id_hash}.png"
                 filepath = self.screenshot_dir / filename
                 
                 # Make sure the post is fully visible before screenshot
@@ -397,26 +439,32 @@ class FacebookScreenshotScraper:
                 self.posts_captured += 1
                 captured_in_current_batch += 1
                 
-                logger.info(f"Captured post {self.posts_captured}: {filename} ({int(file_size/1024)}KB)")
+                logger.info(f"Captured {'political ' if political_keywords else ''}post {self.posts_captured}: {filename} ({int(file_size/1024)}KB)")
                 
             except Exception as e:
                 logger.error(f"Error capturing post: {e}")
         
         return captured_in_current_batch
     
-    async def scrape_facebook(self, url: str = None, target_posts: int = 100):
+    async def scrape_facebook(self, url: str = None, target_posts: int = 100, search_political: list = None):
         """
         Scrape Facebook posts as screenshots from a specific URL or main feed.
         
         Args:
             url: The specific Facebook URL to scrape (profile, group, page, etc.)
             target_posts: Target number of posts to collect
+            search_political: List of political keywords to search for
         """
-        # Navigate to the target URL or default to Facebook homepage
-        target_url = url if url else "https://www.facebook.com"
-        logger.info(f"Navigating to {target_url}")
-        
-        await self.page.goto(target_url, timeout=60000)
+        # If search_political is provided, search for political posts
+        if search_political:
+            await self.search_political_posts(search_political)
+            political_keywords = search_political
+        else:
+            # Navigate to the target URL or default to Facebook homepage
+            target_url = url if url else "https://www.facebook.com"
+            logger.info(f"Navigating to {target_url}")
+            await self.page.goto(target_url, timeout=60000)
+            political_keywords = None
         
         # Dismiss any popup dialogs that might appear
         try:
@@ -458,7 +506,7 @@ class FacebookScreenshotScraper:
             logger.warning("Could not detect feed with known selectors. Continuing anyway...")
             await asyncio.sleep(5)  # Give page time to load
             
-        logger.info(f"Starting to collect posts (target: {target_posts})")
+        logger.info(f"Starting to collect {'political ' if search_political else ''}posts (target: {target_posts})")
         start_time = time.time()
         
         no_new_posts_count = 0
@@ -475,7 +523,7 @@ class FacebookScreenshotScraper:
         
         while self.posts_captured < target_posts:
             # Capture all visible posts
-            captured = await self.capture_visible_posts()
+            captured = await self.capture_visible_posts(political_keywords=political_keywords)
             
             # If we didn't find any new posts after several scrolls, try different strategies
             if captured == 0:
