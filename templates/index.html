@@ -72,9 +72,15 @@
       <h2>Run</h2>
       <div style="display:flex;flex-direction:column;gap:10px">
         <input id="topic" placeholder="Topic, e.g. 'OpenAI Codex'" />
-        <div class="row">
+        <div class="row" style="flex-wrap:wrap">
           <label class="toggle"><input type="checkbox" id="src-reddit" checked> Reddit</label>
           <label class="toggle"><input type="checkbox" id="src-hn" checked> HN</label>
+          <label class="toggle"><input type="checkbox" id="src-facebook"> Facebook</label>
+          <label class="toggle"><input type="checkbox" id="src-x"> X</label>
+          <label class="toggle"><input type="checkbox" id="src-instagram"> Instagram</label>
+        </div>
+        <div class="muted" style="font-size:11px">
+          FB/X/IG need creds + cookies. See README "Source reliability".
         </div>
         <button id="go">Start agent</button>
       </div>
@@ -161,6 +167,9 @@ async function start() {
   const sources = [];
   if ($("#src-reddit").checked) sources.push("reddit");
   if ($("#src-hn").checked) sources.push("hn");
+  if ($("#src-facebook").checked) sources.push("facebook");
+  if ($("#src-x").checked) sources.push("x");
+  if ($("#src-instagram").checked) sources.push("instagram");
   $("#go").disabled = true;
   clear(logEl);
   clear($("#clusters"));

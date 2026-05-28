@@ -5,6 +5,9 @@ from concurrent.futures import ThreadPoolExecutor
 from .connectors.base import Connector, Post
 from .connectors.reddit import RedditConnector
 from .connectors.hn import HNConnector
+from .connectors.facebook import FacebookConnector
+from .connectors.x import XConnector
+from .connectors.instagram import InstagramConnector
 from .embed import embed_texts
 from .cluster import cluster_embeddings, centroids, entropy
 from .label import label_cluster
@@ -18,7 +21,13 @@ from .llm import chat_json
 MAX_ITERS = 4
 MAX_POSTS = 500
 EPS = 0.05
-SOURCES: dict[str, type[Connector]] = {"reddit": RedditConnector, "hn": HNConnector}
+SOURCES: dict[str, type[Connector]] = {
+    "reddit": RedditConnector,
+    "hn": HNConnector,
+    "facebook": FacebookConnector,
+    "x": XConnector,
+    "instagram": InstagramConnector,
+}
 
 
 SEED_SYS = (

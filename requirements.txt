@@ -9,4 +9,6 @@ numpy>=1.26
 scikit-learn>=1.4
 hdbscan>=0.8.33
 faiss-cpu>=1.7.4
+twikit>=2.0
+instaloader>=4.13
 pytest>=8.0

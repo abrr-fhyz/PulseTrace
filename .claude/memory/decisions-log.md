@@ -3,6 +3,8 @@
 Append-only. Newest at top. Format: date — decision — reason.
 
 ## 2026-05-29
+- **Add FB / X / IG connectors with honest caveats.** User confirmed FB is main target; willing to accept fragility on X / IG. Skeletons fail gracefully ([]). Live testing deferred for X / IG until creds available.
+- **FacebookConnector uses Playwright + DOM scrape, not OCR.** v1 OCR pipeline preserved as separate CLI path. v2 connector is lighter and per-query.
 - **Adopt `.claude/{memory,plans,rules,skills,specs}` layout.** Mirror readest-app convention. CLAUDE.md at root indexes it.
 - **Branch v2 work to `shyan`.** Keep `v1.1` clean; merge later if v2 stabilizes.
 - **No durable DB; per-run JSON + FAISS files.** Hackathon scope; SQLite would add ceremony without payoff.

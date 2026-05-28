@@ -20,7 +20,7 @@ V1 (preserved): Facebook scraper (Playwright) + Gemini/OpenAI vision OCR + text 
   skills/         local project skills
   specs/          design specs (input to plans)
 lib/
-  connectors/     pluggable source connectors (base, reddit, hn, facebook)
+  connectors/     pluggable source connectors (base, reddit, hn, facebook, x, instagram)
   embed.py        cached OpenAI embeddings
   cluster.py      HDBSCAN + KMeans fallback + entropy
   llm.py          strict-JSON chat wrapper
@@ -68,4 +68,10 @@ PYTHONPATH=. .venv/bin/python -m pytest tests/ -v
 - Env vars: never hardcode keys; use `python-dotenv`.
 
 ## Non-goals (won't build)
-Instagram, Twitter/X, auth, DB, Docker, hosted deployment.
+Auth, durable DB, Docker, hosted deployment.
+
+## Source reliability
+- Reddit + HN: reliable, always on.
+- Facebook (main target): fragile real scraper, needs `info/cookies.json`.
+- Twitter/X + Instagram: skeletons wired, awaiting creds. Return `[]` until configured.
+- See `.claude/memory/source-risks.md` for full caveats.

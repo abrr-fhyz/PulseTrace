@@ -13,6 +13,7 @@ Give it a topic. An LLM-driven agent generates search queries, pulls posts from 
 - [Features](#features)
 - [How it works](#how-it-works)
 - [Architecture](#architecture)
+- [Source reliability](#source-reliability)
 - [Quick start](#quick-start)
 - [Configuration](#configuration)
 - [Using the dashboard](#using-the-dashboard)
@@ -29,7 +30,7 @@ Give it a topic. An LLM-driven agent generates search queries, pulls posts from 
 ## Features
 
 - **Agentic research loop.** An LLM plans seed queries, inspects what came back, and proposes new queries to fill coverage gaps. Stops on entropy convergence, iteration budget, or LLM signal.
-- **Multi-source ingestion.** Pluggable connectors for Reddit (PRAW) and Hacker News (Algolia). Facebook scraper from v1 is preserved as an optional source.
+- **Multi-source ingestion.** Pluggable connectors for **Reddit**, **Hacker News**, **Facebook**, **Twitter / X**, and **Instagram**. Reliability varies dramatically — see [Source reliability](#source-reliability).
 - **Embedding-based topic discovery.** OpenAI `text-embedding-3-small` + HDBSCAN clustering (KMeans fallback). On-disk JSONL cache makes re-runs free.
 - **Per-cluster sentiment.** Batched LLM classification, aggregated to positive / neutral / negative ratios.
 - **Influence ranking.** Engagement + recency-decayed score surfaces the posts that actually moved the needle in each cluster.
@@ -67,7 +68,7 @@ Stop conditions: `MAX_ITERS = 4`, `MAX_POSTS = 500`, entropy delta `< 0.05`, or 
 
 | Layer | Module | Responsibility |
 |---|---|---|
-| Sources | `lib/connectors/{base,reddit,hn,facebook}.py` | Fetch normalized `Post` records for a query |
+| Sources | `lib/connectors/{base,reddit,hn,facebook,x,instagram}.py` | Fetch normalized `Post` records for a query |
 | Embedding | `lib/embed.py` | Cached OpenAI embeddings (SHA1-keyed JSONL) |
 | Clustering | `lib/cluster.py` | HDBSCAN with KMeans fallback, centroids, entropy |
 | LLM | `lib/llm.py` | Strict-JSON chat wrapper with one retry |
@@ -79,6 +80,41 @@ Stop conditions: `MAX_ITERS = 4`, `MAX_POSTS = 500`, entropy delta `< 0.05`, or 
 | Storage | `lib/store.py` | Per-run JSON files under `data/runs/<run_id>/` |
 | Server | `server.py` | Flask app + SSE |
 | UI | `templates/index.html` | Single-page dashboard (CDN libs, no build) |
+
+---
+
+## Source reliability
+
+Honest accounting. **Reddit and HN are the only sources you can trust without setup.**
+Everything else is best-effort and will return empty lists on failure rather than crash.
+
+| Source | Status | Auth | Failure mode |
+|---|---|---|---|
+| **Reddit** | reliable | `REDDIT_CLIENT_ID` + `REDDIT_CLIENT_SECRET` | rare rate-limit |
+| **Hacker News** | reliable | none | none |
+| **Facebook** | fragile (main target) | `info/cookies.json` from logged-in session | DOM drift, expired cookies, account flags |
+| **Twitter / X** | fragile, awaiting creds | `info/x_cookies.json` or `X_USERNAME`/`X_PASSWORD`/`X_EMAIL` | unofficial endpoints, suspension risk |
+| **Instagram** | fragile, awaiting creds | `info/ig_session_<user>` or `IG_USERNAME`/`IG_PASSWORD` | rate-limits, session bans |
+
+### What you should know before enabling FB / X / IG
+
+- **Use a throwaway account.** Facebook, X, and Instagram all flag and disable
+  accounts that look automated. Do not point this at your main account.
+- **Cookies / sessions go stale silently.** When a connector starts returning
+  empty results without errors, the auth is the first thing to check.
+- **DOM and endpoint drift.** The Facebook connector scrapes `[role="article"]`
+  nodes. The X connector uses unofficial endpoints via `twikit`. Both platforms
+  rotate these regularly; expect breakage every few weeks.
+- **Rate limits are real and unforgiving.** Especially Instagram. Cap your runs
+  and don't loop the same query.
+- **Graceful failure.** Every connector catches its own exceptions and returns
+  `[]`. The agent loop treats low recall as a signal to retry on remaining
+  working sources, so a broken source never kills a run.
+- **Twitter/X and Instagram are not live-tested in this repo.** Skeletons are
+  wired in. They will fire the moment you supply credentials. Until then they
+  return `[]` and the UI toggles are off by default.
+
+Full detail and mitigations in [`.claude/memory/source-risks.md`](.claude/memory/source-risks.md).
 
 ---
 
@@ -129,7 +165,14 @@ All configuration lives in `.env`. See `.env.example` for the full list.
 | `REDDIT_CLIENT_SECRET` | for Reddit source | PRAW auth |
 | `REDDIT_USER_AGENT` | optional | Defaults to `pulsetrace/0.2` |
 | `PULSETRACE_LLM_MODEL` | optional | Defaults to `gpt-4o-mini` |
-| `FACEBOOK_EMAIL` / `FACEBOOK_PASSWORD` | only for legacy FB scraper | v1 path |
+| `FACEBOOK_EMAIL` / `FACEBOOK_PASSWORD` | only for legacy v1 scraper | v1 path |
+| `X_USERNAME` / `X_PASSWORD` / `X_EMAIL` | for X source | optional — see Source reliability |
+| `IG_USERNAME` / `IG_PASSWORD` | for Instagram source | optional — see Source reliability |
+
+Session files (preferred over username/password where available):
+- Facebook: `info/cookies.json`
+- Twitter/X: `info/x_cookies.json`
+- Instagram: `info/ig_session_<username>` (instaloader format)
 
 Tunable constants live near the top of `lib/agent.py`: `MAX_ITERS`, `MAX_POSTS`, `EPS`.
 
@@ -277,7 +320,9 @@ LLM calls are mocked. Embedding cache means tests do not hit OpenAI.
 
 ## Limitations
 
-- **Facebook scraping is fragile.** Depends on a valid `info/cookies.json` and on Facebook's current DOM. Use Reddit / HN as primary sources.
+- **Facebook, X, and Instagram scraping is fragile.** See [Source reliability](#source-reliability) — these connectors are real attempts, not stubs, but they depend on cookies / sessions and on platform DOMs / endpoints that change without warning. Reddit + HN are the only sources that work out of the box.
+- **Twitter/X and Instagram are not live-tested.** Skeletons wired in and ready to fire on creds. No guarantees they survive their first real run without selector tweaks.
+- **Risk of account suspension.** All three closed platforms detect automation. Use throwaway accounts.
 - **No durable storage.** Runs are JSON files on disk. Wipe `data/runs/` to reset.
 - **OpenAI cost.** Hard-capped at 500 posts per run; the embedding cache reuses prior work. A typical run is a few cents.
 - **No auth.** The Flask server is for local use. Do not expose it to the internet without adding an auth layer.
