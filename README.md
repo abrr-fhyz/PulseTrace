@@ -40,24 +40,23 @@ Give it a topic. An LLM-driven agent generates search queries, pulls posts from 
 
 ## How it works
 
-```
-   topic
-     v
-  LLM seed queries  ----+
-     v                  |
-  connectors.fetch <----+
-     v
-   embeddings (cached)
-     v
-   HDBSCAN cluster
-     v
-   LLM label + sentiment + influence rank
-     v
-   converged? --no--> LLM proposes new queries --+
-     v yes                                       |
-   write JSON + FAISS index    <-----------------+
-     v
-   dashboard (SSE) + /ask (RAG)
+```mermaid
+flowchart TD
+    A([Topic]) --> B[LLM seed queries]
+    B --> C[connectors.fetch<br/>Reddit · HN · FB]
+    C --> D[Embeddings<br/>OpenAI · cached]
+    D --> E[HDBSCAN cluster<br/>KMeans fallback]
+    E --> F[LLM label + sentiment<br/>+ influence rank]
+    F --> G{Converged?<br/>entropy &lt; ε · iters · budget}
+    G -- no --> H[LLM proposes<br/>new queries]
+    H --> C
+    G -- yes --> I[(Persist<br/>posts.json · clusters.json<br/>index.faiss)]
+    I --> J[Dashboard SSE<br/>+ /ask RAG]
+
+    classDef store fill:#1a2332,stroke:#25324a,color:#e6edf7;
+    classDef decision fill:#131a26,stroke:#60a5fa,color:#e6edf7;
+    class I store;
+    class G decision;
 ```
 
 Stop conditions: `MAX_ITERS = 4`, `MAX_POSTS = 500`, entropy delta `< 0.05`, or LLM-signaled stop.
