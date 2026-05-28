@@ -1,15 +1,23 @@
-# Ignore environment variables file
+# Env
 .env
 
-# Ignore cookies file in the info directory
+# Cookies
 info/cookies.json
 
-# Python cache directories
+# Python
 __pycache__/
 */__pycache__
+*.pyc
+.venv/
+venv/
+.pytest_cache/
 
-# All images inside screenshots directory
+# Outputs
 screenshots/*
-
-# All files inside data directory
 data/*
+!data/.gitkeep
+*.faiss
+
+# Logs / harness
+.remember/
+init_plan.md

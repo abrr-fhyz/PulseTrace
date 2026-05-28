@@ -1,0 +1,12 @@
+flask>=3.0
+flask-cors>=4.0
+python-dotenv>=1.0
+playwright>=1.40
+openai>=1.50
+praw>=7.7
+requests>=2.31
+numpy>=1.26
+scikit-learn>=1.4
+hdbscan>=0.8.33
+faiss-cpu>=1.7.4
+pytest>=8.0
