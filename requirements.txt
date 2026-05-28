@@ -12,3 +12,4 @@ faiss-cpu>=1.7.4
 twikit>=2.0
 instaloader>=4.13
 pytest>=8.0
+pytest-timeout>=2.2

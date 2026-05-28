@@ -56,8 +56,14 @@ cp .env.example .env  # fill OPENAI_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SEC
 
 Tests:
 ```bash
-PYTHONPATH=. .venv/bin/python -m pytest tests/ -v
+.venv/bin/python -m pytest -v                       # default (mocked)
+PULSETRACE_BACKEND=ollama FB_INTEGRATION=1 \
+  .venv/bin/python -m pytest -v -m "slow or not slow"   # full live suite
 ```
+
+Backend selector: `PULSETRACE_BACKEND=openai|ollama` (default openai).
+Ollama path uses `lib/backend.py` for host/model/timeouts.
+Full Ollama + FB testing guide: `.claude/memory/testing-with-ollama.md`.
 
 ## Rules cheat sheet (full: `.claude/rules/`)
 - Small focused files. One responsibility per module.

@@ -296,15 +296,25 @@ Adding a new source:
 
 ## Testing
 
+Default suite (fully mocked, no external calls):
 ```bash
-PYTHONPATH=. .venv/bin/python -m pytest tests/ -v
+.venv/bin/python -m pytest -v
 ```
 
-External-API tests are gated behind env vars:
+`slow` tests (live external calls) are skipped by default. They cover:
 
-- `tests/test_reddit_connector.py::test_reddit_fetch_smoke` — runs only if `REDDIT_CLIENT_ID` is set.
+- Live Ollama backend (`tests/test_ollama_backend.py`)
+- Real Facebook Playwright scrape (`tests/test_fb_integration.py`)
+- Full FB + Ollama end-to-end pipeline (`tests/test_agent_e2e_fb_ollama.py`)
 
-LLM calls are mocked. Embedding cache means tests do not hit OpenAI.
+Setup, env vars, troubleshooting: see [`.claude/memory/testing-with-ollama.md`](.claude/memory/testing-with-ollama.md).
+
+Quick local-only run with Ollama + FB cookies in place:
+```bash
+export PULSETRACE_BACKEND=ollama
+export FB_INTEGRATION=1
+.venv/bin/python -m pytest -v -m "slow or not slow"
+```
 
 ---
 

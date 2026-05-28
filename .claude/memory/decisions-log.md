@@ -3,6 +3,8 @@
 Append-only. Newest at top. Format: date — decision — reason.
 
 ## 2026-05-29
+- **Add Ollama backend + slow-marked live test suite.** User has no OpenAI key, has 16 GB RAM + Ollama locally. `lib/backend.py` selects via `PULSETRACE_BACKEND`. New tests: `test_ollama_backend.py`, `test_fb_integration.py`, `test_agent_e2e_fb_ollama.py`, all behind `slow` marker; deselected by default. Setup in `.claude/memory/testing-with-ollama.md`. pytest-timeout=900.
+- **Embed cache key salted with backend tag.** Prevents cross-backend cache poisoning (OpenAI 1536d vs Ollama 768d).
 - **Add FB / X / IG connectors with honest caveats.** User confirmed FB is main target; willing to accept fragility on X / IG. Skeletons fail gracefully ([]). Live testing deferred for X / IG until creds available.
 - **FacebookConnector uses Playwright + DOM scrape, not OCR.** v1 OCR pipeline preserved as separate CLI path. v2 connector is lighter and per-query.
 - **Adopt `.claude/{memory,plans,rules,skills,specs}` layout.** Mirror readest-app convention. CLAUDE.md at root indexes it.
