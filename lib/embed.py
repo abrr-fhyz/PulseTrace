@@ -1,9 +1,16 @@
-"""Embedding client with sha1-keyed JSONL cache. Dispatches openai or ollama."""
+"""Embedding client with sha1-keyed JSONL cache.
+
+Routes through `backend.embed_provider()`. Local Ollama keeps its native
+`/api/embeddings` path; everything else uses the OpenAI-compatible
+`embeddings.create` endpoint.
+"""
 from __future__ import annotations
 import hashlib
 import json
 import os
 from pathlib import Path
+from typing import Any
+
 import numpy as np
 import requests
 
@@ -11,19 +18,19 @@ from . import backend
 
 
 CACHE_PATH = Path("data/embed_cache.jsonl")
-OPENAI_MODEL = "text-embedding-3-small"
-OPENAI_DIM = 1536
+OPENAI_MODEL = backend.PROVIDERS["openai"].embed_model or "text-embedding-3-small"
+OPENAI_DIM = backend.PROVIDERS["openai"].embed_dim
 
 
 def _backend_tag() -> str:
     if backend.is_ollama():
         return f"ollama:{backend.OLLAMA_EMBED_MODEL}"
-    return f"openai:{OPENAI_MODEL}"
+    p = backend.embed_provider()
+    return f"{p.name}:{p.embed_model}"
 
 
 def _key(text: str) -> str:
-    salted = f"{_backend_tag()}::{text}"
-    return hashlib.sha1(salted.encode("utf-8")).hexdigest()
+    return hashlib.sha1(f"{_backend_tag()}::{text}".encode("utf-8")).hexdigest()
 
 
 def _load_cache() -> dict[str, list[float]]:
@@ -47,24 +54,32 @@ def _append_cache(rows: list[tuple[str, list[float]]]) -> None:
             f.write(json.dumps({"k": k, "v": v}) + "\n")
 
 
-def _embed_openai(texts: list[str], batch: int) -> list[list[float]]:
+def _embed_openai_compat(p: backend.Provider, texts: list[str], batch: int) -> list[list[float]]:
     from openai import OpenAI
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
+    kwargs: dict[str, Any] = {"api_key": os.environ.get(p.key_env) or "EMPTY"}
+    if p.base_url:
+        kwargs["base_url"] = p.base_url
+    client = OpenAI(**kwargs)
     out: list[list[float]] = []
     for start in range(0, len(texts), batch):
         chunk = [t[:8000] for t in texts[start:start + batch]]
-        resp = client.embeddings.create(model=OPENAI_MODEL, input=chunk)
+        resp = client.embeddings.create(model=p.embed_model, input=chunk)
         out.extend(d.embedding for d in resp.data)
     return out
 
 
-def _embed_ollama(texts: list[str]) -> list[list[float]]:
+def _embed_ollama_native(texts: list[str]) -> list[list[float]]:
     url = f"{backend.OLLAMA_HOST}/api/embeddings"
+    headers: dict[str, str] = {}
+    key = os.environ.get("OLLAMA_API_KEY", "")
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
     out: list[list[float]] = []
     for t in texts:
         r = requests.post(
             url,
             json={"model": backend.OLLAMA_EMBED_MODEL, "prompt": t[:8000]},
+            headers=headers,
             timeout=backend.OLLAMA_EMBED_TIMEOUT,
         )
         r.raise_for_status()
@@ -83,8 +98,10 @@ def embed_texts(texts: list[str], batch: int = 100) -> np.ndarray:
 
     if missing_idx:
         chunk_texts = [texts[i] for i in missing_idx]
-        vectors = (_embed_ollama(chunk_texts) if backend.is_ollama()
-                   else _embed_openai(chunk_texts, batch))
+        if backend.is_ollama():
+            vectors = _embed_ollama_native(chunk_texts)
+        else:
+            vectors = _embed_openai_compat(backend.embed_provider(), chunk_texts, batch)
         new_rows: list[tuple[str, list[float]]] = []
         for i, v in zip(missing_idx, vectors):
             cache[keys[i]] = v
@@ -98,9 +115,9 @@ def embed_texts(texts: list[str], batch: int = 100) -> np.ndarray:
 
 
 def _probe_dim_or_zero() -> int:
-    """Best-effort: ask Ollama for the embed model's dim by embedding one token."""
     if not backend.is_ollama():
-        return OPENAI_DIM
+        p = backend.embed_provider()
+        return p.embed_dim or OPENAI_DIM
     try:
         r = requests.post(
             f"{backend.OLLAMA_HOST}/api/embeddings",

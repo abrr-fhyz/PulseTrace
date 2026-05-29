@@ -37,6 +37,8 @@ Examples:
     # Load environment variables
     try:
         load_dotenv()
+        from lib.keys import load as _load_api_keys
+        _load_api_keys()
         print(f"Environment loaded, executing {args.command}...")
     except Exception as e:
         print(f"Failed to load environment: {e}")

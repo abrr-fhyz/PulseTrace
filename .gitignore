@@ -1,5 +1,7 @@
 # Env
 .env
+.env.api_keys
+.env.*.local
 
 # Cookies
 info/cookies.json
@@ -21,3 +23,7 @@ data/*
 # Logs / harness
 .remember/
 init_plan.md
+
+# Test outputs
+test_artifacts/
+results/

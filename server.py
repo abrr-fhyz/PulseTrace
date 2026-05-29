@@ -14,6 +14,8 @@ import numpy as np
 from dotenv import load_dotenv
 
 load_dotenv()
+from lib.keys import load as _load_api_keys
+_load_api_keys()
 
 from lib.agent import run_agent
 from lib.events import BUS, sse_format
