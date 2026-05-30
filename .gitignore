@@ -29,3 +29,4 @@ init_plan.md
 test_artifacts/
 results/
 info/cookies.stale
+data/event_logs/

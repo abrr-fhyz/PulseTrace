@@ -396,15 +396,16 @@ def run_command():
 
 if __name__ == "__main__":
     import os as _os
-    # Template auto-reload works without debug. We avoid debug+reloader by
-    # default because the Werkzeug reloader restarts the process on code
-    # edits, killing the long-lived SSE stream the dashboard subscribes to.
-    # Opt in for Python hot-reload with PT_DEBUG=1 (run will drop SSE on
-    # restart — fine for editing UI/code, not for long runs).
-    debug = _os.environ.get("PT_DEBUG", "0") == "1"
+    # debug=True keeps the Werkzeug error pages + verbose request log so
+    # you can see what the server is doing. use_reloader stays OFF
+    # because the reloader restarts the process on code edits and that
+    # kills the long-lived /events SSE stream mid-run. Opt in to the
+    # reloader with PT_RELOAD=1 when you actively want hot-reload (will
+    # drop in-flight runs).
+    reload_on = _os.environ.get("PT_RELOAD", "0") == "1"
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     app.jinja_env.auto_reload = True
     print(f"PulseTrace v2 -> http://localhost:5000 "
-          f"(templates auto-reload; PT_DEBUG={int(debug)})")
-    app.run(debug=debug, host="0.0.0.0", port=5000, threaded=True,
-            use_reloader=debug)
+          f"(debug=on, reload={int(reload_on)}; templates auto-reload)")
+    app.run(debug=True, host="0.0.0.0", port=5000, threaded=True,
+            use_reloader=reload_on)
