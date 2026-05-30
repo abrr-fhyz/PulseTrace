@@ -360,7 +360,8 @@
     <span class="muted">Agentic sentiment intelligence · multi-source</span>
     <span id="byok-badge" class="byok-badge" style="display:none"></span>
     <span id="run-pill" class="pill" style="display:none"></span>
-    <a id="briefing-link" class="pill" href="#" target="_blank" rel="noopener"
+    <a id="briefing-link" class="pill" href="#" data-kind="pdf"
+       onclick="downloadBriefing(event)"
        style="display:none">📄 Download briefing PDF</a>
     <span class="nav-back" onclick="goto('landing')">← home</span>
     <span class="nav-back" onclick="goto('byok')" style="margin-left:8px">⚙ BYOK</span>
@@ -817,6 +818,37 @@ async function start() {
   subscribe(runId);
 }
 
+async function downloadBriefing(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const link = $("#briefing-link");
+  const href = link.getAttribute("href");
+  if (!href || href === "#") return;
+  const kind = link.getAttribute("data-kind") || "pdf";
+  if (kind === "html") { window.open(href, "_blank", "noopener"); return; }
+  const orig = link.textContent;
+  link.textContent = "⏳ preparing…";
+  try {
+    const r = await fetch(href, { credentials: "same-origin" });
+    if (!r.ok) {
+      link.textContent = "⚠ " + r.status;
+      setTimeout(() => link.textContent = orig, 2500);
+      return;
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "briefing-" + (runId || "run") + ".pdf";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (err) {
+    link.textContent = "⚠ failed";
+    setTimeout(() => link.textContent = orig, 2500);
+    return;
+  }
+  link.textContent = orig;
+}
+
 async function revealBriefingIfReady(rid) {
   if (!rid) return;
   try {
@@ -825,6 +857,7 @@ async function revealBriefingIfReady(rid) {
     const m = await r.json();
     const link = $("#briefing-link");
     link.href = "/run/" + encodeURIComponent(rid) + (m.pdf ? "/briefing/pdf" : "/briefing/html");
+    link.setAttribute("data-kind", m.pdf ? "pdf" : "html");
     link.textContent = m.pdf ? "📄 Download briefing PDF" : "📄 View briefing HTML";
     link.style.display = "inline-block";
   } catch (e) {}
@@ -891,6 +924,7 @@ function handle(ev) {
       const href = ev.pdf || ev.html;
       if (href) {
         link.href = href;
+        link.setAttribute("data-kind", ev.pdf ? "pdf" : "html");
         link.textContent = ev.pdf ? "📄 Download briefing PDF" : "📄 View briefing HTML";
         link.style.display = "inline-block";
       }
