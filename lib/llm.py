@@ -1,8 +1,10 @@
-"""Strict-JSON chat wrapper with one retry.
+"""Strict-JSON chat wrapper with stage-aware provider cascade.
 
-OpenAI-compatible providers (openai, groq, openrouter, gemini, pollen, llm7,
-huggingface, ollama-cloud) share one client path. Native local Ollama keeps a
-direct `/api/chat` call for its `format=json` mode.
+`chat_json(sys, user, stage="seed")` walks `lib.dispatch.cascade_for_stage()`,
+trying each provider until one returns parseable JSON. Retryable errors
+(quota, auth, model_not_found, 5xx, timeouts) skip to the next provider;
+caller bugs bubble immediately. Native local Ollama keeps its dedicated
+`/api/chat` path because it offers a real `format=json` mode.
 """
 from __future__ import annotations
 import json
@@ -12,7 +14,7 @@ from typing import Any
 import requests
 from openai import OpenAI
 
-from . import backend
+from . import backend, dispatch
 
 
 def _client_for(p: backend.Provider) -> OpenAI:
@@ -28,7 +30,6 @@ def _client_for(p: backend.Provider) -> OpenAI:
 def _chat_openai_compat(p: backend.Provider, system: str, user: str, max_tokens: int) -> Any:
     client = _client_for(p)
     last_err: Exception | None = None
-    # Gemini's OpenAI shim historically chokes on response_format; try strict then plain.
     formats: list[dict[str, Any] | None] = [{"type": "json_object"}, None]
     for fmt in formats:
         for _ in range(2):
@@ -52,7 +53,7 @@ def _chat_openai_compat(p: backend.Provider, system: str, user: str, max_tokens:
                 continue
             except Exception as e:
                 last_err = e
-                break  # try next format
+                break
     raise last_err or ValueError(f"{p.name}: no parseable JSON")
 
 
@@ -99,10 +100,33 @@ def _chat_ollama_native(system: str, user: str, max_tokens: int) -> Any:
     raise last_err or ValueError("Ollama returned no parseable JSON")
 
 
-def chat_json(system: str, user: str, max_tokens: int = 800) -> Any:
-    if backend.is_ollama():
+def _dispatch_one(p: backend.Provider, system: str, user: str, max_tokens: int) -> Any:
+    if p.name == "ollama":
         return _chat_ollama_native(system, user, max_tokens)
-    return _chat_openai_compat(backend.chat_provider(), system, user, max_tokens)
+    return _chat_openai_compat(p, system, user, max_tokens)
 
 
-MODEL = backend.PROVIDERS["openai"].chat_model
+def chat_json(system: str, user: str, max_tokens: int = 800, *, stage: str = "default") -> Any:
+    chain = dispatch.cascade_for_stage(stage)
+    debug = os.environ.get("PT_LLM_DEBUG") == "1"
+    if debug:
+        print(f"[llm] stage={stage} chain={[p.name for p in chain]}", flush=True)
+    last_err: Exception | None = None
+    for p in chain:
+        try:
+            r = _dispatch_one(p, system, user, max_tokens)
+            if debug:
+                print(f"[llm] stage={stage} OK via {p.name}", flush=True)
+            return r
+        except Exception as e:
+            last_err = e
+            if debug:
+                print(f"[llm] stage={stage} {p.name} FAIL: "
+                      f"{type(e).__name__}: {str(e)[:140]}", flush=True)
+            if dispatch.is_retryable(e):
+                continue
+            raise
+    raise last_err or RuntimeError("cascade exhausted with no providers")
+
+
+MODEL = backend.PROVIDERS["gemini"].chat_model

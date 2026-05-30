@@ -18,8 +18,7 @@ from . import backend
 
 
 CACHE_PATH = Path("data/embed_cache.jsonl")
-OPENAI_MODEL = backend.PROVIDERS["openai"].embed_model or "text-embedding-3-small"
-OPENAI_DIM = backend.PROVIDERS["openai"].embed_dim
+DEFAULT_EMBED_DIM = backend.PROVIDERS["gemini"].embed_dim or 768
 
 
 def _backend_tag() -> str:
@@ -89,7 +88,7 @@ def _embed_ollama_native(texts: list[str]) -> list[list[float]]:
 
 def embed_texts(texts: list[str], batch: int = 100) -> np.ndarray:
     if not texts:
-        dim = OPENAI_DIM if backend.is_openai() else _probe_dim_or_zero()
+        dim = _probe_dim_or_zero() or DEFAULT_EMBED_DIM
         return np.zeros((0, max(dim, 1)), dtype=np.float32)
 
     cache = _load_cache()
@@ -117,7 +116,7 @@ def embed_texts(texts: list[str], batch: int = 100) -> np.ndarray:
 def _probe_dim_or_zero() -> int:
     if not backend.is_ollama():
         p = backend.embed_provider()
-        return p.embed_dim or OPENAI_DIM
+        return p.embed_dim or DEFAULT_EMBED_DIM
     try:
         r = requests.post(
             f"{backend.OLLAMA_HOST}/api/embeddings",

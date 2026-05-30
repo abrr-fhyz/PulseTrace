@@ -14,7 +14,7 @@ def score_batch(theme: str, texts: list[str]) -> list[str]:
         return []
     enum = "\n".join(f"[{i}] {t[:400]}" for i, t in enumerate(texts))
     try:
-        out = chat_json(SYS, f"Theme: {theme}\nPosts:\n{enum}", max_tokens=600)
+        out = chat_json(SYS, f"Theme: {theme}\nPosts:\n{enum}", max_tokens=600, stage="stance")
     except Exception:
         return ["neu"] * len(texts)
     by_i = {int(it.get("i", -1)): it.get("s", "neu") for it in out.get("items", [])}

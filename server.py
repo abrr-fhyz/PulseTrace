@@ -19,12 +19,63 @@ _load_api_keys()
 
 from lib.agent import run_agent
 from lib.events import BUS, sse_format
-from lib.store import read_json
+from lib.store import read_json, new_run_id
 from lib.rag import ask as rag_ask
+from lib import backend
 
 
 app = Flask(__name__)
 CORS(app)
+
+
+BYOK_PROVIDER_REGISTRY = [
+    {"id": "gemini",      "label": "Google Gemini",        "enabled": True,
+     "key_hint": "AIza... or AQ.Ab...", "key_env": "GEMINI_API_KEY",
+     "validate_url": "https://generativelanguage.googleapis.com/v1beta/models?key={key}"},
+    {"id": "groq",        "label": "Groq",                 "enabled": False,
+     "key_hint": "gsk_...", "key_env": "GROQ_API_KEY"},
+    {"id": "openrouter",  "label": "OpenRouter",           "enabled": False,
+     "key_hint": "sk-or-...", "key_env": "OPENROUTER_API_KEY"},
+    {"id": "llm7",        "label": "LLM7",                 "enabled": False,
+     "key_hint": "base64-ish token", "key_env": "LLM7_API_KEY"},
+    {"id": "huggingface", "label": "Hugging Face",         "enabled": False,
+     "key_hint": "hf_...", "key_env": "HUGGINGFACE_TOKEN"},
+    {"id": "pollen",      "label": "Pollinations",         "enabled": False,
+     "key_hint": "sk_...", "key_env": "POLLEN_API_KEY"},
+    {"id": "ollama",      "label": "Ollama (local/cloud)", "enabled": False,
+     "key_hint": "optional", "key_env": "OLLAMA_API_KEY"},
+]
+_BYOK_BY_ID = {p["id"]: p for p in BYOK_PROVIDER_REGISTRY}
+
+
+def _byok_apply(byok: dict | None) -> dict[str, str]:
+    """Inject BYOK key into os.environ for the run thread. Returns prior values
+    so the caller can restore them after. Returns {} if no byok."""
+    if not byok:
+        return {}
+    pid = (byok.get("provider") or "").lower().strip()
+    key = (byok.get("api_key") or "").strip()
+    spec = _BYOK_BY_ID.get(pid)
+    if not spec or not spec["enabled"] or not key:
+        return {}
+    prior: dict[str, str] = {
+        "PULSETRACE_BACKEND": os.environ.get("PULSETRACE_BACKEND", ""),
+        spec["key_env"]: os.environ.get(spec["key_env"], ""),
+    }
+    os.environ["PULSETRACE_BACKEND"] = pid
+    os.environ[spec["key_env"]] = key
+    if pid == "gemini":
+        prior["GOOGLE_API_KEY"] = os.environ.get("GOOGLE_API_KEY", "")
+        os.environ["GOOGLE_API_KEY"] = key
+    return prior
+
+
+def _byok_restore(prior: dict[str, str]) -> None:
+    for k, v in prior.items():
+        if v:
+            os.environ[k] = v
+        else:
+            os.environ.pop(k, None)
 
 
 @app.route("/")
@@ -36,28 +87,79 @@ def index():
 def start_run():
     data = request.get_json(force=True, silent=True) or {}
     topic = (data.get("topic") or "").strip()
-    sources = data.get("sources") or ["reddit", "hn"]
+    sources = data.get("sources") or ["facebook"]
+    byok = data.get("byok") or None
     if not topic:
         return jsonify({"error": "topic required"}), 400
 
-    holder: dict = {}
+    if byok:
+        pid = (byok.get("provider") or "").lower().strip()
+        spec = _BYOK_BY_ID.get(pid)
+        if not spec:
+            return jsonify({"error": f"unknown provider {pid!r}"}), 400
+        if not spec["enabled"]:
+            return jsonify({"error": f"{spec['label']} is not yet wired "
+                            "(Gemini-only beta)"}), 400
+        if not (byok.get("api_key") or "").strip():
+            return jsonify({"error": "api_key required when byok set"}), 400
+
+    run_id = new_run_id()
 
     def go():
+        prior = _byok_apply(byok)
         try:
-            holder["run_id"] = run_agent(topic, sources)
+            run_agent(topic, sources, run_id=run_id)
         except Exception as e:
-            holder["error"] = str(e)
+            BUS.publish(run_id, {"type": "error", "err": str(e)})
+        finally:
+            _byok_restore(prior)
 
     threading.Thread(target=go, daemon=True).start()
+    return jsonify({"run_id": run_id, "byok": bool(byok)})
 
-    # Agent publishes "started" with run_id immediately; we wait briefly to capture it.
-    for _ in range(40):
-        if holder.get("run_id") or holder.get("error"):
-            break
-        time.sleep(0.05)
-    if holder.get("error") and not holder.get("run_id"):
-        return jsonify({"error": holder["error"]}), 500
-    return jsonify({"run_id": holder.get("run_id")})
+
+@app.route("/providers")
+def list_providers():
+    """Public registry of providers offered in the BYOK UI."""
+    return jsonify({
+        "providers": [
+            {"id": p["id"], "label": p["label"], "enabled": p["enabled"],
+             "key_hint": p["key_hint"]}
+            for p in BYOK_PROVIDER_REGISTRY
+        ],
+        "default_provider": "gemini",
+    })
+
+
+@app.route("/byok/validate", methods=["POST"])
+def byok_validate():
+    """Ping the provider's API with the supplied key. Returns {ok:true} or
+    {ok:false, error:...}. Only Gemini is wired right now; others reject."""
+    data = request.get_json(force=True, silent=True) or {}
+    pid = (data.get("provider") or "").lower().strip()
+    key = (data.get("api_key") or "").strip()
+    spec = _BYOK_BY_ID.get(pid)
+    if not spec:
+        return jsonify({"ok": False, "error": f"unknown provider {pid!r}"}), 400
+    if not spec["enabled"]:
+        return jsonify({"ok": False, "error": f"{spec['label']} not yet wired "
+                        "(Gemini-only beta)"}), 400
+    if not key:
+        return jsonify({"ok": False, "error": "api_key required"}), 400
+
+    import requests as _rq
+    try:
+        url = spec["validate_url"].format(key=key)
+        r = _rq.get(url, timeout=10)
+        if r.status_code == 200:
+            return jsonify({"ok": True, "provider": pid})
+        try:
+            msg = r.json().get("error", {}).get("message", r.text[:200])
+        except Exception:
+            msg = r.text[:200]
+        return jsonify({"ok": False, "error": f"HTTP {r.status_code}: {msg}"}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}"}), 500
 
 
 @app.route("/events")

@@ -20,7 +20,7 @@ def _run_id_with_data(monkeypatch, chat: str, embed: str):
     from lib import agent, store
     monkeypatch.setattr(agent, "MAX_ITERS", 2)
     monkeypatch.setattr(agent, "MAX_POSTS", 30)
-    rid = agent.run_agent(TOPIC, ["hn"])
+    rid = agent.run_agent(TOPIC, ["facebook"])
     posts = store.read_json(rid, "posts.json") or []
     if len(posts) < 4:
         pytest.skip(f"only {len(posts)} posts collected for {TOPIC!r} — "

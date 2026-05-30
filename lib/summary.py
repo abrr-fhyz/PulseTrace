@@ -1,20 +1,33 @@
+"""V1 Facebook posts summary — Gemini chat via lib.llm cascade.
+
+Converted from direct OpenAI gpt-4o calls to chat_json() which walks the
+multi-provider cascade (gemini, groq, llm7, etc.). Output is a JSON object
+with one field; we extract the plain text and write the same files.
+"""
+from __future__ import annotations
 import json
-from openai import OpenAI
 import os
 
+from .llm import chat_json
+
+
+SYS = (
+    "You are an expert social media analyst. Analyze Facebook posts data and "
+    "return ONLY a JSON object of the shape {\"summary\": \"...\"}, where "
+    "summary is exactly two well-structured paragraphs totaling 150-200 words. "
+    "Focus on: general highlights and most popular posts (reactions, comments, "
+    "shares), overall mood (Optimistic, Pessimistic, Skeptical, Ironic, etc.), "
+    "notable trends/themes/patterns, observations about engagement."
+)
+
+
 class FacebookPostsSummaryAnalyzer:
-    def __init__(self, api_key):
-        """Initialize the Facebook Posts Summary Analyzer."""
+    def __init__(self, api_key: str | None = None):
         self.api_key = api_key
-        if not self.api_key:
-            raise ValueError("No OpenAI API key provided")
-        
-        self.client = OpenAI(api_key=self.api_key)
-    
-    def load_posts_data(self, file_path='data/facebook_posts_all.json'):
-        """Load the Facebook posts JSON data."""
+
+    def load_posts_data(self, file_path: str = "data/facebook_posts_all.json"):
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             print(f"Loaded {len(data)} posts from {file_path}")
             return data
@@ -27,115 +40,66 @@ class FacebookPostsSummaryAnalyzer:
         except Exception as e:
             print(f"Error loading file: {e}")
             return None
-    
-    def prepare_posts_text(self, posts_data):
-        """Convert posts data to readable text format for analysis."""
+
+    def prepare_posts_text(self, posts_data) -> str:
         if not posts_data:
             return ""
-        
-        posts_text = "Facebook Posts Data for Analysis:\n\n"
-        
+        out = ["Facebook Posts Data for Analysis:\n"]
         for i, post in enumerate(posts_data, 1):
-            posts_text += f"Post {i}:\n"
-            posts_text += f"Author: {post.get('author', 'N/A')}\n"
-            posts_text += f"Shared by: {post.get('shared_by', 'N/A')}\n"
-            posts_text += f"Content: {post.get('post_content', 'N/A')}\n"
-            posts_text += f"Reactions: {post.get('reactions', 'N/A')}\n"
-            posts_text += f"Comments: {post.get('comments', 'N/A')}\n"
-            posts_text += f"Shares: {post.get('shares', 'N/A')}\n"
-            posts_text += f"Image Description: {post.get('image_description', 'N/A')}\n"
-            posts_text += "-" * 50 + "\n"
-        
-        return posts_text
-    
-    def analyze_posts_summary(self, posts_data):
-        """Send posts to GPT-4o and get summary analysis."""
+            out.append(f"Post {i}:")
+            out.append(f"Author: {post.get('author', 'N/A')}")
+            out.append(f"Shared by: {post.get('shared_by', 'N/A')}")
+            out.append(f"Content: {post.get('post_content', 'N/A')}")
+            out.append(f"Reactions: {post.get('reactions', 'N/A')}")
+            out.append(f"Comments: {post.get('comments', 'N/A')}")
+            out.append(f"Shares: {post.get('shares', 'N/A')}")
+            out.append(f"Image Description: {post.get('image_description', 'N/A')}")
+            out.append("-" * 50)
+        return "\n".join(out)
+
+    def analyze_posts_summary(self, posts_data) -> str:
         if not posts_data:
             return "No data available for analysis."
-        
         posts_text = self.prepare_posts_text(posts_data)
-        
-        # Truncate if too long (GPT has token limits)
-        if len(posts_text) > 50000:  # Rough character limit
+        if len(posts_text) > 50000:
             posts_text = posts_text[:50000] + "\n[Content truncated due to length]"
             print("Content truncated due to length limitations")
-        
         try:
-            print("Sending data to GPT-4o for analysis...")
-            
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert social media analyst. Analyze Facebook posts data and provide insights about trends, popular posts, overall mood, and notable patterns."
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""Analyze the following Facebook posts data and provide a comprehensive summary in exactly 2 paragraphs (150-200 words total).
-
-Focus on:
-1. General highlights and most popular posts (based on reactions, comments, shares)
-2. Overall mood of the posts (Optimistic, Pessimistic, Skeptical, Ironic, etc.)
-3. Notable trends, themes, or patterns
-4. Any interesting observations about user engagement
-
-Data to analyze:
-
-{posts_text}
-
-Please provide your analysis in exactly 2 well-structured paragraphs totaling 150-200 words."""
-                    }
-                ],
-                max_completion_tokens=300,
-                temperature=0.7
-            )
-            
-            summary = response.choices[0].message.content
+            print("Sending data to cascade LLM for analysis...")
+            out = chat_json(SYS,
+                            f"Analyze the following Facebook posts data:\n\n{posts_text}",
+                            max_tokens=500, stage="rag")
+            summary = str(out.get("summary", "")).strip()
             print("Analysis completed successfully!")
-            return summary.strip()
-            
+            return summary or "No summary returned."
         except Exception as e:
             print(f"Error during analysis: {e}")
-            return f"Error occurred during analysis: {str(e)}"
-    
-    def save_summary(self, summary, output_path='data/facebook_posts_summary.txt'):
-        """Save the summary to a text file."""
+            return f"Error occurred during analysis: {e}"
+
+    def save_summary(self, summary: str, output_path: str = "data/facebook_posts_summary.txt") -> bool:
         try:
-            # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write("Facebook Posts Analysis Summary\n")
                 f.write("=" * 40 + "\n\n")
                 f.write(summary)
-            
             print(f"Summary saved to {output_path}")
             return True
         except Exception as e:
             print(f"Error saving summary: {e}")
             return False
-    
-    def run_analysis(self, input_file='data/facebook_posts_all.json', output_file='data/facebook_posts_summary.txt'):
-        """Run complete analysis pipeline."""
+
+    def run_analysis(self, input_file: str = "data/facebook_posts_all.json",
+                     output_file: str = "data/facebook_posts_summary.txt"):
         print("Starting Facebook posts analysis...")
-        
-        # Load posts data
         posts_data = self.load_posts_data(input_file)
         if not posts_data:
             return None
-        
-        # Analyze with GPT-4o
         summary = self.analyze_posts_summary(posts_data)
-        
-        # Save summary
         self.save_summary(summary, output_file)
-        
-        # Print summary to console
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("FACEBOOK POSTS ANALYSIS SUMMARY")
-        print("="*50)
+        print("=" * 50)
         print(summary)
-        print("="*50)
-        
+        print("=" * 50)
         return summary

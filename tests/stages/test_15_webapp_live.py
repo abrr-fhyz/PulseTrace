@@ -61,7 +61,7 @@ def test_webapp_index_loads():
 
 def test_webapp_full_topic_flow():
     """POST /run -> wait -> GET /run-info -> GET /graph -> POST /ask."""
-    payload = {"topic": TOPIC, "sources": ["hn"]}
+    payload = {"topic": TOPIC, "sources": ["facebook"]}
     r = requests.post(f"{WEBAPP_URL}/run", json=payload, timeout=15)
     assert r.status_code == 200, f"/run returned {r.status_code}: {r.text[:200]}"
     body = r.json()

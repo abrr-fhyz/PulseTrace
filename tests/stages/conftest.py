@@ -27,7 +27,7 @@ _load_api_keys(REPO_ROOT / ".env.api_keys")
 
 TOPIC = os.environ.get("PT_TEST_TOPIC", "Donald Trump Buffalo")
 CHAT_PROVIDERS = ["gemini", "groq", "openrouter", "llm7", "huggingface", "pollen"]
-EMBED_PROVIDERS = ["gemini", "ollama", "openai"]
+EMBED_PROVIDERS = ["gemini", "ollama"]
 RESULTS_DIR = REPO_ROOT / "results"
 
 # Configurable RAG questions for stage 14. Override with PT_RAG_QUESTIONS as
@@ -52,7 +52,7 @@ def pick_chat_provider() -> str | None:
 
 
 def pick_embed_provider() -> str | None:
-    """Prefer local Ollama (free + already proven), then OpenAI, then Gemini."""
+    """Prefer local Ollama (free + already proven), else Gemini."""
     import requests
     try:
         host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
@@ -60,8 +60,6 @@ def pick_embed_provider() -> str | None:
             return "ollama"
     except Exception:
         pass
-    if has_key("openai"):
-        return "openai"
     if has_key("gemini"):
         return "gemini"
     return None

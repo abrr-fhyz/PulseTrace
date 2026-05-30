@@ -24,8 +24,6 @@ def _pick_embed() -> str | None:
             return "ollama"
     except Exception:
         pass
-    if has_key("openai"):
-        return "openai"
     if has_key("gemini"):
         return "gemini"
     return None

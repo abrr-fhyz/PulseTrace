@@ -14,7 +14,7 @@ def label_cluster(samples: list[str]) -> dict:
         return {"label": "Empty", "desc": ""}
     body = "\n\n---\n\n".join(s[:500] for s in samples[:8])
     try:
-        out = chat_json(SYS, f"Posts in this cluster:\n{body}")
+        out = chat_json(SYS, f"Posts in this cluster:\n{body}", stage="label")
     except Exception:
         return {"label": "Unlabeled", "desc": ""}
     return {

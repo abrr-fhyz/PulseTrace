@@ -1,8 +1,9 @@
 """LLM + embedding backend selector.
 
-PULSETRACE_BACKEND ∈ {openai, ollama, gemini, openrouter, groq, pollen, llm7, huggingface}
+PULSETRACE_BACKEND ∈ {gemini, ollama, openrouter, groq, pollen, llm7, huggingface}
+Default unset → multi-provider cascade in lib/dispatch.py.
 PULSETRACE_EMBED_BACKEND overrides backend for embeddings (defaults to chat backend,
-falling back to openai if chosen provider lacks embedding support).
+falling back to gemini if chosen provider lacks embedding support).
 """
 from __future__ import annotations
 import os
@@ -23,14 +24,6 @@ class Provider:
 _OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
 
 PROVIDERS: dict[str, Provider] = {
-    "openai": Provider(
-        name="openai",
-        base_url=None,
-        key_env="OPENAI_API_KEY",
-        chat_model=os.environ.get("PULSETRACE_LLM_MODEL", "gpt-4o-mini"),
-        embed_model="text-embedding-3-small",
-        embed_dim=1536,
-    ),
     "ollama": Provider(
         name="ollama",
         base_url=f"{_OLLAMA_HOST}/v1",
@@ -43,7 +36,7 @@ PROVIDERS: dict[str, Provider] = {
         name="gemini",
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         key_env="GEMINI_API_KEY",
-        chat_model=os.environ.get("GEMINI_CHAT_MODEL", "gemini-1.5-flash"),
+        chat_model=os.environ.get("GEMINI_CHAT_MODEL", "gemini-2.0-flash"),
         embed_model=os.environ.get("GEMINI_EMBED_MODEL", "gemini-embedding-001"),
         embed_dim=768,
     ),
@@ -92,15 +85,11 @@ PROVIDERS: dict[str, Provider] = {
 
 
 def name() -> str:
-    return (os.environ.get("PULSETRACE_BACKEND", "openai") or "openai").lower().strip()
+    return (os.environ.get("PULSETRACE_BACKEND", "gemini") or "gemini").lower().strip()
 
 
 def is_ollama() -> bool:
     return name() == "ollama"
-
-
-def is_openai() -> bool:
-    return name() == "openai"
 
 
 def chat_provider() -> Provider:
@@ -111,12 +100,12 @@ def chat_provider() -> Provider:
 
 
 def embed_provider() -> Provider:
-    """Provider for embeddings. Falls back to openai if chat provider has none."""
+    """Provider for embeddings. Falls back to gemini if chat provider has none."""
     override = (os.environ.get("PULSETRACE_EMBED_BACKEND") or "").lower().strip()
     candidate = PROVIDERS.get(override) if override else chat_provider()
     if candidate and candidate.embed_model:
         return candidate
-    return PROVIDERS["openai"]
+    return PROVIDERS["gemini"]
 
 
 # Back-compat constants (still used by lib.llm / lib.embed for native ollama path).

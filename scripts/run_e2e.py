@@ -33,7 +33,7 @@ from pathlib import Path
 
 
 # ─── Configuration — edit these ────────────────────────────────────────────
-TOPIC = "Bangladesh Qurbani 2026 Donald trump Buffalow"
+TOPIC = "openai codex"
 ONLY_PHASES: list[str] = []        # e.g. ["02", "03"] to run a subset
 STOP_ON_FAIL = False               # True = abort after first FAIL
 RAG_QUESTIONS = [                  # questions Stage 14 will run + save to results/
@@ -66,6 +66,7 @@ PHASE_LABELS = {
     "13": "entropy + convergence",
     "14": "RAG Q&A -> results JSON",
     "15": "live webapp (HTTP)",
+    "16": "provider cascade",
 }
 
 

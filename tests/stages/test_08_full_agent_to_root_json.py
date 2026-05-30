@@ -40,8 +40,6 @@ def _pick_embed() -> str | None:
             return "ollama"
     except Exception:
         pass
-    if has_key("openai"):
-        return "openai"
     if has_key("gemini"):
         return "gemini"
     return None
@@ -66,7 +64,7 @@ def test_full_agent_writes_root_json(monkeypatch):
     monkeypatch.setattr(agent, "MAX_ITERS", 2)
     monkeypatch.setattr(agent, "MAX_POSTS", 40)
 
-    sources = ["hn", "facebook"]
+    sources = ["facebook"]
     t0 = time.time()
     run_id = agent.run_agent(TOPIC, sources)
     elapsed = time.time() - t0

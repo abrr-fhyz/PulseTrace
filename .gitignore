@@ -2,6 +2,7 @@
 .env
 .env.api_keys
 .env.*.local
+.env.*
 
 # Cookies
 info/cookies.json

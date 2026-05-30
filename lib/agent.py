@@ -43,7 +43,7 @@ NEXT_SYS = (
 
 def _llm_seed(topic: str) -> list[str]:
     try:
-        out = chat_json(SEED_SYS, f"Topic: {topic}")
+        out = chat_json(SEED_SYS, f"Topic: {topic}", stage="seed")
     except Exception:
         return [topic]
     qs = [str(q) for q in out.get("queries", []) if q]
@@ -52,7 +52,7 @@ def _llm_seed(topic: str) -> list[str]:
 
 def _llm_next(topic: str, labels: list[str]) -> dict:
     try:
-        return chat_json(NEXT_SYS, f"Topic: {topic}\nLabels so far:\n- " + "\n- ".join(labels))
+        return chat_json(NEXT_SYS, f"Topic: {topic}\nLabels so far:\n- " + "\n- ".join(labels), stage="next")
     except Exception:
         return {"action": "stop", "queries": []}
 
@@ -77,9 +77,9 @@ def _fetch_all(queries: list[tuple[str, str]], limit: int) -> list[Post]:
     return posts
 
 
-def run_agent(topic: str, sources: list[str]) -> str:
-    run_id = new_run_id()
-    sources = [s for s in sources if s in SOURCES] or ["hn"]
+def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
+    run_id = run_id or new_run_id()
+    sources = [s for s in sources if s in SOURCES] or ["facebook"]
     BUS.publish(run_id, {"type": "started", "run_id": run_id, "topic": topic, "sources": sources})
 
     seen: dict[str, Post] = {}

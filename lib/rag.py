@@ -49,7 +49,7 @@ def ask(run_id: str, question: str, k: int = 8) -> dict:
         f"[{pid}] {posts[pid]['text'][:600]}" for pid in hits if pid in posts
     )
     try:
-        out = chat_json(ASK_SYS, f"Question: {question}\n\nPosts:\n{context}")
+        out = chat_json(ASK_SYS, f"Question: {question}\n\nPosts:\n{context}", stage="rag")
     except Exception as e:
         return {"answer": f"LLM error: {e}", "citations": [], "retrieved": hits}
     return {
