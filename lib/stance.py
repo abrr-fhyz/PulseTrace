@@ -17,7 +17,17 @@ def score_batch(theme: str, texts: list[str]) -> list[str]:
         out = chat_json(SYS, f"Theme: {theme}\nPosts:\n{enum}", max_tokens=600, stage="stance")
     except Exception:
         return ["neu"] * len(texts)
-    by_i = {int(it.get("i", -1)): it.get("s", "neu") for it in out.get("items", [])}
+    items = out.get("items", [])
+    if not isinstance(items, list):
+        return ["neu"] * len(texts)
+    by_i: dict[int, str] = {}
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        try:
+            by_i[int(it.get("i", -1))] = str(it.get("s", "neu"))
+        except (TypeError, ValueError):
+            continue
     return [by_i.get(i, "neu") for i in range(len(texts))]
 
 

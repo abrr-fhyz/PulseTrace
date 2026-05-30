@@ -164,13 +164,19 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
         for cid in sorted(cents.keys()):
             members = [posts[i] for i, lab in enumerate(labels) if lab == cid]
             sample = [m.text for m in members[:8]]
-            meta = label_cluster(sample)
-            sent = cluster_sentiment(meta["label"], [m.text for m in members])
+            try:
+                meta = label_cluster(sample)
+            except Exception as e:
+                meta = {"label": f"cluster {cid}", "desc": f"label_error: {e}"}
+            try:
+                sent = cluster_sentiment(meta["label"], [m.text for m in members])
+            except Exception as e:
+                sent = {"pos": 0.0, "neu": 1.0, "neg": 0.0, "error": str(e)}
             tops = top_n(members, n=5)
             cluster_meta.append({
                 "id": int(cid),
-                "label": meta["label"],
-                "desc": meta["desc"],
+                "label": meta.get("label", f"cluster {cid}"),
+                "desc": meta.get("desc", ""),
                 "centroid": cents[cid].tolist(),
                 "members": [m.id for m in members],
                 "sentiment": sent,

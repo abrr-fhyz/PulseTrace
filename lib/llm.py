@@ -50,7 +50,7 @@ def _chat_openai_compat(p: backend.Provider, system: str, user: str, max_tokens:
                     kw["response_format"] = fmt
                 resp = client.chat.completions.create(**kw)
                 raw = resp.choices[0].message.content or "{}"
-                return json.loads(_strip_fence(raw))
+                return _coerce_dict(json.loads(_strip_fence(raw)))
             except json.JSONDecodeError as e:
                 last_err = e
                 continue
@@ -58,6 +58,19 @@ def _chat_openai_compat(p: backend.Provider, system: str, user: str, max_tokens:
                 last_err = e
                 break
     raise last_err or ValueError(f"{p.name}: no parseable JSON")
+
+
+def _coerce_dict(payload: Any) -> dict:
+    """Some Gemini variants return a top-level array even under json_object
+    mode. Normalise so every caller gets a dict it can .get() on.
+    Single-dict array -> that dict. Anything else -> {"items": payload}."""
+    if isinstance(payload, dict):
+        return payload
+    if isinstance(payload, list):
+        if len(payload) == 1 and isinstance(payload[0], dict):
+            return payload[0]
+        return {"items": payload}
+    return {"value": payload}
 
 
 def _strip_fence(s: str) -> str:
@@ -96,7 +109,7 @@ def _chat_ollama_native(system: str, user: str, max_tokens: int) -> Any:
             continue
         raw = (r.json().get("message") or {}).get("content") or "{}"
         try:
-            return json.loads(raw)
+            return _coerce_dict(json.loads(raw))
         except json.JSONDecodeError as e:
             last_err = e
             continue
