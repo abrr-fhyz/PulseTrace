@@ -1,39 +1,65 @@
-# Model Selection — Production E2E
+---
+name: Gemini model selection
+description: Active prod chat/embed/vision model picks + pricing rationale (Dec 2025 verified)
+type: project
+---
 
-> Decided 2026-05-30. Verified live against the paid Gemini API (key prefix `AQ.Ab8R…`). Used by `lib/backend.py` defaults and `.env.production.example`.
+# Model Selection — Production E2E (revised 2026-05-30 b)
 
-## Chat / Vision: `gemini-2.5-flash`
+> Verified live against the paid Gemini API (key prefix `AQ.Ab8R…`). Pricing
+> cross-checked at https://ai.google.dev/gemini-api/docs/pricing on 2026-05-30.
 
-- **Why this one:** stable (not preview), 1M-token input context, 65K output, multimodal (text + image in one model so the Vision OCR path and the chat path use the same SKU). Replaces the deprecated `gemini-2.0-flash` which now returns `NOT_FOUND` for new users.
-- **Cost (Dec 2025 paid pricing):** ~$0.30 / 1M input tokens, ~$2.50 / 1M output tokens. Roughly 5–10× cheaper than `gemini-2.5-pro` for materially similar quality on label/stance/RAG.
-- **Trade-off vs `gemini-2.5-flash-lite`:** lite is ~3× cheaper but visibly weaker at multi-fact JSON output (cluster labels, stance reasoning). We keep `-lite` as the high-volume secondary for label/stance batches when the run is cost-bound, and `flash` for vision OCR + RAG answer generation.
-- **Trade-off vs `gemini-3.5-flash` / `gemini-3.x-*-preview`:** newer, but `preview` channel can change schema mid-run. Stable channel is the prod choice; revisit when 3.x goes GA.
+## Active defaults
 
-## Embedding: `gemini-embedding-2`
+| Stage          | Model                       | Why                                                |
+|----------------|-----------------------------|----------------------------------------------------|
+| chat (label, stance, RAG, agent) | `gemini-2.5-flash-lite` | 3× cheaper than flash, latest stable, sufficient quality for JSON-mode label/stance |
+| embeddings     | `gemini-embedding-001`      | Cheapest stable embed ($0.15/M), text-only is all we need |
+| vision OCR     | `gemini-2.5-flash`          | flash-lite multimodal is weaker; OCR fidelity matters more than cost (1 call per screenshot) |
 
-- **Why this one:** newest stable Gemini embedding model. 3072-dim output (same as `-001`, so on-disk vector cache is dimension-compatible). Improved retrieval quality on multi-lingual + opinion-mining benchmarks per Google's release notes.
-- **Why not `gemini-embedding-2-preview`:** preview tier — schema not pinned, no SLA. Skip until promoted.
-- **Why not `gemini-embedding-001`:** still works, but `-2` is the recommended upgrade path for new code. We keep `-001` as a hard-coded fallback inside `_embed_with_cascade` in case `-2` returns 503 on a hot rollout.
-- **Dimension note:** `lib/backend.py:embed_dim` was 768 (legacy default for `text-embedding-004`). Bumped to 3072 to match the real Gemini output shape. Only affects empty-input zero-array shape; real embeds were already correct via `len(response.values)`.
+## Pricing (paid tier, Dec 2025)
 
-## Fallback cascade (unchanged)
+```
+gemini-2.5-flash-lite   $0.10 in / $0.40 out  per 1M tokens   ← chat default
+gemini-2.5-flash        $0.30 in / $2.50 out  per 1M tokens   ← vision only
+gemini-2.5-pro          $1.25 in / $10.00 out per 1M tokens   (not used)
+gemini-embedding-001    $0.15  per 1M input tokens            ← embed default
+gemini-embedding-2      $0.20 text / $0.45 image              (multimodal alt)
+```
 
-`lib/dispatch.py` still rotates every stage across all free providers (groq → openrouter → llm7 → huggingface → gemini → pollen → ollama) per `cascade_for_stage`. Gemini is now position-0 for paid-key users via `PULSETRACE_BACKEND=gemini`, but the cascade is preserved so a Gemini outage degrades to free providers instead of failing the run.
+## Deprecation note
 
-## Pricing math for typical run
+`gemini-2.0-flash` and `gemini-2.0-flash-lite` shut down **2026-06-01**. Anything
+still pointing at them must move to 2.5-* before that date. Our defaults are
+already 2.5-*.
 
-- Topic: "Donald Trump Buffalo", 50 posts across 4 iters, 1 vision OCR per screenshot, 1 RAG turn with 4 questions.
-- Estimated paid Gemini cost per run: ~$0.01–0.03 (mostly cached input).
-- 10–50 runs ≈ $0.10–$1.50 total. Negligible vs free-tier rate-limit pain.
+## Cost math for typical run
+
+- "Donald Trump Buffalo", 50 posts, 4 iters, 1 vision OCR per screenshot, 1 RAG turn.
+- Chat ≈ 200k input + 30k output → ~$0.03 (flash-lite)
+- Vision ≈ 10 OCR calls × ~5k input → ~$0.015 (flash)
+- Embed ≈ 50k tokens → ~$0.008
+- **Per run total ≈ $0.05.** 50 runs ≈ $2.50.
+
+## Fallback cascade
+
+`lib/dispatch.py` rotates every stage across all free providers
+(groq → openrouter → llm7 → huggingface → gemini → pollen → ollama).
+Gemini sits position-0 for paid-key users via `PULSETRACE_BACKEND=gemini`.
+Cascade preserved so a Gemini outage degrades to free providers instead of
+killing the run.
 
 ## Vision OCR config
 
-- `tests/stages/test_18_fb_ocr_e2e.py` and `lib/catalogue.py` use the same model list: `[gemini-2.5-flash, gemini-2.5-flash-lite]`. The lite acts as a per-request fallback if flash 429s. Free-tier 15-RPM throttle is no longer the binding constraint with the paid key, but we keep the `time.sleep(4)` between OCR calls as a courtesy / safety net.
+`tests/stages/test_18_fb_ocr_e2e.py` and `lib/catalogue.py` use:
+`[gemini-2.5-flash, gemini-2.5-flash-lite]`. Lite acts as per-request fallback
+if flash 429s. Paid-tier 15-RPM no longer binding; courtesy `time.sleep(4)`
+between OCR calls retained.
 
 ## Updating this doc
 
 If you swap models, update:
 1. `lib/backend.py:PROVIDERS["gemini"]` defaults
-2. `.env.production.example:GEMINI_CHAT_MODEL` / `GEMINI_EMBED_MODEL`
+2. `.env.production.example:GEMINI_CHAT_MODEL` / `GEMINI_EMBED_MODEL` / `GEMINI_VISION_MODEL`
 3. `tests/stages/test_18_fb_ocr_e2e.py:GEMINI_MODELS`
-4. This file's "Why this one" sections.
+4. This file's "Active defaults" table + pricing.
