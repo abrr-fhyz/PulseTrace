@@ -386,45 +386,40 @@
           <div class="pl-ic">1</div>
           <div class="pl-body">
             <div class="pl-title">Seed queries</div>
-            <div class="pl-sub">LLM proposes search angles</div>
           </div>
-          <div class="pl-meta" data-meta>idle</div>
+          <div class="pl-meta" data-meta></div>
           <div class="pl-bar"></div>
         </div>
         <div class="pl-stage" data-stage="fetch">
           <div class="pl-ic">2</div>
           <div class="pl-body">
             <div class="pl-title">Fetch &amp; OCR</div>
-            <div class="pl-sub">Facebook scroll + Gemini Vision</div>
           </div>
-          <div class="pl-meta" data-meta>idle</div>
+          <div class="pl-meta" data-meta></div>
           <div class="pl-bar"></div>
         </div>
         <div class="pl-stage" data-stage="cluster">
           <div class="pl-ic">3</div>
           <div class="pl-body">
             <div class="pl-title">Embed &amp; cluster</div>
-            <div class="pl-sub">Gemini embeddings → HDBSCAN</div>
           </div>
-          <div class="pl-meta" data-meta>idle</div>
+          <div class="pl-meta" data-meta></div>
           <div class="pl-bar"></div>
         </div>
         <div class="pl-stage" data-stage="label">
           <div class="pl-ic">4</div>
           <div class="pl-body">
             <div class="pl-title">Label &amp; sentiment</div>
-            <div class="pl-sub">Per-cluster LLM naming + stance</div>
           </div>
-          <div class="pl-meta" data-meta>idle</div>
+          <div class="pl-meta" data-meta></div>
           <div class="pl-bar"></div>
         </div>
         <div class="pl-stage" data-stage="brief">
           <div class="pl-ic">5</div>
           <div class="pl-body">
             <div class="pl-title">Executive briefing</div>
-            <div class="pl-sub">PDF + HTML for download</div>
           </div>
-          <div class="pl-meta" data-meta>idle</div>
+          <div class="pl-meta" data-meta></div>
           <div class="pl-bar"></div>
         </div>
       </div>
@@ -667,7 +662,7 @@ function plMark(stage, state) { plState(stage, state); }
 function plReset() {
   for (const s of PL_ORDER) {
     plState(s, null);
-    plMeta(s, "idle");
+    plMeta(s, "");
   }
 }
 function plStatus(_t) {}
