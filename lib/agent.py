@@ -58,22 +58,36 @@ def _llm_next(topic: str, labels: list[str]) -> dict:
 
 
 def _fetch_all(queries: list[tuple[str, str]], limit: int) -> list[Post]:
+    by_src: dict[str, list[str]] = {}
+    for q, src in queries:
+        if src not in SOURCES:
+            continue
+        by_src.setdefault(src, []).append(q)
+
     posts: list[Post] = []
-    with ThreadPoolExecutor(max_workers=4) as ex:
-        futures = []
-        for q, src in queries:
-            if src not in SOURCES:
-                continue
+    serial_calls: list[tuple[Connector, str]] = []
+    for src, qs in by_src.items():
+        try:
+            conn = SOURCES[src]()
+        except Exception:
+            continue
+        if getattr(conn, "supports_batch", False) and hasattr(conn, "fetch_many"):
             try:
-                conn = SOURCES[src]()
+                posts.extend(conn.fetch_many(qs, limit))
             except Exception:
-                continue
-            futures.append(ex.submit(conn.fetch, q, limit))
-        for f in futures:
-            try:
-                posts.extend(f.result())
-            except Exception:
-                continue
+                pass
+        else:
+            for q in qs:
+                serial_calls.append((conn, q))
+
+    if serial_calls:
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            futures = [ex.submit(c.fetch, q, limit) for c, q in serial_calls]
+            for f in futures:
+                try:
+                    posts.extend(f.result())
+                except Exception:
+                    continue
     return posts
 
 

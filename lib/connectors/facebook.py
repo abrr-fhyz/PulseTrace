@@ -1,17 +1,17 @@
 """Facebook connector — viewport screenshots + Gemini Vision OCR.
 
 DOM extraction is dead: FB scrambles text across rotating span class names so
-`inner_text()` returns short useless fragments. Instead this connector does
-what tests/stages/test_18_fb_ocr_e2e.py proved works:
- 1. cookies.json -> Playwright Chromium
- 2. goto search URL, wait, scroll N times, screenshot the viewport each scroll
- 3. send each screenshot to gemini-2.5-flash Vision REST endpoint with a
-    structured JSON prompt; fall back to flash-lite on 429
- 4. parse posts, dedupe by content hash, return Post list
+`inner_text()` returns short useless fragments. Replicates the pipeline that
+tests/stages/test_18_fb_ocr_e2e.py proved working:
+ 1. cookies.json -> ONE Playwright Chromium session for all queries in a batch
+ 2. per query: goto search URL, wait, scroll N times, screenshot the viewport
+ 3. send each screenshot to gemini-2.5-flash Vision REST (flash-lite fallback
+    on 429) with a structured JSON prompt
+ 4. parse posts, dedupe by content prefix, return Post list
 
-Requires:
- - info/cookies.json (logged-in browser cookies)
- - GEMINI_API_KEY (or gemini_api_key) in env
+Single-session batching is critical: re-launching Chromium per query trips FB
+anti-bot and yields empty viewports. Use `fetch_many([...])` from agent; the
+single-query `fetch()` wraps it for the connector contract.
 """
 from __future__ import annotations
 import asyncio
@@ -19,6 +19,7 @@ import base64
 import json
 import os
 import re
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -35,6 +36,7 @@ SEARCH_URL = "https://www.facebook.com/search/posts/?q={q}"
 DEFAULT_SCROLLS = int(os.environ.get("PT_FB_SCROLLS", "5"))
 DEFAULT_SHOTS = int(os.environ.get("PT_FB_SHOTS", "4"))
 SHOT_MIN_BYTES = 30_000
+DEBUG = os.environ.get("PT_FB_DEBUG", "0") == "1"
 
 OCR_PROMPT = (
     "This screenshot shows one or more Facebook posts in a feed. Extract every "
@@ -46,6 +48,11 @@ OCR_PROMPT = (
     "objective description of the image instead. Skip empty skeleton "
     "placeholders. No prose, no markdown, JSON only."
 )
+
+
+def _log(msg: str) -> None:
+    if DEBUG:
+        print(f"[fb] {msg}", file=sys.stderr, flush=True)
 
 
 def _gemini_key() -> str:
@@ -77,16 +84,20 @@ def _ocr(png_path: Path, key: str) -> list[dict]:
                         "responseMimeType": "application/json",
                     },
                 }, timeout=60)
-            except requests.RequestException:
+            except requests.RequestException as e:
+                _log(f"ocr {model} req-error: {e}")
                 break
             if r.status_code == 429:
+                _log(f"ocr {model} 429 retry {attempt+1}")
                 time.sleep(4 * (attempt + 1))
                 continue
             if r.status_code >= 400:
+                _log(f"ocr {model} http {r.status_code}: {r.text[:160]}")
                 break
             body = r.json()
             cands = body.get("candidates") or []
             if not cands:
+                _log(f"ocr {model} no candidates")
                 break
             txt = "".join(p.get("text", "") for p in
                           cands[0].get("content", {}).get("parts", [])).strip()
@@ -94,8 +105,10 @@ def _ocr(png_path: Path, key: str) -> list[dict]:
             try:
                 parsed = json.loads(txt)
             except json.JSONDecodeError:
+                _log(f"ocr {model} json parse fail")
                 break
             posts = parsed.get("posts") or ([parsed] if "post_content" in parsed else [])
+            _log(f"ocr {model} ok: {len(posts)} posts from {png_path.name}")
             return posts
     return []
 
@@ -115,14 +128,18 @@ def _parse_count(s: object) -> int:
     return int(n * mult)
 
 
-async def _capture(query: str, scrolls: int, shots_per: int,
-                   out_dir: Path) -> list[Path]:
+async def _capture_many(queries: list[str], scrolls: int, shots_per: int,
+                        out_dir: Path) -> dict[str, list[Path]]:
+    """Single browser session, sequential queries — matches test_18."""
     from playwright.async_api import async_playwright
 
+    out_dir.mkdir(parents=True, exist_ok=True)
     if not COOKIE_PATH.exists():
-        return []
+        _log(f"cookies missing at {COOKIE_PATH}")
+        return {q: [] for q in queries}
     cookies = json.loads(COOKIE_PATH.read_text())
-    shots: list[Path] = []
+    bag: dict[str, list[Path]] = {q: [] for q in queries}
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True, args=[
             "--disable-blink-features=AutomationControlled",
@@ -135,33 +152,40 @@ async def _capture(query: str, scrolls: int, shots_per: int,
         )
         await ctx.add_cookies(cookies)
         page = await ctx.new_page()
-        try:
-            await page.goto(SEARCH_URL.format(q=query.replace(" ", "%20")),
-                            wait_until="domcontentloaded", timeout=30_000)
-        except Exception:
-            await browser.close()
-            return []
-        await asyncio.sleep(4)
         ts = int(time.time())
-        for n in range(scrolls):
-            shot = out_dir / f"q_{n}_{ts}.png"
+
+        for qi, q in enumerate(queries):
+            url = SEARCH_URL.format(q=q.replace(" ", "%20"))
             try:
-                await page.screenshot(path=str(shot), full_page=False, timeout=10_000)
-            except Exception:
+                await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
+            except Exception as e:
+                _log(f"q{qi} goto fail: {e}")
                 continue
-            if shot.exists() and shot.stat().st_size > SHOT_MIN_BYTES:
-                shots.append(shot)
-            if len(shots) >= shots_per:
-                break
-            await page.mouse.wheel(0, 3500)
-            await asyncio.sleep(1.8)
+            await asyncio.sleep(4)
+            shots_taken = 0
+            for n in range(scrolls):
+                shot = out_dir / f"q{qi}_s{n}_{ts}.png"
+                try:
+                    await page.screenshot(path=str(shot), full_page=False, timeout=10_000)
+                except Exception as e:
+                    _log(f"q{qi} shot {n} fail: {e}")
+                    continue
+                size = shot.stat().st_size if shot.exists() else 0
+                if size > SHOT_MIN_BYTES:
+                    bag[q].append(shot)
+                    shots_taken += 1
+                    _log(f"q{qi} '{q[:40]}' shot {n}: {size} bytes")
+                if shots_taken >= shots_per:
+                    break
+                await page.mouse.wheel(0, 3500)
+                await asyncio.sleep(1.8)
+            await asyncio.sleep(3)
         await browser.close()
-    return shots
+    return bag
 
 
 def _shots_to_posts(query: str, shots: list[Path], key: str,
-                    limit: int) -> list[Post]:
-    seen: set[str] = set()
+                    seen: set[str], limit: int) -> list[Post]:
     out: list[Post] = []
     for shot in shots:
         for e in _ocr(shot, key):
@@ -192,6 +216,7 @@ def _shots_to_posts(query: str, shots: list[Path], key: str,
 
 class FacebookConnector(Connector):
     name = "facebook"
+    supports_batch = True
 
     def __init__(self, headless: bool = True, scrolls: int = DEFAULT_SCROLLS,
                  shots: int = DEFAULT_SHOTS) -> None:
@@ -199,18 +224,36 @@ class FacebookConnector(Connector):
         self.scrolls = scrolls
         self.shots = shots
 
-    def fetch(self, query: str, limit: int = 30) -> list[Post]:
+    def fetch_many(self, queries: list[str], limit_per_query: int = 30) -> list[Post]:
         key = _gemini_key()
-        if not key or not COOKIE_PATH.exists():
+        if not key:
+            _log("GEMINI_API_KEY missing — connector returns []")
+            return []
+        if not COOKIE_PATH.exists():
+            _log(f"cookies missing at {COOKIE_PATH} — connector returns []")
             return []
         with tempfile.TemporaryDirectory(prefix="fbshots_") as td:
             try:
-                shots = asyncio.run(_capture(query, self.scrolls, self.shots, Path(td)))
-            except Exception:
+                shots_by_q = asyncio.run(_capture_many(
+                    queries, self.scrolls, self.shots, Path(td)))
+            except Exception as e:
+                _log(f"_capture_many crashed: {e}")
                 return []
-            if not shots:
+            total_shots = sum(len(v) for v in shots_by_q.values())
+            _log(f"captured {total_shots} shots across {len(queries)} queries")
+            if total_shots == 0:
                 return []
-            try:
-                return _shots_to_posts(query, shots, key, limit)
-            except Exception:
-                return []
+            seen: set[str] = set()
+            all_posts: list[Post] = []
+            for q, shots in shots_by_q.items():
+                try:
+                    all_posts.extend(_shots_to_posts(q, shots, key, seen,
+                                                     limit_per_query))
+                except Exception as e:
+                    _log(f"OCR-to-posts crashed for q={q!r}: {e}")
+                    continue
+            _log(f"yielded {len(all_posts)} posts")
+            return all_posts
+
+    def fetch(self, query: str, limit: int = 30) -> list[Post]:
+        return self.fetch_many([query], limit_per_query=limit)
