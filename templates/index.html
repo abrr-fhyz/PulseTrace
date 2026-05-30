@@ -818,7 +818,9 @@ async function downloadBriefing(e) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "briefing-" + (runId || "run") + ".pdf";
+    const cd = r.headers.get("Content-Disposition") || "";
+    const m = cd.match(/filename="?([^"]+)"?/i);
+    a.download = m ? m[1] : ((runId || "run") + ".pdf");
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   } catch (err) {

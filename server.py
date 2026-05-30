@@ -17,6 +17,8 @@ load_dotenv()
 from lib.keys import load as _load_api_keys
 _load_api_keys()
 
+import re as _re
+
 from lib.agent import run_agent
 from lib.briefing import build as build_briefing
 from lib.events import BUS, sse_format
@@ -218,8 +220,22 @@ def briefing_pdf(run_id):
     return Response(
         p.read_bytes(),
         mimetype="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="briefing-{run_id}.pdf"'},
+        headers={"Content-Disposition": f'attachment; filename="{_pdf_filename(run_id)}"'},
     )
+
+
+def _pdf_filename(run_id: str) -> str:
+    topic = ""
+    try:
+        run = read_json(run_id, "run.json") or {}
+        topic = (run.get("topic") or "").strip()
+        if not topic:
+            qs = run.get("queries") or []
+            topic = str((qs[0] or {}).get("q") or "") if qs else ""
+    except Exception:
+        pass
+    slug = _re.sub(r"[^a-z0-9]+", "-", topic.lower()).strip("-")
+    return f"{slug or run_id}.pdf"
 
 
 @app.route("/run/<run_id>/briefing/manifest")
