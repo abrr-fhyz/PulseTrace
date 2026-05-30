@@ -9,7 +9,7 @@ extraction shape via Gemini Vision (only key the project ships with).
  1. Reuse info/cookies.json to skip email/password login.
  2. Drive Playwright Chromium to facebook.com/search/posts/?q=<topic>.
  3. Capture up to PT_OCR_LIMIT article screenshots.
- 4. Send each as inline_data to gemini-2.0-flash via REST.
+ 4. Send each as inline_data to gemini-2.5-flash via REST.
  5. Assert >=1 screenshot yields non-empty `post_content`.
 
 Heavy. Skips unless PT_OCR_TEST=1 + cookies + gemini_api_key all set.
@@ -33,7 +33,7 @@ COOKIE_PATH = REPO_ROOT / "info" / "cookies.json"
 PROBE_QUERY = os.environ.get("PT_OCR_QUERY", "Donald Trump")
 PROBE_LIMIT = int(os.environ.get("PT_OCR_LIMIT", "3"))
 PROBE_SCROLLS = int(os.environ.get("PT_OCR_SCROLLS", "5"))
-GEMINI_MODEL = os.environ.get("PT_OCR_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL = os.environ.get("PT_OCR_MODEL", "gemini-2.5-flash")
 
 
 def _gemini_key() -> str:
@@ -211,8 +211,6 @@ def _gemini_ocr(png_path: Path) -> dict:
     models = [
         GEMINI_MODEL,
         "gemini-2.5-flash-lite",
-        "gemini-2.0-flash-lite",
-        "gemini-3.5-flash",
     ]
     last_err: dict = {}
     for m in models:

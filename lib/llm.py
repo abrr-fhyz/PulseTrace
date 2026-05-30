@@ -1,10 +1,13 @@
-"""Strict-JSON chat wrapper with stage-aware provider cascade.
+"""Strict-JSON chat wrapper.
 
-`chat_json(sys, user, stage="seed")` walks `lib.dispatch.cascade_for_stage()`,
-trying each provider until one returns parseable JSON. Retryable errors
-(quota, auth, model_not_found, 5xx, timeouts) skip to the next provider;
-caller bugs bubble immediately. Native local Ollama keeps its dedicated
-`/api/chat` path because it offers a real `format=json` mode.
+Prod path: `chat_json()` calls `backend.chat_provider()` directly — single
+provider (Gemini by default), no cascade. The `stage=` parameter is accepted
+for back-compat with old call sites but ignored.
+
+Test/legacy path: `chat_json_cascade()` walks `lib.dispatch.cascade_for_stage()`,
+trying each credentialed provider with retryable-error fallthrough. Used by
+`tests/stages/test_16_cascade.py` to exercise the cascade dispatcher; not
+imported by any prod stage.
 """
 from __future__ import annotations
 import json
@@ -107,21 +110,30 @@ def _dispatch_one(p: backend.Provider, system: str, user: str, max_tokens: int) 
 
 
 def chat_json(system: str, user: str, max_tokens: int = 800, *, stage: str = "default") -> Any:
+    p = backend.chat_provider()
+    debug = os.environ.get("PT_LLM_DEBUG") == "1"
+    if debug:
+        print(f"[llm] stage={stage} direct -> {p.name}:{p.chat_model}", flush=True)
+    return _dispatch_one(p, system, user, max_tokens)
+
+
+def chat_json_cascade(system: str, user: str, max_tokens: int = 800,
+                      *, stage: str = "default") -> Any:
     chain = dispatch.cascade_for_stage(stage)
     debug = os.environ.get("PT_LLM_DEBUG") == "1"
     if debug:
-        print(f"[llm] stage={stage} chain={[p.name for p in chain]}", flush=True)
+        print(f"[llm] cascade stage={stage} chain={[p.name for p in chain]}", flush=True)
     last_err: Exception | None = None
     for p in chain:
         try:
             r = _dispatch_one(p, system, user, max_tokens)
             if debug:
-                print(f"[llm] stage={stage} OK via {p.name}", flush=True)
+                print(f"[llm] cascade stage={stage} OK via {p.name}", flush=True)
             return r
         except Exception as e:
             last_err = e
             if debug:
-                print(f"[llm] stage={stage} {p.name} FAIL: "
+                print(f"[llm] cascade stage={stage} {p.name} FAIL: "
                       f"{type(e).__name__}: {str(e)[:140]}", flush=True)
             if dispatch.is_retryable(e):
                 continue

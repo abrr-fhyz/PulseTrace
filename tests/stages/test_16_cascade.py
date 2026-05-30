@@ -115,7 +115,7 @@ def test_chat_json_falls_through_to_next_provider(fake_keys, monkeypatch):
         return {"ok": True, "provider": provider.name}
 
     with patch.object(llm, "_chat_openai_compat", side_effect=fake_call):
-        out = llm.chat_json("sys", "user", stage="seed")
+        out = llm.chat_json_cascade("sys", "user", stage="seed")
 
     assert out == {"ok": True, "provider": "llm7"}
     assert calls == ["groq", "openrouter", "llm7"]
@@ -132,7 +132,7 @@ def test_chat_json_reraises_when_all_providers_fail(fake_keys, monkeypatch):
 
     with patch.object(llm, "_chat_openai_compat", side_effect=boom):
         with pytest.raises(RuntimeError, match="429"):
-            llm.chat_json("sys", "user", stage="seed")
+            llm.chat_json_cascade("sys", "user", stage="seed")
 
 
 def test_chat_json_non_retryable_does_not_advance(fake_keys, monkeypatch):
@@ -149,7 +149,7 @@ def test_chat_json_non_retryable_does_not_advance(fake_keys, monkeypatch):
 
     with patch.object(llm, "_chat_openai_compat", side_effect=fake_call):
         with pytest.raises(KeyError):
-            llm.chat_json("sys", "user", stage="seed")
+            llm.chat_json_cascade("sys", "user", stage="seed")
 
     assert len(calls) == 1
 
@@ -163,4 +163,4 @@ def test_stage_default_keyword_is_optional(fake_keys, monkeypatch):
 
     with patch.object(llm, "_chat_openai_compat",
                       return_value={"ok": True}):
-        assert llm.chat_json("sys", "user") == {"ok": True}
+        assert llm.chat_json_cascade("sys", "user") == {"ok": True}

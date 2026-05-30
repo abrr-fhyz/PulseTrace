@@ -9,5 +9,5 @@ def test_key_deterministic():
 
 def test_embed_empty():
     arr = embed_texts([])
-    assert arr.shape == (0, 1536)
+    assert arr.shape == (0, 3072)
     assert arr.dtype == np.float32

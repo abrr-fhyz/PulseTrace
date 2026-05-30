@@ -19,11 +19,11 @@ from . import backend
 
 
 DEFAULT_CASCADE = [
+    "gemini",
     "groq",
     "openrouter",
     "llm7",
     "huggingface",
-    "gemini",
     "pollen",
     "ollama",
 ]

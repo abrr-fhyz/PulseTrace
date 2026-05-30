@@ -36,9 +36,9 @@ PROVIDERS: dict[str, Provider] = {
         name="gemini",
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         key_env="GEMINI_API_KEY",
-        chat_model=os.environ.get("GEMINI_CHAT_MODEL", "gemini-2.0-flash"),
+        chat_model=os.environ.get("GEMINI_CHAT_MODEL", "gemini-2.5-flash-lite"),
         embed_model=os.environ.get("GEMINI_EMBED_MODEL", "gemini-embedding-001"),
-        embed_dim=768,
+        embed_dim=3072,
     ),
     "openrouter": Provider(
         name="openrouter",
@@ -114,3 +114,5 @@ OLLAMA_CHAT_MODEL = PROVIDERS["ollama"].chat_model
 OLLAMA_EMBED_MODEL = PROVIDERS["ollama"].embed_model or "nomic-embed-text"
 OLLAMA_CHAT_TIMEOUT = int(os.environ.get("OLLAMA_CHAT_TIMEOUT", "600"))
 OLLAMA_EMBED_TIMEOUT = int(os.environ.get("OLLAMA_EMBED_TIMEOUT", "300"))
+
+GEMINI_VISION_MODEL = os.environ.get("GEMINI_VISION_MODEL", "gemini-2.5-flash")
