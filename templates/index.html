@@ -175,6 +175,32 @@
                 border: 1px solid rgba(110,231,183,0.3); }
     code.inline { background: var(--panel2); padding: 2px 6px; border-radius: 4px;
                   font-size: 12px; color: var(--accent); }
+
+    .shots-wrap { padding: 24px; min-height: 100vh; }
+    .shots-wrap header { padding: 0 0 16px; border: none; background: transparent;
+                         position: static; }
+    .iter-block { margin-bottom: 28px; }
+    .iter-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .iter-head h3 { font-size: 14px; color: var(--text); }
+    .shots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                  gap: 12px; }
+    .shot-card { background: var(--panel); border: 1px solid var(--border);
+                 border-radius: 10px; overflow: hidden; cursor: pointer;
+                 transition: transform .15s, border-color .15s; }
+    .shot-card:hover { transform: translateY(-2px); border-color: var(--accent2); }
+    .shot-card img { display: block; width: 100%; height: 160px; object-fit: cover;
+                     object-position: top; background: #0d141f; }
+    .shot-card .meta { padding: 8px 10px; font-size: 11px; color: var(--muted);
+                       display: flex; justify-content: space-between; }
+    .lightbox { position: fixed; inset: 0; background: rgba(7,9,15,0.94);
+                display: none; align-items: center; justify-content: center;
+                z-index: 60; padding: 32px; }
+    .lightbox.show { display: flex; }
+    .lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px;
+                    box-shadow: 0 16px 64px rgba(0,0,0,.6); }
+    .lightbox .close { position: absolute; top: 16px; right: 20px; cursor: pointer;
+                       color: var(--muted); font-size: 22px; }
+    .shots-empty { padding: 60px; text-align: center; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -269,6 +295,8 @@
     <span id="run-pill" class="pill" style="display:none"></span>
     <span class="nav-back" onclick="goto('landing')">← home</span>
     <span class="nav-back" onclick="goto('byok')" style="margin-left:8px">⚙ BYOK</span>
+    <span id="nav-shots" class="nav-back" onclick="goto('shots')"
+          style="margin-left:8px;display:none">📸 Captures</span>
   </header>
 
   <main>
@@ -338,6 +366,24 @@
   </main>
 </section>
 
+<section id="view-shots" class="view">
+  <div class="shots-wrap">
+    <header style="display:flex;align-items:center;gap:12px">
+      <h1>Captures</h1>
+      <span id="shots-run-pill" class="pill"></span>
+      <span class="muted" style="margin-left:auto">
+        <a class="nav-back" onclick="goto('app')" style="margin-left:0">← back to dashboard</a>
+      </span>
+    </header>
+    <div id="shots-body"></div>
+  </div>
+</section>
+
+<div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+  <span class="close" onclick="closeLightbox(event)">✕</span>
+  <img id="lightbox-img" alt="" />
+</div>
+
 <div id="fb-cookie-modal" class="modal-backdrop">
   <div class="modal">
     <div id="fb-stale-pill" class="stale-warn"></div>
@@ -367,7 +413,7 @@ function elem(tag, attrs, ...children) {
   return e;
 }
 
-const VIEWS = ["landing", "byok", "app"];
+const VIEWS = ["landing", "byok", "app", "shots"];
 function goto(name) {
   if (!VIEWS.includes(name)) name = "landing";
   if (location.hash !== "#/" + name) location.hash = "#/" + name;
@@ -375,6 +421,7 @@ function goto(name) {
   window.scrollTo({ top: 0, behavior: "instant" });
   if (name === "app") onEnterApp();
   if (name === "byok") onEnterByok();
+  if (name === "shots") onEnterShots();
 }
 function routeFromHash() {
   const m = (location.hash || "").match(/^#\/(landing|byok|app)/);
@@ -504,6 +551,76 @@ function log(msg, cls) {
 
 function onEnterApp() { updateAppBadge(); }
 
+async function onEnterShots() {
+  const pill = $("#shots-run-pill");
+  const body = $("#shots-body");
+  clearNode(body);
+  if (!runId) {
+    pill.textContent = "no active run";
+    body.appendChild(elem("div", { class: "shots-empty" },
+                          "Start a run first — captures appear here once Facebook OCR has run."));
+    return;
+  }
+  pill.textContent = "run " + runId;
+  body.appendChild(elem("div", { class: "muted" }, "Loading captures..."));
+  let j;
+  try {
+    const r = await fetch("/shots/" + encodeURIComponent(runId));
+    j = await r.json();
+  } catch (e) {
+    clearNode(body);
+    body.appendChild(elem("div", { class: "shots-empty" }, "Failed to load captures."));
+    return;
+  }
+  clearNode(body);
+  if (!j.iters || j.iters.length === 0) {
+    body.appendChild(elem("div", { class: "shots-empty" },
+                          "No captures saved for this run yet."));
+    return;
+  }
+  for (const it of j.iters) {
+    const block = elem("div", { class: "iter-block" });
+    block.appendChild(elem("div", { class: "iter-head" },
+      elem("h3", null, it.iter.replace("_", " ")),
+      elem("span", { class: "pill" }, it.count + " shots"),
+    ));
+    const grid = elem("div", { class: "shots-grid" });
+    const sample = it.shots.slice(0, 5);
+    for (const fn of sample) {
+      const src = "/shots/" + encodeURIComponent(runId)
+                + "/" + encodeURIComponent(it.iter)
+                + "/" + encodeURIComponent(fn);
+      const card = elem("div", { class: "shot-card" });
+      const img = elem("img", { src: src, alt: fn, loading: "lazy" });
+      card.appendChild(img);
+      card.appendChild(elem("div", { class: "meta" },
+        elem("span", null, fn.replace(/_\d+\.png$/, "")),
+        elem("span", null, "open ↗"),
+      ));
+      card.addEventListener("click", () => openLightbox(src));
+      grid.appendChild(card);
+    }
+    if (it.shots.length > sample.length) {
+      grid.appendChild(elem("div", { class: "muted",
+                                      style: "align-self:center;padding:0 8px;font-size:12px" },
+                            "+" + (it.shots.length - sample.length) + " more"));
+    }
+    block.appendChild(grid);
+    body.appendChild(block);
+  }
+}
+
+function openLightbox(src) {
+  const img = $("#lightbox-img");
+  img.src = src;
+  $("#lightbox").classList.add("show");
+}
+function closeLightbox(ev) {
+  if (ev && ev.target && ev.target.tagName === "IMG"
+      && ev.target.id === "lightbox-img") return;
+  $("#lightbox").classList.remove("show");
+}
+
 async function start() {
   const topic = $("#topic").value.trim();
   if (!topic) return;
@@ -544,6 +661,9 @@ async function start() {
   const pill = $("#run-pill");
   pill.style.display = "inline-block";
   pill.textContent = "run " + runId;
+  if (sources.includes("facebook")) {
+    $("#nav-shots").style.display = "inline-block";
+  }
   subscribe(runId);
 }
 
@@ -581,7 +701,11 @@ function handle(ev) {
     case "low_recall": log("Low recall (" + ev.n + ") - retrying with broader query"); break;
     case "embed_error": log("Embed error: " + ev.err, "err"); break;
     case "error": log("Error: " + (ev.err || ""), "err"); break;
-    case "done": log("Done - stop_reason=" + ev.stop_reason + ", posts=" + ev.n_posts); break;
+    case "done":
+      log("Done - stop_reason=" + ev.stop_reason + ", posts=" + ev.n_posts);
+      log("📸 captures available — click '📸 Captures' in header");
+      $("#nav-shots").style.display = "inline-block";
+      break;
   }
 }
 

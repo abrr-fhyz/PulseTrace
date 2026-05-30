@@ -235,10 +235,15 @@ class FacebookConnector(Connector):
     supports_batch = True
 
     def __init__(self, headless: bool = True, scrolls: int = DEFAULT_SCROLLS,
-                 shots: int = DEFAULT_SHOTS) -> None:
+                 shots: int = DEFAULT_SHOTS,
+                 shots_dir: Path | str | None = None) -> None:
         self.headless = headless
         self.scrolls = scrolls
         self.shots = shots
+        self.shots_dir = Path(shots_dir) if shots_dir else None
+
+    def _run_capture(self, queries: list[str], out_dir: Path) -> dict[str, list[Path]]:
+        return asyncio.run(_capture_many(queries, self.scrolls, self.shots, out_dir))
 
     def fetch_many(self, queries: list[str], limit_per_query: int = 30) -> list[Post]:
         key = _gemini_key()
@@ -248,40 +253,48 @@ class FacebookConnector(Connector):
         if not COOKIE_PATH.exists():
             _log(f"cookies missing at {COOKIE_PATH} — connector returns []")
             return []
-        with tempfile.TemporaryDirectory(prefix="fbshots_") as td:
+
+        def _process(target_dir: Path) -> list[Post]:
             try:
-                shots_by_q = asyncio.run(_capture_many(
-                    queries, self.scrolls, self.shots, Path(td)))
+                shots_by_q = self._run_capture(queries, target_dir)
             except Exception as e:
                 _log(f"_capture_many crashed: {e}")
                 return []
             total_shots = sum(len(v) for v in shots_by_q.values())
-            _log(f"captured {total_shots} shots across {len(queries)} queries")
-            try:
-                DEBUG_DIR.mkdir(parents=True, exist_ok=True)
-                for qi, (q, shots) in enumerate(shots_by_q.items()):
-                    if not shots:
-                        continue
-                    src = shots[0]
-                    dst = DEBUG_DIR / f"sample_q{qi}_{int(time.time())}.png"
-                    dst.write_bytes(src.read_bytes())
-                    _log(f"sample shot saved: {dst}")
-                    break
-            except Exception as e:
-                _log(f"could not save sample shot: {e}")
+            _log(f"captured {total_shots} shots across {len(queries)} queries "
+                 f"-> {target_dir}")
+            if not self.shots_dir:
+                try:
+                    DEBUG_DIR.mkdir(parents=True, exist_ok=True)
+                    for qi, (q, shots) in enumerate(shots_by_q.items()):
+                        if not shots:
+                            continue
+                        src = shots[0]
+                        dst = DEBUG_DIR / f"sample_q{qi}_{int(time.time())}.png"
+                        dst.write_bytes(src.read_bytes())
+                        _log(f"sample shot saved: {dst}")
+                        break
+                except OSError as e:
+                    _log(f"could not save sample shot: {e}")
             if total_shots == 0:
                 return []
             seen: set[str] = set()
-            all_posts: list[Post] = []
+            posts: list[Post] = []
             for q, shots in shots_by_q.items():
                 try:
-                    all_posts.extend(_shots_to_posts(q, shots, key, seen,
-                                                     limit_per_query))
+                    posts.extend(_shots_to_posts(q, shots, key, seen,
+                                                 limit_per_query))
                 except Exception as e:
                     _log(f"OCR-to-posts crashed for q={q!r}: {e}")
                     continue
-            _log(f"yielded {len(all_posts)} posts")
-            return all_posts
+            _log(f"yielded {len(posts)} posts")
+            return posts
+
+        if self.shots_dir:
+            self.shots_dir.mkdir(parents=True, exist_ok=True)
+            return _process(self.shots_dir)
+        with tempfile.TemporaryDirectory(prefix="fbshots_") as td:
+            return _process(Path(td))
 
     def fetch(self, query: str, limit: int = 30) -> list[Post]:
         return self.fetch_many([query], limit_per_query=limit)

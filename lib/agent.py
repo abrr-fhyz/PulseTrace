@@ -57,7 +57,26 @@ def _llm_next(topic: str, labels: list[str]) -> dict:
         return {"action": "stop", "queries": []}
 
 
-def _fetch_all(queries: list[tuple[str, str]], limit: int) -> list[Post]:
+def _build_connector(src: str, run_id: str | None,
+                     iter_no: int) -> Connector | None:
+    cls = SOURCES.get(src)
+    if cls is None:
+        return None
+    if src == "facebook" and run_id:
+        from .store import run_dir
+        shots_dir = run_dir(run_id) / "shots" / f"iter_{iter_no}"
+        try:
+            return cls(shots_dir=shots_dir)
+        except TypeError:
+            pass
+    try:
+        return cls()
+    except Exception:
+        return None
+
+
+def _fetch_all(queries: list[tuple[str, str]], limit: int,
+               run_id: str | None = None, iter_no: int = 0) -> list[Post]:
     by_src: dict[str, list[str]] = {}
     for q, src in queries:
         if src not in SOURCES:
@@ -67,9 +86,8 @@ def _fetch_all(queries: list[tuple[str, str]], limit: int) -> list[Post]:
     posts: list[Post] = []
     serial_calls: list[tuple[Connector, str]] = []
     for src, qs in by_src.items():
-        try:
-            conn = SOURCES[src]()
-        except Exception:
+        conn = _build_connector(src, run_id, iter_no)
+        if conn is None:
             continue
         if getattr(conn, "supports_batch", False) and hasattr(conn, "fetch_many"):
             try:
@@ -109,7 +127,8 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
     for it in range(MAX_ITERS):
         BUS.publish(run_id, {"type": "iter_start", "iter": it + 1, "queries": pending})
         per = max(5, MAX_POSTS // max(len(pending), 1))
-        new_posts = _fetch_all(pending, limit=per)
+        new_posts = _fetch_all(pending, limit=per,
+                                run_id=run_id, iter_no=it + 1)
         added = 0
         for p in new_posts:
             if p.id not in seen and len(seen) < MAX_POSTS:

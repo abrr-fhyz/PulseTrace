@@ -162,6 +162,37 @@ def byok_validate():
         return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}"}), 500
 
 
+@app.route("/shots/<run_id>")
+def shots_list(run_id):
+    from pathlib import Path as _P
+    base = _P("data/runs") / run_id / "shots"
+    if not base.exists():
+        return jsonify({"run_id": run_id, "iters": []})
+    iters = []
+    for it in sorted(base.iterdir()):
+        if not it.is_dir():
+            continue
+        files = sorted([f.name for f in it.iterdir()
+                        if f.is_file() and f.suffix.lower() == ".png"])
+        if files:
+            iters.append({"iter": it.name, "shots": files,
+                          "count": len(files)})
+    return jsonify({"run_id": run_id, "iters": iters})
+
+
+@app.route("/shots/<run_id>/<iter_name>/<filename>")
+def shots_file(run_id, iter_name, filename):
+    from pathlib import Path as _P
+    if not filename.endswith(".png") or "/" in filename or ".." in filename:
+        return jsonify({"error": "bad filename"}), 400
+    if "/" in iter_name or ".." in iter_name:
+        return jsonify({"error": "bad iter"}), 400
+    p = _P("data/runs") / run_id / "shots" / iter_name / filename
+    if not p.exists():
+        return jsonify({"error": "not found"}), 404
+    return Response(p.read_bytes(), mimetype="image/png")
+
+
 @app.route("/fb/cookies/status")
 def fb_cookies_status():
     return jsonify(fb_cookies.status())
