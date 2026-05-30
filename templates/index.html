@@ -443,8 +443,12 @@ function goto(name) {
   if (name === "shots") onEnterShots();
 }
 function routeFromHash() {
-  const m = (location.hash || "").match(/^#\/(landing|byok|app)/);
-  goto(m ? m[1] : "landing");
+  const m = (location.hash || "").match(/^#\/(landing|byok|app|shots)/);
+  if (m) { goto(m[1]); return; }
+  // Empty / stray hash — keep the currently visible view rather than
+  // snapping back to landing.
+  const cur = VIEWS.find(v => $("#view-" + v).classList.contains("active"));
+  goto(cur || "landing");
 }
 window.addEventListener("hashchange", routeFromHash);
 
@@ -846,12 +850,17 @@ function renderAnswerWithCites(text, rawList, byRaw) {
     parts.forEach((p, i) => {
       if (i > 0) wrap.appendChild(document.createTextNode(", "));
       const d = byRaw[p];
-      const chip = elem(d ? "a" : "span",
+      const chip = elem("span",
                         { class: "cite" + (d && d.resolved ? "" : " unresolved"),
+                          role: "button", tabindex: "0",
                           title: d && d.text_preview ? d.text_preview : "" },
                         d ? d.label : p);
       if (d) {
-        chip.addEventListener("click", (e) => { e.preventDefault(); openCite(d); });
+        chip.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openCite(d);
+        });
         seen.add(p);
       }
       wrap.appendChild(chip);
@@ -883,7 +892,11 @@ function renderCiteCard(d) {
                        d.shot_url ? "open shot ↗" : (d.url ? "open ↗" : "no link")));
   body.appendChild(meta);
   card.appendChild(body);
-  card.addEventListener("click", () => openCite(d));
+  card.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openCite(d);
+  });
   return card;
 }
 
