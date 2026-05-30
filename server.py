@@ -395,5 +395,10 @@ def run_command():
 
 
 if __name__ == "__main__":
-    print("PulseTrace v2 -> http://localhost:5000")
-    app.run(debug=False, host="0.0.0.0", port=5000, threaded=True)
+    import os as _os
+    debug = _os.environ.get("PT_DEBUG", "1") != "0"
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
+    app.jinja_env.auto_reload = True
+    print(f"PulseTrace v2 -> http://localhost:5000 (debug={debug})")
+    app.run(debug=debug, host="0.0.0.0", port=5000, threaded=True,
+            use_reloader=debug)

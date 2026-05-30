@@ -684,6 +684,7 @@ async function start() {
     return;
   }
   runId = j.run_id;
+  try { localStorage.setItem("pt:lastRunId", runId); } catch (e) {}
   const pill = $("#run-pill");
   pill.style.display = "inline-block";
   pill.textContent = "run " + runId;
@@ -693,6 +694,19 @@ async function start() {
     $("#nav-shots").style.display = "inline-block";
   }
   subscribe(runId);
+}
+
+async function revealBriefingIfReady(rid) {
+  if (!rid) return;
+  try {
+    const r = await fetch("/run/" + encodeURIComponent(rid) + "/briefing/manifest");
+    if (!r.ok) return;
+    const m = await r.json();
+    const link = $("#briefing-link");
+    link.href = "/run/" + encodeURIComponent(rid) + (m.pdf ? "/briefing/pdf" : "/briefing/html");
+    link.textContent = m.pdf ? "📄 Download briefing PDF" : "📄 View briefing HTML";
+    link.style.display = "inline-block";
+  } catch (e) {}
 }
 
 function subscribe(rid) {
@@ -1104,6 +1118,17 @@ $("#topic").addEventListener("keydown", e => { if (e.key === "Enter") start(); }
 
 routeFromHash();
 updateAppBadge();
+
+try {
+  const cached = localStorage.getItem("pt:lastRunId");
+  if (cached) {
+    runId = cached;
+    const pill = $("#run-pill");
+    pill.style.display = "inline-block";
+    pill.textContent = "run " + cached;
+    revealBriefingIfReady(cached);
+  }
+} catch (e) {}
 </script>
 </body>
 </html>
