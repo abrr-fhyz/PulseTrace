@@ -21,7 +21,7 @@ from lib.agent import run_agent
 from lib.events import BUS, sse_format
 from lib.store import read_json, new_run_id
 from lib.rag import ask as rag_ask
-from lib import backend
+from lib import backend, fb_cookies
 
 
 app = Flask(__name__)
@@ -160,6 +160,53 @@ def byok_validate():
         return jsonify({"ok": False, "error": f"HTTP {r.status_code}: {msg}"}), 400
     except Exception as e:
         return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}"}), 500
+
+
+@app.route("/fb/cookies/status")
+def fb_cookies_status():
+    return jsonify(fb_cookies.status())
+
+
+@app.route("/fb/cookies/refresh/start", methods=["POST"])
+def fb_cookies_refresh_start():
+    try:
+        job = fb_cookies.start_refresh()
+    except FileNotFoundError as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}"}), 500
+    return jsonify({"ok": True, "job_id": job.id, "state": job.state})
+
+
+@app.route("/fb/cookies/refresh/events")
+def fb_cookies_refresh_events():
+    job_id = request.args.get("job_id", "")
+    if not fb_cookies.get(job_id):
+        return jsonify({"error": "unknown job"}), 404
+
+    @stream_with_context
+    def gen():
+        yield sse_format({"type": "open", "job_id": job_id})
+        while True:
+            for ev in fb_cookies.drain_events(job_id, timeout=5.0):
+                yield sse_format(ev)
+                if ev.get("type") in ("done", "cancelled"):
+                    return
+            yield ": keepalive\n\n"
+
+    return Response(gen(), mimetype="text/event-stream")
+
+
+@app.route("/fb/cookies/refresh/confirm", methods=["POST"])
+def fb_cookies_refresh_confirm():
+    data = request.get_json(force=True, silent=True) or {}
+    return jsonify(fb_cookies.confirm(data.get("job_id", "")))
+
+
+@app.route("/fb/cookies/refresh/cancel", methods=["POST"])
+def fb_cookies_refresh_cancel():
+    data = request.get_json(force=True, silent=True) or {}
+    return jsonify(fb_cookies.cancel(data.get("job_id", "")))
 
 
 @app.route("/events")

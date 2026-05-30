@@ -155,6 +155,26 @@
     .byok-badge { font-size: 11px; padding: 3px 8px; border-radius: 999px;
                   background: rgba(110,231,183,0.12); color: var(--pos);
                   border: 1px solid rgba(110,231,183,0.3); }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(7,9,15,0.78);
+                      backdrop-filter: blur(6px); display: none;
+                      align-items: center; justify-content: center; z-index: 50; }
+    .modal-backdrop.show { display: flex; }
+    .modal { width: 100%; max-width: 580px; background: var(--panel);
+             border: 1px solid var(--border); border-radius: 14px; padding: 24px;
+             box-shadow: 0 24px 80px rgba(0,0,0,.5); animation: rise .25s ease both; }
+    .modal h3 { font-size: 18px; margin-bottom: 6px; color: var(--text); }
+    .modal .sub { color: var(--muted); font-size: 13px; line-height: 1.55; margin-bottom: 14px; }
+    .modal .log { height: 180px; }
+    .modal .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .modal .actions button { flex: 1 1 140px; }
+    .stale-warn { display: inline-block; padding: 2px 8px; border-radius: 999px;
+                  background: rgba(248,113,113,0.14); color: var(--neg);
+                  border: 1px solid rgba(248,113,113,0.32); font-size: 11px; margin-bottom: 12px; }
+    .stale-ok { background: rgba(110,231,183,0.12); color: var(--pos);
+                border: 1px solid rgba(110,231,183,0.3); }
+    code.inline { background: var(--panel2); padding: 2px 6px; border-radius: 4px;
+                  font-size: 12px; color: var(--accent); }
   </style>
 </head>
 <body>
@@ -317,6 +337,16 @@
     </section>
   </main>
 </section>
+
+<div id="fb-cookie-modal" class="modal-backdrop">
+  <div class="modal">
+    <div id="fb-stale-pill" class="stale-warn"></div>
+    <h3 id="fb-modal-title">Facebook cookies</h3>
+    <p id="fb-modal-sub" class="sub"></p>
+    <div id="fb-modal-log" class="log" style="display:none"></div>
+    <div class="actions" id="fb-modal-actions"></div>
+  </div>
+</div>
 
 <script>
 const $ = (s) => document.querySelector(s);
@@ -483,6 +513,12 @@ async function start() {
   if ($("#src-facebook").checked) sources.push("facebook");
   if ($("#src-x").checked) sources.push("x");
   if ($("#src-instagram").checked) sources.push("instagram");
+
+  if (sources.includes("facebook")) {
+    const ok = await ensureFreshCookies();
+    if (!ok) return;
+  }
+
   $("#go").disabled = true;
   clearNode(logEl());
   clearNode($("#clusters"));
@@ -653,6 +689,173 @@ document.querySelectorAll("[data-cmd]").forEach(btn => {
     });
   });
 });
+
+const fbModal = $("#fb-cookie-modal");
+const fbPill = $("#fb-stale-pill");
+const fbSub = $("#fb-modal-sub");
+const fbLog = $("#fb-modal-log");
+const fbActions = $("#fb-modal-actions");
+let fbJobId = null;
+let fbEventSrc = null;
+let fbResolve = null;
+
+function fmtAge(s) {
+  if (s == null) return "never";
+  if (s < 60) return s + "s";
+  if (s < 3600) return Math.floor(s / 60) + "m";
+  return Math.floor(s / 3600) + "h" + Math.floor((s % 3600) / 60) + "m";
+}
+
+function openModal() { fbModal.classList.add("show"); }
+function closeModal() {
+  fbModal.classList.remove("show");
+  if (fbEventSrc) { fbEventSrc.close(); fbEventSrc = null; }
+  clearNode(fbLog);
+  fbLog.style.display = "none";
+}
+
+function setActions(items) {
+  clearNode(fbActions);
+  for (const it of items) {
+    const b = document.createElement("button");
+    b.textContent = it.label;
+    if (it.primary) b.className = "cta-primary";
+    else b.className = "secondary";
+    b.addEventListener("click", it.onClick);
+    fbActions.appendChild(b);
+  }
+}
+
+function fbLogLine(text, cls) {
+  fbLog.style.display = "block";
+  const line = elem("div", { class: "log-line " + (cls || "ev") },
+                    "[" + new Date().toLocaleTimeString() + "] " + text);
+  fbLog.appendChild(line);
+  fbLog.scrollTop = fbLog.scrollHeight;
+}
+
+async function ensureFreshCookies() {
+  let st;
+  try {
+    const r = await fetch("/fb/cookies/status");
+    st = await r.json();
+  } catch (e) {
+    return true;
+  }
+  if (st.exists && !st.stale) return true;
+  return new Promise((resolve) => {
+    fbResolve = resolve;
+    fbPill.className = "stale-warn";
+    if (!st.exists) {
+      fbPill.textContent = "⚠ no cookies on disk";
+      fbSub.textContent = ("Facebook source needs info/cookies.json. Refresh "
+        + "via the embedded login (a Chromium window opens — log in, then "
+        + "click 'I'm logged in') or run the script in your terminal.");
+    } else {
+      fbPill.textContent = "⚠ cookies " + fmtAge(st.age_seconds) + " old "
+                          + "(ttl " + fmtAge(st.ttl_seconds) + ")";
+      fbSub.textContent = ("Cookies look stale. FB usually starts redirecting "
+        + "scrapers to login after 4–8h. Refresh now or run the script "
+        + "yourself.");
+    }
+    setActions([
+      { label: "Refresh now (auto)", primary: true, onClick: doRefresh },
+      { label: "Run manually", onClick: showManual },
+      { label: "Skip (use as-is)", onClick: () => { closeModal(); resolve(true); } },
+      { label: "Cancel run", onClick: () => { closeModal(); resolve(false); } },
+    ]);
+    openModal();
+  });
+}
+
+function showManual() {
+  clearNode(fbLog);
+  fbLog.style.display = "block";
+  fbLog.appendChild(elem("div", { class: "log-line ev" }, "Run this in a terminal:"));
+  fbLog.appendChild(elem("div", { class: "log-line ev" }, "  .venv/bin/python scripts/fb_login.py"));
+  fbLog.appendChild(elem("div", { class: "log-line ev" }, "Log in inside the Chromium window."));
+  fbLog.appendChild(elem("div", { class: "log-line ev" }, "Press Enter in the terminal to save cookies."));
+  setActions([
+    { label: "I've done it — continue", primary: true,
+      onClick: () => { closeModal(); fbResolve && fbResolve(true); } },
+    { label: "Cancel", onClick: () => { closeModal(); fbResolve && fbResolve(false); } },
+  ]);
+}
+
+async function doRefresh() {
+  clearNode(fbLog);
+  fbLog.style.display = "block";
+  fbLogLine("Starting fb_login.py — a Chromium window will open shortly...");
+  setActions([{ label: "Cancel", onClick: doCancel }]);
+  let r;
+  try {
+    r = await fetch("/fb/cookies/refresh/start", { method: "POST" });
+  } catch (e) {
+    fbLogLine("Failed to start: " + e.message, "err");
+    return;
+  }
+  const j = await r.json();
+  if (!j.ok) { fbLogLine("Server error: " + (j.error || "unknown"), "err"); return; }
+  fbJobId = j.job_id;
+  fbEventSrc = new EventSource("/fb/cookies/refresh/events?job_id=" + encodeURIComponent(fbJobId));
+  fbEventSrc.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch { return; }
+    if (m.type === "log") fbLogLine(m.line);
+    if (m.type === "awaiting_enter") {
+      fbLogLine("→ Log in in the Chromium window, then click 'I'm logged in'.", "ev");
+      setActions([
+        { label: "I'm logged in — save cookies", primary: true, onClick: doConfirm },
+        { label: "Cancel", onClick: doCancel },
+      ]);
+    }
+    if (m.type === "done") {
+      const c = m.cookies || {};
+      if (m.exit_code === 0) {
+        fbLogLine("✓ Cookies saved — age " + fmtAge(c.age_seconds), "ev");
+        setActions([
+          { label: "Continue run", primary: true,
+            onClick: () => { closeModal(); fbResolve && fbResolve(true); } },
+        ]);
+      } else {
+        fbLogLine("✗ Login script exited " + m.exit_code, "err");
+        setActions([
+          { label: "Try again", primary: true, onClick: doRefresh },
+          { label: "Cancel run", onClick: () => { closeModal(); fbResolve && fbResolve(false); } },
+        ]);
+      }
+    }
+    if (m.type === "cancelled") {
+      fbLogLine("Cancelled.", "err");
+      setActions([
+        { label: "Close", onClick: () => { closeModal(); fbResolve && fbResolve(false); } },
+      ]);
+    }
+  };
+  fbEventSrc.onerror = () => { fbLogLine("SSE disconnected.", "err"); };
+}
+
+async function doConfirm() {
+  if (!fbJobId) return;
+  fbLogLine("Sending Enter to script...");
+  try {
+    const r = await fetch("/fb/cookies/refresh/confirm", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ job_id: fbJobId }),
+    });
+    const j = await r.json();
+    if (!j.ok) fbLogLine("Confirm failed: " + (j.error || "unknown"), "err");
+  } catch (e) { fbLogLine("Confirm failed: " + e.message, "err"); }
+}
+
+async function doCancel() {
+  if (!fbJobId) { closeModal(); fbResolve && fbResolve(false); return; }
+  try {
+    await fetch("/fb/cookies/refresh/cancel", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ job_id: fbJobId }),
+    });
+  } catch (_) {}
+}
 
 $("#byok-validate").addEventListener("click", validateByok);
 $("#byok-clear").addEventListener("click", clearByok);

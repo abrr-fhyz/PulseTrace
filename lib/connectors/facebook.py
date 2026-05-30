@@ -170,7 +170,12 @@ async def _capture_many(queries: list[str], scrolls: int, shots_per: int,
                 title = await page.title()
                 _log(f"q{qi} landed url={final_url!r} title={title!r}")
                 if "/login" in final_url or "checkpoint" in final_url:
-                    _log(f"q{qi} LOGIN REDIRECT — cookies stale, re-export info/cookies.json")
+                    _log(f"q{qi} LOGIN REDIRECT — marking cookies stale")
+                    try:
+                        from .. import fb_cookies as _fbc
+                        _fbc.mark_stale(f"login redirect on q{qi}: {final_url}")
+                    except Exception:
+                        pass
             except Exception:
                 pass
             shots_taken = 0
