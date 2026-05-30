@@ -178,9 +178,6 @@
       50%  { transform: scaleX(0.7); opacity: 1; }
       100% { transform: scaleX(0.1); opacity: .6; }
     }
-    .pl-foot { margin-top: 4px; font-size: 11px; color: var(--muted);
-               display: flex; justify-content: space-between; }
-    .pl-foot a { color: var(--accent); text-decoration: none; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .kpi { background: var(--panel2); border-radius: 10px; padding: 14px; }
@@ -357,12 +354,11 @@
   <header>
     <div class="dot"></div>
     <h1>PulseTrace</h1>
-    <span class="muted">Agentic sentiment intelligence · multi-source</span>
     <span id="byok-badge" class="byok-badge" style="display:none"></span>
     <span id="run-pill" class="pill" style="display:none"></span>
     <a id="briefing-link" class="pill" href="#" data-kind="pdf"
        onclick="downloadBriefing(event)"
-       style="display:none">📄 Download briefing PDF</a>
+       style="display:none">📄 Download PDF</a>
     <span class="nav-back" onclick="goto('landing')">← home</span>
     <span class="nav-back" onclick="goto('byok')" style="margin-left:8px">⚙ BYOK</span>
     <span id="nav-shots" class="nav-back" onclick="goto('shots')"
@@ -380,9 +376,6 @@
           <label class="toggle"><input type="checkbox" id="src-facebook" checked> Facebook</label>
           <label class="toggle"><input type="checkbox" id="src-x"> X</label>
           <label class="toggle"><input type="checkbox" id="src-instagram"> Instagram</label>
-        </div>
-        <div class="muted" style="font-size:11px">
-          FB / X / IG need cookies. See README "Source reliability".
         </div>
         <button id="go">Start agent</button>
       </div>
@@ -434,10 +427,6 @@
           <div class="pl-meta" data-meta>idle</div>
           <div class="pl-bar"></div>
         </div>
-        <div class="pl-foot">
-          <span id="pl-status">Awaiting run</span>
-          <span>Server logs stream to your terminal &amp; <code>data/event_logs/&lt;run&gt;.log</code></span>
-        </div>
       </div>
 
       <h2 style="margin-top:18px">Metrics</h2>
@@ -447,14 +436,6 @@
         <div class="kpi"><span>Entropy</span><b id="m-entropy">--</b></div>
       </div>
 
-      <details style="margin-top:16px">
-        <summary>Legacy v1 tools</summary>
-        <div class="row" style="margin-top:8px;gap:6px">
-          <button class="secondary" data-cmd="scrape">Scrape FB</button>
-          <button class="secondary" data-cmd="process">Process</button>
-          <button class="secondary" data-cmd="summarize">Summarize</button>
-        </div>
-      </details>
     </section>
 
     <section style="display:flex;flex-direction:column;gap:16px;min-width:0">
@@ -688,9 +669,8 @@ function plReset() {
     plState(s, null);
     plMeta(s, "idle");
   }
-  $("#pl-status").textContent = "Awaiting run";
 }
-function plStatus(t) { $("#pl-status").textContent = t; }
+function plStatus(_t) {}
 
 // Legacy log() retained as no-op; server mirrors all events to stdout + file.
 function log(_msg, _cls) {}
