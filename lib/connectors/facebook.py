@@ -36,7 +36,8 @@ SEARCH_URL = "https://www.facebook.com/search/posts/?q={q}"
 DEFAULT_SCROLLS = int(os.environ.get("PT_FB_SCROLLS", "5"))
 DEFAULT_SHOTS = int(os.environ.get("PT_FB_SHOTS", "4"))
 SHOT_MIN_BYTES = 30_000
-DEBUG = os.environ.get("PT_FB_DEBUG", "0") == "1"
+DEBUG_DIR = Path(os.environ.get("PT_FB_DEBUG_DIR", "data/fb_debug"))
+QUIET = os.environ.get("PT_FB_QUIET", "0") == "1"
 
 OCR_PROMPT = (
     "This screenshot shows one or more Facebook posts in a feed. Extract every "
@@ -51,7 +52,7 @@ OCR_PROMPT = (
 
 
 def _log(msg: str) -> None:
-    if DEBUG:
+    if not QUIET:
         print(f"[fb] {msg}", file=sys.stderr, flush=True)
 
 
@@ -109,6 +110,8 @@ def _ocr(png_path: Path, key: str) -> list[dict]:
                 break
             posts = parsed.get("posts") or ([parsed] if "post_content" in parsed else [])
             _log(f"ocr {model} ok: {len(posts)} posts from {png_path.name}")
+            if not posts:
+                _log(f"ocr raw payload (first 240ch): {txt[:240]!r}")
             return posts
     return []
 
@@ -162,6 +165,14 @@ async def _capture_many(queries: list[str], scrolls: int, shots_per: int,
                 _log(f"q{qi} goto fail: {e}")
                 continue
             await asyncio.sleep(4)
+            try:
+                final_url = page.url
+                title = await page.title()
+                _log(f"q{qi} landed url={final_url!r} title={title!r}")
+                if "/login" in final_url or "checkpoint" in final_url:
+                    _log(f"q{qi} LOGIN REDIRECT — cookies stale, re-export info/cookies.json")
+            except Exception:
+                pass
             shots_taken = 0
             for n in range(scrolls):
                 shot = out_dir / f"q{qi}_s{n}_{ts}.png"
@@ -241,6 +252,18 @@ class FacebookConnector(Connector):
                 return []
             total_shots = sum(len(v) for v in shots_by_q.values())
             _log(f"captured {total_shots} shots across {len(queries)} queries")
+            try:
+                DEBUG_DIR.mkdir(parents=True, exist_ok=True)
+                for qi, (q, shots) in enumerate(shots_by_q.items()):
+                    if not shots:
+                        continue
+                    src = shots[0]
+                    dst = DEBUG_DIR / f"sample_q{qi}_{int(time.time())}.png"
+                    dst.write_bytes(src.read_bytes())
+                    _log(f"sample shot saved: {dst}")
+                    break
+            except Exception as e:
+                _log(f"could not save sample shot: {e}")
             if total_shots == 0:
                 return []
             seen: set[str] = set()
