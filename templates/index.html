@@ -782,7 +782,6 @@ async function start() {
   }
 
   $("#go").disabled = true;
-  clearNode(logEl());
   clearNode($("#clusters"));
   clearNode($("#answer"));
   if (cy) { cy.destroy(); cy = null; }
