@@ -13,3 +13,5 @@ twikit>=2.0
 instaloader>=4.13
 pytest>=8.0
 pytest-timeout>=2.2
+weasyprint>=62.0
+Pillow>=10.0

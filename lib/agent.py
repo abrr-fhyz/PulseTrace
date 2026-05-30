@@ -112,6 +112,7 @@ def _fetch_all(queries: list[tuple[str, str]], limit: int,
 def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
     run_id = run_id or new_run_id()
     sources = [s for s in sources if s in SOURCES] or ["facebook"]
+    started_at = int(time.time())
     BUS.publish(run_id, {"type": "started", "run_id": run_id, "topic": topic, "sources": sources})
 
     seen: dict[str, Post] = {}
@@ -218,11 +219,22 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
         "id": run_id,
         "topic": topic,
         "sources": sources,
-        "started_at": int(time.time()),
+        "started_at": started_at,
+        "finished_at": int(time.time()),
         "queries": queries_log,
         "stop_reason": stop_reason,
         "metrics": {"posts": len(seen), "clusters": len(cluster_meta)},
     })
+    try:
+        from .briefing import build as build_briefing
+        briefing = build_briefing(run_id, with_pdf=True, exec_summary=True)
+        BUS.publish(run_id, {
+            "type": "briefing_ready",
+            "html": f"/run/{run_id}/briefing/html",
+            "pdf": f"/run/{run_id}/briefing/pdf" if briefing["pdf"] else None,
+        })
+    except Exception as e:
+        BUS.publish(run_id, {"type": "briefing_error", "err": str(e)})
     BUS.publish(run_id, {
         "type": "done", "run_id": run_id, "stop_reason": stop_reason, "n_posts": len(seen),
     })

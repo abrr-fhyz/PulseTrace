@@ -18,8 +18,9 @@ from lib.keys import load as _load_api_keys
 _load_api_keys()
 
 from lib.agent import run_agent
+from lib.briefing import build as build_briefing
 from lib.events import BUS, sse_format
-from lib.store import read_json, new_run_id
+from lib.store import read_json, new_run_id, run_dir
 from lib.rag import ask as rag_ask
 from lib import backend, fb_cookies
 
@@ -191,6 +192,42 @@ def shots_file(run_id, iter_name, filename):
     if not p.exists():
         return jsonify({"error": "not found"}), 404
     return Response(p.read_bytes(), mimetype="image/png")
+
+
+@app.route("/run/<run_id>/briefing/html")
+def briefing_html(run_id):
+    p = run_dir(run_id) / "briefing" / "briefing.html"
+    if not p.exists():
+        try:
+            build_briefing(run_id)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    return Response(p.read_text(encoding="utf-8"), mimetype="text/html")
+
+
+@app.route("/run/<run_id>/briefing/pdf")
+def briefing_pdf(run_id):
+    p = run_dir(run_id) / "briefing" / "briefing.pdf"
+    if not p.exists():
+        try:
+            build_briefing(run_id, with_pdf=True)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    if not p.exists():
+        return jsonify({"error": "PDF unavailable (weasyprint not installed)"}), 501
+    return Response(
+        p.read_bytes(),
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="briefing-{run_id}.pdf"'},
+    )
+
+
+@app.route("/run/<run_id>/briefing/manifest")
+def briefing_manifest(run_id):
+    p = run_dir(run_id) / "briefing" / "briefing.json"
+    if not p.exists():
+        return jsonify({"error": "not generated"}), 404
+    return Response(p.read_text(encoding="utf-8"), mimetype="application/json")
 
 
 @app.route("/fb/cookies/status")

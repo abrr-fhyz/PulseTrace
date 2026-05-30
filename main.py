@@ -20,15 +20,17 @@ Commands:
   scrape      - Scrape Facebook posts and take screenshots
   process     - Analyze screenshots using AI
   summarize   - Generate summary analysis of posts
+  briefing    - Generate an executive briefing for a completed run
 
 Examples:
   python main.py scrape --target 100 --headless
   python main.py process
   python main.py summarize
+  python main.py briefing --run-id 1780124361-beadcb
         """
     )
     
-    parser.add_argument('command', choices=['scrape', 'process', 'summarize'],
+    parser.add_argument('command', choices=['scrape', 'process', 'summarize', 'briefing'],
                        help='Command to execute')
     
     # Parse only the command first
@@ -59,6 +61,21 @@ Examples:
         elif args.command == 'summarize':
             from lib.summarizer import main as summarizer_main
             return summarizer_main()
+
+        elif args.command == 'briefing':
+            briefing_parser = argparse.ArgumentParser()
+            briefing_parser.add_argument('--run-id', required=True)
+            briefing_parser.add_argument('--no-pdf', action='store_true')
+            briefing_parser.add_argument('--no-summary', action='store_true')
+            briefing_args = briefing_parser.parse_args(remaining_args)
+            from lib.briefing import build
+            out = build(
+                briefing_args.run_id,
+                with_pdf=not briefing_args.no_pdf,
+                exec_summary=not briefing_args.no_summary,
+            )
+            print(out)
+            return 0
             
     except Exception as e:
         print(f"Error executing {args.command}: {e}")

@@ -33,6 +33,7 @@
     .muted { color: var(--muted); font-size: 12px; }
     .pill { display: inline-block; padding: 2px 8px; border-radius: 999px;
             background: var(--panel2); border: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+    #briefing-link { color: var(--accent); text-decoration: none; }
 
     .view { display: none; opacity: 0; transition: opacity .35s ease; min-height: 100vh; }
     .view.active { display: block; opacity: 1; }
@@ -312,6 +313,8 @@
     <span class="muted">Agentic sentiment intelligence · multi-source</span>
     <span id="byok-badge" class="byok-badge" style="display:none"></span>
     <span id="run-pill" class="pill" style="display:none"></span>
+    <a id="briefing-link" class="pill" href="#" target="_blank" rel="noopener"
+       style="display:none">📄 Download briefing PDF</a>
     <span class="nav-back" onclick="goto('landing')">← home</span>
     <span class="nav-back" onclick="goto('byok')" style="margin-left:8px">⚙ BYOK</span>
     <span id="nav-shots" class="nav-back" onclick="goto('shots')"
@@ -684,6 +687,8 @@ async function start() {
   const pill = $("#run-pill");
   pill.style.display = "inline-block";
   pill.textContent = "run " + runId;
+  $("#briefing-link").style.display = "none";
+  $("#briefing-link").href = "#";
   if (sources.includes("facebook")) {
     $("#nav-shots").style.display = "inline-block";
   }
@@ -723,6 +728,18 @@ function handle(ev) {
       log("Labeled " + (ev.clusters || []).length + " clusters"); break;
     case "low_recall": log("Low recall (" + ev.n + ") - retrying with broader query"); break;
     case "embed_error": log("Embed error: " + ev.err, "err"); break;
+    case "briefing_ready": {
+      const link = $("#briefing-link");
+      const href = ev.pdf || ev.html;
+      if (href) {
+        link.href = href;
+        link.textContent = ev.pdf ? "📄 Download briefing PDF" : "📄 View briefing HTML";
+        link.style.display = "inline-block";
+      }
+      log("Briefing ready");
+      break;
+    }
+    case "briefing_error": log("Briefing error: " + (ev.err || ""), "err"); break;
     case "error": log("Error: " + (ev.err || ""), "err"); break;
     case "done":
       log("Done - stop_reason=" + ev.stop_reason + ", posts=" + ev.n_posts);
