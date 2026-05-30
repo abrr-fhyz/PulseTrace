@@ -149,7 +149,26 @@
     .pos { background: var(--pos); } .neu { background: var(--neu); } .neg { background: var(--neg); }
     .answer { font-size: 14px; line-height: 1.55; }
     .cite { display: inline-block; background: var(--panel2); border: 1px solid var(--border);
-            border-radius: 4px; padding: 0 6px; font-size: 11px; color: var(--accent); margin: 2px 2px 0 0; }
+            border-radius: 4px; padding: 0 6px; font-size: 11px; color: var(--accent);
+            margin: 2px 2px 0 0; cursor: pointer; text-decoration: none; }
+    .cite:hover { border-color: var(--accent); }
+    .cite.unresolved { color: var(--muted); cursor: default; }
+    .cite-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                  gap: 10px; margin-top: 12px; }
+    .cite-card { background: var(--panel2); border: 1px solid var(--border);
+                 border-radius: 10px; overflow: hidden; cursor: pointer;
+                 display: flex; flex-direction: column;
+                 transition: transform .12s, border-color .12s; }
+    .cite-card:hover { transform: translateY(-2px); border-color: var(--accent2); }
+    .cite-card img { width: 100%; height: 110px; object-fit: cover; object-position: top;
+                     background: #0d141f; display: block; }
+    .cite-card .cc-body { padding: 8px 10px; font-size: 11px; line-height: 1.45;
+                           color: var(--muted); flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .cite-card .cc-id { color: var(--accent); font-family: ui-monospace, monospace; font-size: 10px; }
+    .cite-card .cc-text { color: var(--text); font-size: 12px;
+                          display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+                          overflow: hidden; }
+    .cite-card .cc-meta { display: flex; justify-content: space-between; }
     details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
     .log-line { display: block; }
     .byok-badge { font-size: 11px; padding: 3px 8px; border-radius: 999px;
@@ -797,10 +816,75 @@ async function ask() {
   const j = await r.json();
   clearNode(a);
   if (j.error) { a.appendChild(document.createTextNode(j.error)); return; }
-  a.appendChild(elem("div", null, String(j.answer || "")));
-  const cites = elem("div", { style: "margin-top:8px" });
-  for (const c of (j.citations || [])) cites.appendChild(elem("span", { class: "cite" }, String(c)));
-  a.appendChild(cites);
+
+  const details = j.citations_detail || [];
+  const byRaw = {}; for (const d of details) byRaw[d.raw] = d;
+  const rawList = j.citations || details.map(d => d.raw);
+
+  const inline = renderAnswerWithCites(String(j.answer || ""), rawList, byRaw);
+  a.appendChild(inline);
+
+  if (details.length) {
+    a.appendChild(elem("h2", { style: "margin-top:14px;font-size:11px" }, "References"));
+    const grid = elem("div", { class: "cite-cards" });
+    for (const d of details) grid.appendChild(renderCiteCard(d));
+    a.appendChild(grid);
+  }
+}
+
+function renderAnswerWithCites(text, rawList, byRaw) {
+  const wrap = elem("div", { class: "answer" });
+  const seen = new Set();
+  let lastIdx = 0;
+  const all = [...text.matchAll(/\[([^\[\]]+)\]/g)];
+  for (const m of all) {
+    const start = m.index;
+    if (start > lastIdx) wrap.appendChild(document.createTextNode(text.slice(lastIdx, start)));
+    const inside = m[1];
+    const parts = inside.split(/[,\s]+/).filter(Boolean);
+    wrap.appendChild(document.createTextNode("["));
+    parts.forEach((p, i) => {
+      if (i > 0) wrap.appendChild(document.createTextNode(", "));
+      const d = byRaw[p];
+      const chip = elem(d ? "a" : "span",
+                        { class: "cite" + (d && d.resolved ? "" : " unresolved"),
+                          title: d && d.text_preview ? d.text_preview : "" },
+                        d ? d.label : p);
+      if (d) {
+        chip.addEventListener("click", (e) => { e.preventDefault(); openCite(d); });
+        seen.add(p);
+      }
+      wrap.appendChild(chip);
+    });
+    wrap.appendChild(document.createTextNode("]"));
+    lastIdx = start + m[0].length;
+  }
+  if (lastIdx < text.length) wrap.appendChild(document.createTextNode(text.slice(lastIdx)));
+  return wrap;
+}
+
+function openCite(d) {
+  if (d.shot_url) { openLightbox(d.shot_url); return; }
+  if (d.url) { window.open(d.url, "_blank", "noopener"); return; }
+}
+
+function renderCiteCard(d) {
+  const card = elem("div", { class: "cite-card", title: d.text_preview || "" });
+  if (d.shot_url) {
+    const img = elem("img", { src: d.shot_url, alt: d.label, loading: "lazy" });
+    card.appendChild(img);
+  }
+  const body = elem("div", { class: "cc-body" });
+  body.appendChild(elem("div", { class: "cc-id" }, "#" + d.label));
+  if (d.text_preview) body.appendChild(elem("div", { class: "cc-text" }, d.text_preview));
+  const meta = elem("div", { class: "cc-meta" });
+  meta.appendChild(elem("span", null, d.source || "?"));
+  meta.appendChild(elem("span", null,
+                       d.shot_url ? "open shot ↗" : (d.url ? "open ↗" : "no link")));
+  body.appendChild(meta);
+  card.appendChild(body);
+  card.addEventListener("click", () => openCite(d));
+  return card;
 }
 
 document.querySelectorAll("[data-cmd]").forEach(btn => {

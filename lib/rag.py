@@ -8,6 +8,57 @@ from .llm import chat_json
 from .store import run_dir
 
 
+def _normalize_cite(raw: str, posts: dict) -> str | None:
+    """LLM often strips the 'facebook:' prefix. Try several keys."""
+    if not raw:
+        return None
+    s = str(raw).strip().lstrip("[").rstrip("]")
+    if s in posts:
+        return s
+    for pid in posts:
+        if pid.endswith(":" + s) or pid.endswith(s):
+            return pid
+    return None
+
+
+def _resolve_shot_url(run_id: str, shot_name: str) -> str | None:
+    if not shot_name:
+        return None
+    shots_root = run_dir(run_id) / "shots"
+    if not shots_root.exists():
+        return None
+    for it_dir in shots_root.iterdir():
+        if not it_dir.is_dir():
+            continue
+        if (it_dir / shot_name).exists():
+            return f"/shots/{run_id}/{it_dir.name}/{shot_name}"
+    return None
+
+
+def _citation_detail(run_id: str, cite_raw: str, posts: dict) -> dict:
+    pid = _normalize_cite(cite_raw, posts)
+    if pid is None:
+        return {"raw": str(cite_raw), "resolved": False,
+                "label": str(cite_raw)}
+    post = posts[pid]
+    raw = post.get("raw") or {}
+    shot_name = raw.get("shot") if isinstance(raw, dict) else None
+    shot_url = _resolve_shot_url(run_id, shot_name) if shot_name else None
+    short = pid.split(":", 1)[-1]
+    return {
+        "raw": str(cite_raw),
+        "resolved": True,
+        "id": pid,
+        "label": short[-9:] if len(short) > 12 else short,
+        "source": post.get("source"),
+        "author": post.get("author"),
+        "url": post.get("url"),
+        "text_preview": (post.get("text") or "")[:240],
+        "shot_url": shot_url,
+        "query": raw.get("query") if isinstance(raw, dict) else None,
+    }
+
+
 def build_index(run_id: str) -> None:
     posts_path = run_dir(run_id) / "posts.json"
     if not posts_path.exists():
@@ -52,8 +103,11 @@ def ask(run_id: str, question: str, k: int = 8) -> dict:
         out = chat_json(ASK_SYS, f"Question: {question}\n\nPosts:\n{context}", stage="rag")
     except Exception as e:
         return {"answer": f"LLM error: {e}", "citations": [], "retrieved": hits}
+    raw_cites = [str(c) for c in out.get("citations", [])]
+    cites_detail = [_citation_detail(run_id, c, posts) for c in raw_cites]
     return {
         "answer": str(out.get("answer", "")),
-        "citations": [str(c) for c in out.get("citations", [])],
+        "citations": raw_cites,
+        "citations_detail": cites_detail,
         "retrieved": hits,
     }
