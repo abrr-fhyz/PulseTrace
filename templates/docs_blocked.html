@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Docs unavailable · PulseTrace</title>
+  <style>
+    body{margin:0;background:#0a0d14;color:#e6edf7;
+      font-family:ui-sans-serif,system-ui,sans-serif;
+      display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px}
+    h1{font-size:32px;margin:0 0 12px}
+    p{color:#8aa0bd;max-width:520px}
+    .pill{display:inline-block;padding:4px 12px;border-radius:999px;
+      background:#131a26;border:1px solid #25324a;font-size:12px;color:#8aa0bd;margin-top:14px}
+  </style>
+</head>
+<body>
+<div>
+  <h1>Docs not available</h1>
+  <p>
+  {% if reason == 'disabled' %}
+    The documentation page is currently disabled.
+  {% elif reason == 'not_yet' %}
+    Available starting <b style="color:#e6edf7">{{ start }}</b>.
+  {% elif reason == 'expired' %}
+    The viewing window closed on <b style="color:#e6edf7">{{ end }}</b>.
+  {% else %}
+    Not currently accessible.
+  {% endif %}
+  </p>
+  <div class="pill">PulseTrace · Boulder Of Ephyra</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PulseTrace — Docs & Pitch</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <script src="https://unpkg.com/lunr@2.3.9/lunr.min.js"></script>
+  <style>
+    :root {
+      --bg:#0a0d14; --panel:#131a26; --panel2:#1a2332; --border:#25324a;
+      --text:#e6edf7; --muted:#8aa0bd; --accent:#6ee7b7; --accent2:#60a5fa;
+      --accent3:#c084fc; --warn:#fbbf24;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+      line-height:1.55;-webkit-font-smoothing:antialiased}
+    a{color:var(--accent2);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+    aside{position:sticky;top:0;height:100vh;overflow-y:auto;
+      background:var(--panel);border-right:1px solid var(--border);padding:24px 18px}
+    aside h3{font-size:11px;color:var(--muted);text-transform:uppercase;
+      letter-spacing:.1em;margin:18px 0 8px}
+    aside .brand{font-weight:700;font-size:18px;letter-spacing:-.01em;margin-bottom:12px}
+    aside .live{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--muted);margin-bottom:18px}
+    aside .live .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);
+      box-shadow:0 0 0 0 var(--accent);animation:pulse 2s infinite}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(110,231,183,.5)}70%{box-shadow:0 0 0 10px rgba(110,231,183,0)}100%{box-shadow:0 0 0 0 rgba(110,231,183,0)}}
+    aside ul{list-style:none;padding:0;margin:0}
+    aside li a{display:block;padding:6px 10px;border-radius:6px;color:var(--text);
+      font-size:13px}
+    aside li a:hover{background:var(--panel2);text-decoration:none}
+    aside #search{width:100%;background:var(--panel2);border:1px solid var(--border);
+      color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:8px}
+    main{padding:48px 56px 96px;max-width:980px}
+    .hero{padding:48px 0 32px;border-bottom:1px solid var(--border);margin-bottom:32px}
+    .hero h1{font-size:44px;font-weight:700;letter-spacing:-.02em;margin:0 0 12px;
+      background:linear-gradient(90deg,var(--accent) 0%,var(--accent2) 50%,var(--accent3) 100%);
+      -webkit-background-clip:text;background-clip:text;color:transparent}
+    .hero .tag{font-size:20px;color:var(--muted)}
+    .meta{display:flex;gap:16px;margin-top:20px;flex-wrap:wrap}
+    .meta .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;
+      background:var(--panel2);border:1px solid var(--border);border-radius:999px;
+      font-size:12px;color:var(--muted)}
+    .meta .pill b{color:var(--text);font-weight:600}
+    section{padding:36px 0;border-bottom:1px solid var(--border);scroll-margin-top:24px}
+    section:last-child{border-bottom:none}
+    section h2{font-size:13px;color:var(--muted);text-transform:uppercase;
+      letter-spacing:.12em;margin:0 0 14px;font-weight:600}
+    section h3.title{font-size:30px;font-weight:700;letter-spacing:-.01em;margin:0 0 20px}
+    p{margin:0 0 14px}
+    ul.bullets{padding-left:20px;margin:8px 0 16px}
+    ul.bullets li{margin:6px 0}
+    .grid{display:grid;gap:14px}
+    .grid.two{grid-template-columns:repeat(2,1fr)}
+    .grid.three{grid-template-columns:repeat(3,1fr)}
+    @media(max-width:760px){.grid.two,.grid.three{grid-template-columns:1fr}}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+      padding:18px}
+    .card h4{margin:0 0 6px;font-size:15px;font-weight:600}
+    .card .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .card .v{font-size:13px;color:var(--muted);margin-top:4px}
+    /* feature matrix */
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border)}
+    th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+    .status{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+    .status.live{background:rgba(110,231,183,.15);color:var(--accent)}
+    .status.planned{background:rgba(96,165,250,.15);color:var(--accent2)}
+    .status.upcoming{background:rgba(251,191,36,.15);color:var(--warn)}
+    code,pre{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12.5px}
+    code{background:var(--panel2);padding:1px 6px;border-radius:4px}
+    pre{background:var(--panel);border:1px solid var(--border);border-radius:8px;
+      padding:14px;overflow-x:auto}
+    .mermaid{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+      padding:24px;text-align:center}
+    /* team */
+    .team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+    .team-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;
+      padding:24px;text-align:center;transition:transform .2s,border-color .2s}
+    .team-card:hover{transform:translateY(-2px);border-color:var(--accent2)}
+    .avatar{width:96px;height:96px;border-radius:50%;margin:0 auto 14px;
+      display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;
+      background:linear-gradient(135deg,var(--accent2),var(--accent3));color:#07090f;
+      border:3px solid var(--border)}
+    .team-card .nm{font-weight:600;font-size:16px;margin:0 0 4px}
+    .team-card .rl{font-size:13px;color:var(--muted);margin-bottom:8px}
+    .team-card .em{font-size:12px}
+    /* api */
+    .api-row{display:grid;grid-template-columns:80px 1fr 2fr;gap:12px;padding:8px 0;
+      border-bottom:1px solid var(--border);font-size:13px;align-items:center}
+    .method{font-family:ui-monospace,monospace;font-weight:700;font-size:11px;
+      padding:2px 8px;border-radius:4px;text-align:center}
+    .method.GET{background:rgba(110,231,183,.15);color:var(--accent)}
+    .method.POST{background:rgba(96,165,250,.15);color:var(--accent2)}
+    /* roadmap */
+    .road{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    @media(max-width:760px){.road{grid-template-columns:1fr}}
+    .road .col{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px}
+    .road .col h4{margin:0 0 10px;font-size:13px;color:var(--accent2);text-transform:uppercase;letter-spacing:.08em}
+    /* changelog */
+    .clog{display:flex;flex-direction:column;gap:10px}
+    .clog .row{display:grid;grid-template-columns:120px 1fr;gap:14px;padding:10px 0;
+      border-bottom:1px solid var(--border);font-size:13px}
+    .clog .row .d{color:var(--muted);font-family:ui-monospace,monospace;font-size:12px}
+    .ftr{padding:48px 0 0;color:var(--muted);font-size:12px;text-align:center}
+    /* print */
+    @media print{
+      aside{display:none}
+      .wrap{grid-template-columns:1fr}
+      main{padding:0;max-width:100%}
+      section{break-inside:avoid;page-break-inside:avoid}
+      body{background:white;color:black}
+    }
+    .toolbar{position:fixed;bottom:24px;right:24px;display:flex;gap:8px;z-index:10}
+    .toolbar button{background:var(--panel2);color:var(--text);border:1px solid var(--border);
+      padding:10px 14px;border-radius:8px;font-size:12px;cursor:pointer}
+    .toolbar button:hover{border-color:var(--accent2)}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <aside>
+    <div class="brand">PulseTrace</div>
+    <div class="live"><span class="dot"></span> Live · {{ stats.run_count }} runs · {{ stats.connector_count }} sources</div>
+    <input id="search" placeholder="Search docs…">
+    <ul id="nav">
+      <h3>Pitch</h3>
+      <li><a href="#problem">Problem</a></li>
+      <li><a href="#solution">Solution</a></li>
+      <li><a href="#why-now">Why Now</a></li>
+      <li><a href="#demo">Demo</a></li>
+      <li><a href="#market">Market</a></li>
+      <li><a href="#business">Business Model</a></li>
+      <li><a href="#traction">Traction</a></li>
+      <li><a href="#competition">Competition</a></li>
+      <li><a href="#advantage">Advantage</a></li>
+      <li><a href="#gtm">Go-To-Market</a></li>
+      <li><a href="#team">Team</a></li>
+      <li><a href="#vision">Vision</a></li>
+      <h3>Product</h3>
+      <li><a href="#features">Feature Matrix</a></li>
+      <li><a href="#roadmap">Roadmap</a></li>
+      <h3>Engineering</h3>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#dataflow">Data Flow</a></li>
+      <li><a href="#stack">Stack</a></li>
+      <li><a href="#api">API</a></li>
+      <li><a href="#data">Data Layer</a></li>
+      <li><a href="#ai">AI Layer</a></li>
+      <li><a href="#perf">Performance</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#analytics">Analytics</a></li>
+      <li><a href="#changelog">Changelog</a></li>
+    </ul>
+  </aside>
+
+  <main id="content">
+    <div class="hero">
+      <h1>PulseTrace</h1>
+      <div class="tag">{{ pitch.tagline }}</div>
+      <div class="meta">
+        <span class="pill"><b>{{ stats.run_count }}</b> runs completed</span>
+        <span class="pill"><b>{{ stats.connector_count }}</b> live connectors</span>
+        <span class="pill"><b>8</b> LLM providers</span>
+        {% if stats.last_run_ts %}<span class="pill">last run <b>{{ stats.last_run_ts }}</b></span>{% endif %}
+        <span class="pill">window <b>{{ cfg.start }} → {{ cfg.end }}</b></span>
+      </div>
+    </div>
+
+    <section id="problem"><h2>01 · Problem</h2><h3 class="title">The sentiment gap</h3><p>{{ pitch.problem }}</p></section>
+    <section id="solution"><h2>02 · Solution</h2><h3 class="title">Agentic intelligence loop</h3><p>{{ pitch.solution }}</p></section>
+    <section id="why-now"><h2>03 · Why Now</h2><h3 class="title">Three forces aligned</h3>
+      <ul class="bullets">{% for w in pitch.why_now %}<li>{{ w }}</li>{% endfor %}</ul></section>
+    <section id="demo"><h2>04 · Product Demo</h2><h3 class="title">Topic → briefing in minutes</h3>
+      <p>{{ pitch.demo }}</p>
+      <p><a href="/">→ Open the live demo</a></p></section>
+    <section id="market"><h2>05 · Market</h2><h3 class="title">$4B+ social listening</h3><p>{{ pitch.market }}</p></section>
+    <section id="business"><h2>06 · Business Model</h2><h3 class="title">Open core + hosted BYOK</h3><p>{{ pitch.business_model }}</p></section>
+    <section id="traction"><h2>07 · Traction</h2><h3 class="title">Shipping fast</h3>
+      <ul class="bullets">{% for t in pitch.traction %}<li>{{ t }}</li>{% endfor %}</ul></section>
+    <section id="competition"><h2>08 · Competition</h2><h3 class="title">Incumbents are closed and slow</h3><p>{{ pitch.competition }}</p></section>
+    <section id="advantage"><h2>09 · Unique Advantage</h2><h3 class="title">No single point of failure</h3><p>{{ pitch.advantage }}</p></section>
+    <section id="gtm"><h2>10 · Go-To-Market</h2><h3 class="title">OSS → momentum → hosted</h3><p>{{ pitch.gtm }}</p></section>
+
+    <section id="team">
+      <h2>11 · Team</h2>
+      <h3 class="title">{{ team.name }}</h3>
+      <div class="team-grid">
+        {% for m in team.members %}
+        <div class="team-card">
+          <div class="avatar">{{ m.name.split(' ')[0][0] }}{{ m.name.split(' ')[-1][0] }}</div>
+          <div class="nm">{{ m.name }}</div>
+          <div class="rl">{{ m.role }}</div>
+          <div class="em"><a href="mailto:{{ m.email }}">{{ m.email }}</a></div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section id="vision"><h2>12 · Vision</h2><h3 class="title">Every topic has a fingerprint</h3><p>{{ pitch.vision }}</p></section>
+
+    <section id="features">
+      <h2>Feature Matrix</h2><h3 class="title">What's live, what's coming</h3>
+      <table>
+        <thead><tr><th>Feature</th><th>Status</th><th>Detail</th></tr></thead>
+        <tbody>
+        {% for f in features %}
+        <tr>
+          <td>{{ f.name }}</td>
+          <td><span class="status {{ f.status }}">{{ f.status }}</span></td>
+          <td style="color:var(--muted)">{{ f.detail }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section id="roadmap">
+      <h2>Roadmap</h2><h3 class="title">Short, mid, long</h3>
+      <div class="road">
+        <div class="col"><h4>Short (now → 30d)</h4><ul class="bullets">{% for r in roadmap.short %}<li>{{ r }}</li>{% endfor %}</ul></div>
+        <div class="col"><h4>Mid (30 → 90d)</h4><ul class="bullets">{% for r in roadmap.mid %}<li>{{ r }}</li>{% endfor %}</ul></div>
+        <div class="col"><h4>Long (90d+)</h4><ul class="bullets">{% for r in roadmap.long %}<li>{{ r }}</li>{% endfor %}</ul></div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>Architecture</h2><h3 class="title">UI → Agent → Connectors → Stores → AI → Output</h3>
+      <div class="mermaid">{{ architecture }}</div>
+    </section>
+
+    <section id="dataflow">
+      <h2>Data Flow</h2><h3 class="title">Topic to cited answer</h3>
+      <div class="mermaid">{{ dataflow }}</div>
+    </section>
+
+    <section id="stack">
+      <h2>Technology Stack</h2><h3 class="title">Boring where possible</h3>
+      <div class="grid two">
+        {% for layer, items in stack.items() %}
+        <div class="card"><div class="k">{{ layer }}</div>
+          <div class="v">{{ items|join(' · ') }}</div></div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section id="api">
+      <h2>API</h2><h3 class="title">Exposed endpoints</h3>
+      {% for m, path, desc in apis_exposed %}
+      <div class="api-row">
+        <span class="method {{ m }}">{{ m }}</span>
+        <code>{{ path }}</code>
+        <span style="color:var(--muted)">{{ desc }}</span>
+      </div>
+      {% endfor %}
+      <h3 class="title" style="margin-top:32px;font-size:20px">Consumed external APIs</h3>
+      <ul class="bullets">{% for a in apis_consumed %}<li>{{ a }}</li>{% endfor %}</ul>
+    </section>
+
+    <section id="data">
+      <h2>Data Layer</h2><h3 class="title">Per-run JSON, no DB</h3>
+      <div class="grid three">
+        <div class="card"><div class="k">Sources</div><div class="v">{{ data_layer.sources }}</div></div>
+        <div class="card"><div class="k">Storage</div><div class="v">{{ data_layer.storage }}</div></div>
+        <div class="card"><div class="k">Privacy</div><div class="v">{{ data_layer.privacy }}</div></div>
+      </div>
+    </section>
+
+    <section id="ai">
+      <h2>AI Layer</h2><h3 class="title">Models + explainability</h3>
+      <div class="grid two">
+        {% for k, v in ai_layer.items() %}
+        <div class="card"><div class="k">{{ k }}</div><div class="v">{{ v }}</div></div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section id="perf">
+      <h2>Performance & Scalability</h2><h3 class="title">Where the bytes go</h3>
+      <div class="grid two">
+        {% for k, v in performance.items() %}
+        <div class="card"><div class="k">{{ k }}</div><div class="v">{{ v }}</div></div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section id="security">
+      <h2>Security</h2><h3 class="title">Hackathon-scoped, BYOK-first</h3>
+      <div class="grid two">
+        {% for k, v in security.items() %}
+        <div class="card"><div class="k">{{ k }}</div><div class="v">{{ v }}</div></div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section id="analytics">
+      <h2>Analytics</h2><h3 class="title">Live KPIs</h3>
+      <div class="grid two">
+        <div class="card"><div class="k">Runs completed</div><div class="v"><b style="color:var(--accent);font-size:24px">{{ stats.run_count }}</b></div></div>
+        <div class="card"><div class="k">Connectors live</div><div class="v"><b style="color:var(--accent2);font-size:24px">{{ stats.connector_count }}</b> ({{ stats.connectors|join(', ') }})</div></div>
+        <div class="card"><div class="k">Last run</div><div class="v">{{ stats.last_run_ts or 'no runs yet' }}</div></div>
+        <div class="card"><div class="k">Provider cascade</div><div class="v"><b style="color:var(--accent3);font-size:24px">8</b> providers w/ failover</div></div>
+      </div>
+    </section>
+
+    <section id="changelog">
+      <h2>Changelog</h2><h3 class="title">Version history</h3>
+      <div class="clog">
+        {% for d, t in changelog %}
+        <div class="row"><div class="d">{{ d }}</div><div>{{ t }}</div></div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <div class="ftr">PulseTrace · {{ team.name }} · access window {{ cfg.start }} → {{ cfg.end }}</div>
+  </main>
+</div>
+
+<div class="toolbar">
+  <button onclick="window.print()">Print / PDF</button>
+  <a href="/docs/export/markdown" style="text-decoration:none"><button>Markdown</button></a>
+</div>
+
+<script>
+  mermaid.initialize({startOnLoad:true, theme:'dark',
+    themeVariables:{background:'#131a26', primaryColor:'#1a2332',
+      primaryTextColor:'#e6edf7', lineColor:'#60a5fa', fontSize:'13px'}});
+
+  // simple client-side search: highlight matching sections
+  const idx = lunr(function(){
+    this.ref('id'); this.field('text');
+    document.querySelectorAll('section').forEach(s=>{
+      this.add({id:s.id, text:s.innerText});
+    });
+  });
+  const inp = document.getElementById('search');
+  inp.addEventListener('input', e=>{
+    const q = e.target.value.trim();
+    document.querySelectorAll('section').forEach(s=>s.style.display='');
+    if(!q) return;
+    let hits;
+    try { hits = idx.search(q+'*'); } catch(_) { hits = []; }
+    const ids = new Set(hits.map(h=>h.ref));
+    document.querySelectorAll('section').forEach(s=>{
+      s.style.display = ids.has(s.id) ? '' : 'none';
+    });
+  });
+</script>
+</body>
+</html>

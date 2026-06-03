@@ -1,7 +1,7 @@
 flask>=3.0
 flask-cors>=4.0
 python-dotenv>=1.0
-playwright>=1.40
+playwright==1.60.0
 openai>=1.50
 praw>=7.7
 requests>=2.31

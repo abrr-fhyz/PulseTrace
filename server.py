@@ -24,7 +24,8 @@ from lib.briefing import build as build_briefing
 from lib.events import BUS, sse_format
 from lib.store import read_json, new_run_id, run_dir
 from lib.rag import ask as rag_ask
-from lib import backend, fb_cookies
+from lib import backend, fb_cookies, docs as docs_mod
+from lib import docs_content
 
 
 app = Flask(__name__)
@@ -84,6 +85,121 @@ def _byok_restore(prior: dict[str, str]) -> None:
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+def _docs_context():
+    return dict(
+        pitch=docs_content.PITCH,
+        team=docs_content.TEAM,
+        features=docs_content.FEATURES,
+        roadmap=docs_content.ROADMAP,
+        stack=docs_content.STACK,
+        apis_exposed=docs_content.APIS_EXPOSED,
+        apis_consumed=docs_content.APIS_CONSUMED,
+        architecture=docs_content.ARCHITECTURE_MERMAID,
+        dataflow=docs_content.DATA_FLOW_MERMAID,
+        data_layer=docs_content.DATA_LAYER,
+        ai_layer=docs_content.AI_LAYER,
+        performance=docs_content.PERFORMANCE,
+        security=docs_content.SECURITY,
+        analytics=docs_content.ANALYTICS,
+        changelog=docs_content.CHANGELOG,
+        stats=docs_mod.live_stats(),
+        cfg=docs_mod.load_config(),
+    )
+
+
+@app.route("/docs")
+def docs_page():
+    status = docs_mod.access_status()
+    if not status["allowed"]:
+        return render_template(
+            "docs_blocked.html",
+            reason=status["reason"],
+            start=status.get("start", ""),
+            end=status.get("end", ""),
+        ), 403
+    return render_template("docs.html", **_docs_context())
+
+
+@app.route("/docs/admin", methods=["GET"])
+def docs_admin():
+    cfg = docs_mod.load_config()
+    return render_template(
+        "docs_admin.html",
+        cfg=cfg,
+        access=docs_mod.access_status(cfg),
+        message=request.args.get("message"),
+        error=request.args.get("error"),
+    )
+
+
+@app.route("/docs/admin/save", methods=["POST"])
+def docs_admin_save():
+    token = (request.form.get("token") or "").strip()
+    if token != docs_mod.admin_token():
+        cfg = docs_mod.load_config()
+        return render_template(
+            "docs_admin.html", cfg=cfg, access=docs_mod.access_status(cfg),
+            error="Invalid admin token.", message=None,
+        ), 403
+    cfg = docs_mod.load_config()
+    cfg["enabled"] = bool(request.form.get("enabled"))
+    cfg["override_always_on"] = bool(request.form.get("override_always_on"))
+    start = (request.form.get("start") or "").strip()
+    end = (request.form.get("end") or "").strip()
+    if start:
+        cfg["start"] = start
+    if end:
+        cfg["end"] = end
+    docs_mod.save_config(cfg)
+    return render_template(
+        "docs_admin.html", cfg=cfg, access=docs_mod.access_status(cfg),
+        message="Saved.", error=None,
+    )
+
+
+@app.route("/docs/export/markdown")
+def docs_export_md():
+    status = docs_mod.access_status()
+    if not status["allowed"]:
+        return "Docs not available.", 403
+    ctx = _docs_context()
+    p, team, features, roadmap, stack = ctx["pitch"], ctx["team"], ctx["features"], ctx["roadmap"], ctx["stack"]
+    lines = [
+        "# PulseTrace", f"_{p['tagline']}_", "",
+        "## Problem", p["problem"], "",
+        "## Solution", p["solution"], "",
+        "## Why Now", *[f"- {w}" for w in p["why_now"]], "",
+        "## Demo", p["demo"], "",
+        "## Market", p["market"], "",
+        "## Business Model", p["business_model"], "",
+        "## Traction", *[f"- {t}" for t in p["traction"]], "",
+        "## Competition", p["competition"], "",
+        "## Unique Advantage", p["advantage"], "",
+        "## Go-To-Market", p["gtm"], "",
+        f"## Team — {team['name']}",
+    ]
+    for m in team["members"]:
+        lines.append(f"- **{m['name']}** — {m['role']} — {m['email']}")
+    lines += ["", "## Vision", p["vision"], "", "## Feature Matrix"]
+    for f in features:
+        lines.append(f"- [{f['status']}] **{f['name']}** — {f['detail']}")
+    lines += ["", "## Roadmap"]
+    for k in ("short", "mid", "long"):
+        lines.append(f"### {k.title()}")
+        lines += [f"- {r}" for r in roadmap[k]]
+    lines += ["", "## Stack"]
+    for layer, items in stack.items():
+        lines.append(f"- **{layer}**: {', '.join(items)}")
+    lines += ["", "## Architecture", "```mermaid", ctx["architecture"], "```", ""]
+    lines += ["## Data Flow", "```mermaid", ctx["dataflow"], "```", ""]
+    lines += ["## Changelog"]
+    for d, t in ctx["changelog"]:
+        lines.append(f"- **{d}** — {t}")
+    body = "\n".join(lines)
+    return Response(body, mimetype="text/markdown",
+                    headers={"Content-Disposition": "attachment; filename=pulsetrace-docs.md"})
 
 
 @app.route("/run", methods=["POST"])
