@@ -22,7 +22,7 @@ from .llm import chat_json
 MAX_ITERS = 4
 MAX_POSTS = 500
 EPS = 0.05
-SAT_EPS = 0.9
+SAT_EPS = 0.8
 SOURCES: dict[str, type[Connector]] = {
     "reddit": RedditConnector,
     "hn": HNConnector,
@@ -127,12 +127,18 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
     pending = [(q, s) for q in seeds for s in sources]
     cluster_meta: list[dict] = []
     prev_cents: dict = {}
+    fetched: set[tuple[str, str]] = set()
 
     for it in range(MAX_ITERS):
+        pending = [qs for qs in pending if qs not in fetched]
+        if not pending:
+            stop_reason = "exhausted"
+            break
         BUS.publish(run_id, {"type": "iter_start", "iter": it + 1, "queries": pending})
         per = max(5, MAX_POSTS // max(len(pending), 1))
         new_posts = _fetch_all(pending, limit=per,
                                 run_id=run_id, iter_no=it + 1)
+        fetched.update(pending)
         added = 0
         new_ids: list[str] = []
         for p in new_posts:
