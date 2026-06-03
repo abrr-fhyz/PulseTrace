@@ -23,6 +23,7 @@ from lib.agent import run_agent
 from lib.briefing import build as build_briefing
 from lib.events import BUS, sse_format
 from lib.store import read_json, new_run_id, run_dir
+from lib.replay import frame as replay_frame, max_iter as replay_max_iter
 from lib.rag import ask as rag_ask
 from lib import backend, fb_cookies, docs as docs_mod
 from lib import docs_content
@@ -476,7 +477,19 @@ def run_info():
     clusters = read_json(run_id, "clusters.json")
     posts = read_json(run_id, "posts.json")
     posts_by_id = {p["id"]: p for p in (posts or [])}
-    return jsonify({"run": run, "clusters": clusters, "posts": posts_by_id})
+    return jsonify({"run": run, "clusters": clusters, "posts": posts_by_id,
+                    "max_iter": replay_max_iter(run)})
+
+
+@app.route("/replay")
+def replay():
+    run_id = request.args.get("run_id", "")
+    try:
+        iter_n = int(request.args.get("iter", "1"))
+    except (TypeError, ValueError):
+        iter_n = 1
+    iter_n = max(1, iter_n)
+    return jsonify(replay_frame(run_id, iter_n))
 
 
 # --- Legacy v1 endpoints (kept for backward compat) -------------------------
