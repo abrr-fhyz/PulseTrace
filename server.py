@@ -24,6 +24,7 @@ from lib.briefing import build as build_briefing
 from lib.events import BUS, sse_format
 from lib.store import read_json, new_run_id, run_dir
 from lib.rag import ask as rag_ask
+from lib.wordcloud import run_wordclouds
 from lib import backend, fb_cookies, docs as docs_mod
 from lib import docs_content
 
@@ -457,6 +458,16 @@ def graph():
                     "weight": sim,
                 }})
     return jsonify({"nodes": nodes, "edges": edges})
+
+
+@app.route("/wordcloud")
+def wordcloud():
+    run_id = request.args.get("run_id", "")
+    clusters = read_json(run_id, "clusters.json") or []
+    posts = read_json(run_id, "posts.json") or []
+    posts_by_id = {p["id"]: p for p in posts}
+    terms = run_wordclouds(clusters, posts_by_id)
+    return jsonify({str(cid): t for cid, t in terms.items()})
 
 
 @app.route("/ask", methods=["POST"])

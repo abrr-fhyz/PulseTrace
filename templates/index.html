@@ -191,6 +191,10 @@
     .cluster .bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden;
                     margin-top: 8px; background: #0b0f17; }
     .cluster .bar span { display: block; height: 100%; }
+    .cluster .wc { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 10px;
+                   align-items: baseline; line-height: 1.2; }
+    .cluster .wc .term { color: var(--muted); transition: color .12s; }
+    .cluster .wc .term:hover { color: var(--accent); }
     .pos { background: var(--pos); } .neu { background: var(--neu); } .neg { background: var(--neg); }
     .answer { font-size: 14px; line-height: 1.55; }
     .cite { display: inline-block; background: var(--panel2); border: 1px solid var(--border);
@@ -898,6 +902,7 @@ function handle(ev) {
       break;
     case "labeled":
       renderClusters(ev.clusters || []);
+      loadWordclouds(runId);
       renderSentChart(ev.clusters || []);
       plMark("cluster", "done");
       plActivate("label");
@@ -949,7 +954,7 @@ function renderClusters(cs) {
     const pos = Math.round(s.pos * 100);
     const neg = Math.round(s.neg * 100);
     const neu = Math.max(0, 100 - pos - neg);
-    const card = elem("div", { class: "cluster" },
+    const card = elem("div", { class: "cluster", "data-cid": String(c.id) },
       elem("div", { class: "hd" },
         elem("b", null, String(c.label || "Unlabeled")),
         elem("span", { class: "pill" }, c.n + " posts"),
@@ -959,8 +964,35 @@ function renderClusters(cs) {
         elem("span", { class: "neu", style: "width:" + neu + "%" }),
         elem("span", { class: "neg", style: "width:" + neg + "%" }),
       ),
+      elem("div", { class: "wc" }),
     );
     el.appendChild(card);
+  }
+}
+
+async function loadWordclouds(rid) {
+  if (!rid) return;
+  let data;
+  try {
+    const r = await fetch("/wordcloud?run_id=" + encodeURIComponent(rid));
+    if (!r.ok) return;
+    data = await r.json();
+  } catch (e) { return; }
+  for (const card of $("#clusters").querySelectorAll(".cluster")) {
+    const terms = data[card.getAttribute("data-cid")] || [];
+    const wc = card.querySelector(".wc");
+    if (!wc) continue;
+    clearNode(wc);
+    if (!terms.length) continue;
+    const max = terms[0][1] || 1;
+    for (const [term, weight] of terms) {
+      const size = 11 + Math.round((weight / max) * 11);
+      wc.appendChild(elem("span", {
+        class: "term",
+        style: "font-size:" + size + "px",
+        title: weight.toFixed(3),
+      }, term));
+    }
   }
 }
 
