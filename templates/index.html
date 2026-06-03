@@ -438,6 +438,13 @@
         <div class="kpi"><span>Entropy</span><b id="m-entropy">--</b></div>
       </div>
 
+      <div id="replay-wrap" style="display:none;margin-top:18px">
+        <h2 style="margin-bottom:8px">Replay</h2>
+        <input id="replay-slider" type="range" min="1" max="1" value="1" step="1"
+               style="width:100%;margin:0;padding:0" />
+        <div class="muted" id="replay-caption" style="margin-top:6px">iteration 1 of 1</div>
+      </div>
+
     </section>
 
     <section style="display:flex;flex-direction:column;gap:16px;min-width:0">
@@ -767,6 +774,7 @@ async function start() {
   $("#go").disabled = true;
   clearNode($("#clusters"));
   clearNode($("#answer"));
+  $("#replay-wrap").style.display = "none";
   if (cy) { cy.destroy(); cy = null; }
   if (sentChart) { sentChart.destroy(); sentChart = null; }
   log("Starting run for \"" + topic + "\" on [" + sources.join(", ") + "]...");
@@ -856,12 +864,55 @@ function subscribe(rid) {
       es.close();
       $("#go").disabled = false;
       drawGraph(rid);
+      setupReplay(rid);
     }
   };
   es.onerror = () => {
     plStatus("SSE disconnected · server log still recording");
     es.close();
     $("#go").disabled = false;
+  };
+}
+
+let replayTimer = null, replayFinalPosts = 0;
+
+async function applyReplayFrame(rid, iterN) {
+  try {
+    const r = await fetch("/replay?run_id=" + encodeURIComponent(rid)
+      + "&iter=" + encodeURIComponent(iterN));
+    const j = await r.json();
+    const maxN = j.max_iter || 1;
+    const nq = (j.queries || []).length;
+    $("#m-posts").textContent = j.n_posts;
+    $("#replay-caption").textContent =
+      "iteration " + j.iter + " of " + maxN + " · " + nq + " queries";
+  } catch (e) {
+    $("#replay-caption").textContent = "replay unavailable";
+  }
+}
+
+async function setupReplay(rid) {
+  let maxN = 1;
+  try {
+    const r = await fetch("/replay?run_id=" + encodeURIComponent(rid) + "&iter=1");
+    const j = await r.json();
+    maxN = j.max_iter || 1;
+  } catch (e) { return; }
+
+  const wrap = $("#replay-wrap"), slider = $("#replay-slider");
+  slider.max = String(maxN);
+  slider.value = String(maxN);
+  replayFinalPosts = parseInt($("#m-posts").textContent, 10) || 0;
+  wrap.style.display = "block";
+  $("#replay-caption").textContent =
+    "iteration " + maxN + " of " + maxN + " (final)";
+
+  slider.oninput = () => {
+    const v = parseInt(slider.value, 10) || 1;
+    // restore the live final count instantly at the right edge; otherwise debounce
+    if (v >= maxN) $("#m-posts").textContent = replayFinalPosts;
+    clearTimeout(replayTimer);
+    replayTimer = setTimeout(() => applyReplayFrame(rid, v), 180);
   };
 }
 
