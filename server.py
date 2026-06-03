@@ -8,7 +8,7 @@ import os
 import threading
 import time
 import subprocess
-from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context, send_file
 from flask_cors import CORS
 import numpy as np
 from dotenv import load_dotenv
@@ -26,6 +26,11 @@ from lib.store import read_json, new_run_id, run_dir
 from lib.rag import ask as rag_ask
 from lib import backend, fb_cookies, docs as docs_mod
 from lib import docs_content
+from lib import share as share_mod
+
+
+def _share_secret() -> str:
+    return os.environ.get("PULSETRACE_SHARE_SECRET", "pulsetrace-dev-share-secret")
 
 
 app = Flask(__name__)
@@ -360,6 +365,27 @@ def briefing_manifest(run_id):
     if not p.exists():
         return jsonify({"error": "not generated"}), 404
     return Response(p.read_text(encoding="utf-8"), mimetype="application/json")
+
+
+@app.route("/share/<run_id>", methods=["POST"])
+def share_run(run_id):
+    if not (run_dir(run_id) / "run.json").exists():
+        return jsonify({"error": "run not found"}), 404
+    expires_at = int(time.time()) + share_mod.DEFAULT_TTL_SECONDS
+    token = share_mod.make_token(run_id, expires_at, _share_secret())
+    return jsonify({"url": f"/shared/{token}", "expires_at": expires_at})
+
+
+@app.route("/shared/<token>")
+def shared_download(token):
+    run_id = share_mod.verify_token(token, _share_secret())
+    if run_id is None:
+        return jsonify({"error": "invalid or expired link"}), 410
+    try:
+        path = share_mod.bundle_run(run_id)
+    except FileNotFoundError:
+        return jsonify({"error": "run not found"}), 404
+    return send_file(path, as_attachment=True, download_name=f"pulsetrace-{run_id}.tar.gz")
 
 
 @app.route("/fb/cookies/status")

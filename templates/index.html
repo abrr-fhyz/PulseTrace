@@ -360,6 +360,11 @@
     <a id="briefing-link" class="pill" href="#" data-kind="pdf"
        onclick="downloadBriefing(event)"
        style="display:none">📄 Download PDF</a>
+    <a id="share-link" class="pill" href="#"
+       onclick="shareRun(event)"
+       style="display:none">🔗 Share run</a>
+    <span id="share-url" class="pill" onclick="copyShareUrl(event)"
+          title="Click to copy" style="display:none;cursor:pointer"></span>
     <span class="nav-back" onclick="goto('landing')">← home</span>
     <span class="nav-back" onclick="goto('byok')" style="margin-left:8px">⚙ BYOK</span>
     <span class="nav-back" onclick="window.open('/docs','_blank')" style="margin-left:8px">📖 Docs</span>
@@ -791,6 +796,8 @@ async function start() {
   pill.textContent = "run " + runId;
   $("#briefing-link").style.display = "none";
   $("#briefing-link").href = "#";
+  $("#share-link").style.display = "none";
+  $("#share-url").style.display = "none";
   plReset();
   plActivate("seed");
   plStatus("Run starting…");
@@ -831,6 +838,50 @@ async function downloadBriefing(e) {
     return;
   }
   link.textContent = orig;
+}
+
+async function shareRun(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  if (!runId) return;
+  const link = $("#share-link");
+  const orig = link.textContent;
+  link.textContent = "⏳ preparing…";
+  try {
+    const r = await fetch("/share/" + encodeURIComponent(runId), {
+      method: "POST", credentials: "same-origin",
+    });
+    const j = await r.json();
+    if (!r.ok || !j.url) {
+      link.textContent = "⚠ " + (j.error || r.status);
+      setTimeout(() => link.textContent = orig, 2500);
+      return;
+    }
+    const full = window.location.origin + j.url;
+    const out = $("#share-url");
+    out.textContent = "🔗 " + full;
+    out.dataset.url = full;
+    out.style.display = "inline-block";
+  } catch (err) {
+    link.textContent = "⚠ failed";
+    setTimeout(() => link.textContent = orig, 2500);
+    return;
+  }
+  link.textContent = orig;
+}
+
+async function copyShareUrl(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const out = $("#share-url");
+  const url = out.dataset.url || "";
+  if (!url) return;
+  const orig = out.textContent;
+  try {
+    await navigator.clipboard.writeText(url);
+    out.textContent = "✓ copied";
+  } catch (err) {
+    out.textContent = "⚠ copy failed";
+  }
+  setTimeout(() => out.textContent = orig, 1500);
 }
 
 async function revealBriefingIfReady(rid) {
@@ -936,6 +987,7 @@ function handle(ev) {
       // briefing may already be marked done above; otherwise leave as-is
       plStatus("Run complete · " + (ev.n_posts || 0) + " posts");
       $("#nav-shots").style.display = "inline-block";
+      if (runId) $("#share-link").style.display = "inline-block";
       break;
   }
 }
