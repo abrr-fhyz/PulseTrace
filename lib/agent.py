@@ -9,9 +9,10 @@ from .connectors.facebook import FacebookConnector
 from .connectors.x import XConnector
 from .connectors.instagram import InstagramConnector
 from .embed import embed_texts
-from .cluster import cluster_embeddings, centroids, entropy
+from .dedup import near_dupe_keep
+from .cluster import cluster_embeddings, centroids, entropy, saturation
 from .label import label_cluster
-from .stance import cluster_sentiment
+from .stance import cluster_sentiments
 from .influence import top_n
 from .events import BUS
 from .store import write_json, new_run_id
@@ -21,6 +22,7 @@ from .llm import chat_json
 MAX_ITERS = 4
 MAX_POSTS = 500
 EPS = 0.05
+SAT_EPS = 0.8
 SOURCES: dict[str, type[Connector]] = {
     "reddit": RedditConnector,
     "hn": HNConnector,
@@ -124,16 +126,25 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
     BUS.publish(run_id, {"type": "seeded", "queries": seeds})
     pending = [(q, s) for q in seeds for s in sources]
     cluster_meta: list[dict] = []
+    prev_cents: dict = {}
+    fetched: set[tuple[str, str]] = set()
 
     for it in range(MAX_ITERS):
+        pending = [qs for qs in pending if qs not in fetched]
+        if not pending:
+            stop_reason = "exhausted"
+            break
         BUS.publish(run_id, {"type": "iter_start", "iter": it + 1, "queries": pending})
         per = max(5, MAX_POSTS // max(len(pending), 1))
         new_posts = _fetch_all(pending, limit=per,
                                 run_id=run_id, iter_no=it + 1)
+        fetched.update(pending)
         added = 0
+        new_ids: list[str] = []
         for p in new_posts:
             if p.id not in seen and len(seen) < MAX_POSTS:
                 seen[p.id] = p
+                new_ids.append(p.id)
                 added += 1
         BUS.publish(run_id, {"type": "posts_fetched", "n_new": added, "n_total": len(seen)})
         for q, s in pending:
@@ -145,6 +156,14 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
             continue
 
         posts = list(seen.values())
+        keep_idx = near_dupe_keep([p.text for p in posts])
+        if len(keep_idx) < len(posts):
+            BUS.publish(run_id, {
+                "type": "deduped",
+                "kept": len(keep_idx),
+                "dropped": len(posts) - len(keep_idx),
+            })
+            posts = [posts[i] for i in keep_idx]
         try:
             emb = embed_texts([p.text for p in posts])
         except Exception as e:
@@ -161,18 +180,44 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
         })
 
         cents = centroids(emb, labels)
+        id_to_row = {p.id: i for i, p in enumerate(posts)}
+        new_rows = [id_to_row[i] for i in new_ids if i in id_to_row]
+        sat = saturation(emb[new_rows], prev_cents) if new_rows else 0.0
+        prev_cents = cents
+        if sat:
+            BUS.publish(run_id, {"type": "saturation", "value": sat})
+
+        cids = sorted(cents.keys())
+        members_by_cid = {
+            cid: [posts[i] for i, lab in enumerate(labels) if lab == cid]
+            for cid in cids
+        }
+
+        def _label(cid: int) -> dict:
+            try:
+                return label_cluster([m.text for m in members_by_cid[cid][:8]])
+            except Exception as e:
+                return {"label": f"cluster {cid}", "desc": f"label_error: {e}"}
+
+        metas: dict[int, dict] = {}
+        if cids:
+            with ThreadPoolExecutor(max_workers=min(8, len(cids))) as ex:
+                metas = dict(zip(cids, ex.map(_label, cids)))
+
+        try:
+            sentiments = cluster_sentiments({
+                cid: (metas[cid].get("label", f"cluster {cid}"),
+                      [m.text for m in members_by_cid[cid]])
+                for cid in cids
+            })
+        except Exception as e:
+            sentiments = {cid: {"pos": 0.0, "neu": 1.0, "neg": 0.0, "error": str(e)}
+                          for cid in cids}
+
         cluster_meta = []
-        for cid in sorted(cents.keys()):
-            members = [posts[i] for i, lab in enumerate(labels) if lab == cid]
-            sample = [m.text for m in members[:8]]
-            try:
-                meta = label_cluster(sample)
-            except Exception as e:
-                meta = {"label": f"cluster {cid}", "desc": f"label_error: {e}"}
-            try:
-                sent = cluster_sentiment(meta["label"], [m.text for m in members])
-            except Exception as e:
-                sent = {"pos": 0.0, "neu": 1.0, "neg": 0.0, "error": str(e)}
+        for cid in cids:
+            members = members_by_cid[cid]
+            meta = metas[cid]
             tops = top_n(members, n=5)
             cluster_meta.append({
                 "id": int(cid),
@@ -180,7 +225,7 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
                 "desc": meta.get("desc", ""),
                 "centroid": cents[cid].tolist(),
                 "members": [m.id for m in members],
-                "sentiment": sent,
+                "sentiment": sentiments.get(cid, {"pos": 0.0, "neu": 1.0, "neg": 0.0}),
                 "top_posts": [m.id for m in tops],
             })
 
@@ -202,6 +247,9 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
             break
         if abs(H - last_H) < EPS and it > 0:
             stop_reason = "converged"
+            break
+        if sat >= SAT_EPS and it > 0:
+            stop_reason = "saturated"
             break
         last_H = H
 

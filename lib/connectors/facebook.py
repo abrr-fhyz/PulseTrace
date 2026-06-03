@@ -22,6 +22,7 @@ import re
 import sys
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import requests
@@ -38,6 +39,7 @@ DEFAULT_SHOTS = int(os.environ.get("PT_FB_SHOTS", "4"))
 SHOT_MIN_BYTES = 30_000
 DEBUG_DIR = Path(os.environ.get("PT_FB_DEBUG_DIR", "data/fb_debug"))
 QUIET = os.environ.get("PT_FB_QUIET", "0") == "1"
+OCR_WORKERS = int(os.environ.get("PT_FB_OCR_WORKERS", "6"))
 
 OCR_PROMPT = (
     "This screenshot shows one or more Facebook posts in a feed. Extract every "
@@ -200,11 +202,21 @@ async def _capture_many(queries: list[str], scrolls: int, shots_per: int,
     return bag
 
 
-def _shots_to_posts(query: str, shots: list[Path], key: str,
+def _ocr_many(shots: list[Path], key: str,
+              workers: int = OCR_WORKERS) -> dict[Path, list[dict]]:
+    """OCR every screenshot concurrently — network-bound, GIL released per call."""
+    if not shots:
+        return {}
+    with ThreadPoolExecutor(max_workers=max(1, min(workers, len(shots)))) as ex:
+        return dict(zip(shots, ex.map(lambda s: _ocr(s, key), shots)))
+
+
+def _shots_to_posts(query: str, shots: list[Path],
+                    ocr_by_shot: dict[Path, list[dict]],
                     seen: set[str], limit: int) -> list[Post]:
     out: list[Post] = []
     for shot in shots:
-        for e in _ocr(shot, key):
+        for e in ocr_by_shot.get(shot, []):
             body = (e.get("post_content") or "").strip()
             if len(body) < 30:
                 continue
@@ -226,7 +238,6 @@ def _shots_to_posts(query: str, shots: list[Path], key: str,
             ))
             if len(out) >= limit:
                 return out
-        time.sleep(2)
     return out
 
 
@@ -278,11 +289,13 @@ class FacebookConnector(Connector):
                     _log(f"could not save sample shot: {e}")
             if total_shots == 0:
                 return []
+            all_shots = [s for shots in shots_by_q.values() for s in shots]
+            ocr_by_shot = _ocr_many(all_shots, key)
             seen: set[str] = set()
             posts: list[Post] = []
             for q, shots in shots_by_q.items():
                 try:
-                    posts.extend(_shots_to_posts(q, shots, key, seen,
+                    posts.extend(_shots_to_posts(q, shots, ocr_by_shot, seen,
                                                  limit_per_query))
                 except Exception as e:
                     _log(f"OCR-to-posts crashed for q={q!r}: {e}")

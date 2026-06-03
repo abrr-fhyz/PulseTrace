@@ -30,3 +30,8 @@ test_artifacts/
 results/
 info/cookies.stale
 data/event_logs/
+
+/test_artifacts
+/feature
+/data
+/info
