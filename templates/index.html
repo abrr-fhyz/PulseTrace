@@ -6,11 +6,28 @@
   <title>PulseTrace — Sentiment Intelligence</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("pulsetrace_theme");
+        document.documentElement.dataset.theme = t === "light" ? "light" : "dark";
+      } catch (e) {
+        document.documentElement.dataset.theme = "dark";
+      }
+    })();
+  </script>
   <style>
     :root {
       --bg: #07090f; --panel: #131a26; --panel2: #1a2332; --border: #25324a;
       --text: #e6edf7; --muted: #8aa0bd; --accent: #6ee7b7; --accent2: #60a5fa;
       --accent3: #c084fc; --neg: #f87171; --pos: #6ee7b7; --neu: #94a3b8;
+      --header-bg: rgba(7,9,15,0.7);
+    }
+    :root[data-theme="light"] {
+      --bg: #f5f7fb; --panel: #ffffff; --panel2: #eef2f9; --border: #cdd7e6;
+      --text: #0f1726; --muted: #51607a; --accent: #0f9d6b; --accent2: #2563eb;
+      --accent3: #9333ea; --neg: #dc2626; --pos: #0f9d6b; --neu: #64748b;
+      --header-bg: rgba(245,247,251,0.8);
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
@@ -119,7 +136,7 @@
 
     header { padding: 16px 24px; border-bottom: 1px solid var(--border);
              display: flex; align-items: center; gap: 16px; backdrop-filter: blur(8px);
-             background: rgba(7,9,15,0.7); position: sticky; top: 0; z-index: 5; }
+             background: var(--header-bg); position: sticky; top: 0; z-index: 5; }
     header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
                   box-shadow: 0 0 12px var(--accent); }
     header .nav-back { margin-left: auto; cursor: pointer; color: var(--muted);
@@ -360,6 +377,9 @@
     <a id="briefing-link" class="pill" href="#" data-kind="pdf"
        onclick="downloadBriefing(event)"
        style="display:none">📄 Download PDF</a>
+    <button id="theme-toggle" class="pill secondary" type="button"
+            onclick="toggleTheme()" title="Toggle light/dark theme"
+            aria-label="Toggle theme" style="cursor:pointer;margin-left:auto">🌙</button>
     <span class="nav-back" onclick="goto('landing')">← home</span>
     <span class="nav-back" onclick="goto('byok')" style="margin-left:8px">⚙ BYOK</span>
     <span class="nav-back" onclick="window.open('/docs','_blank')" style="margin-left:8px">📖 Docs</span>
@@ -499,6 +519,28 @@
 
 <script>
 const $ = (s) => document.querySelector(s);
+
+const THEME_LS_KEY = "pulsetrace_theme";
+const cssVar = (name) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  const btn = $("#theme-toggle");
+  if (btn) {
+    btn.textContent = theme === "light" ? "☀️" : "🌙";
+    btn.setAttribute("aria-pressed", theme === "light" ? "true" : "false");
+  }
+}
+
+function toggleTheme() {
+  const next =
+    document.documentElement.dataset.theme === "light" ? "dark" : "light";
+  applyTheme(next);
+  try { localStorage.setItem(THEME_LS_KEY, next); } catch (e) {}
+  if (sentChart) renderSentChart(lastClusters);
+  if (cy && graphRid) drawGraph(graphRid);
+}
 
 function clearNode(el) { while (el && el.firstChild) el.removeChild(el.firstChild); }
 
@@ -647,6 +689,7 @@ document.addEventListener("change", e => {
 });
 
 let runId = null, sentChart = null, cy = null;
+let lastClusters = [], graphRid = null;
 
 const PL_ORDER = ["seed", "fetch", "cluster", "label", "brief"];
 const plEl = (s) => document.querySelector(`.pl-stage[data-stage="${s}"]`);
@@ -965,31 +1008,34 @@ function renderClusters(cs) {
 }
 
 function renderSentChart(cs) {
+  lastClusters = cs;
   const labels = cs.map(c => String(c.label || "?").slice(0, 18));
   const pos = cs.map(c => Math.round((c.sentiment && c.sentiment.pos || 0) * 100));
   const neu = cs.map(c => Math.round((c.sentiment && c.sentiment.neu || 0) * 100));
   const neg = cs.map(c => Math.round((c.sentiment && c.sentiment.neg || 0) * 100));
+  const text = cssVar("--text"), muted = cssVar("--muted"), border = cssVar("--border");
   const ctx = $("#sentChart");
   if (sentChart) sentChart.destroy();
   sentChart = new Chart(ctx, {
     type: "bar",
     data: { labels, datasets: [
-      { label: "pos", data: pos, backgroundColor: "#6ee7b7" },
-      { label: "neu", data: neu, backgroundColor: "#94a3b8" },
-      { label: "neg", data: neg, backgroundColor: "#f87171" },
+      { label: "pos", data: pos, backgroundColor: cssVar("--pos") },
+      { label: "neu", data: neu, backgroundColor: cssVar("--neu") },
+      { label: "neg", data: neg, backgroundColor: cssVar("--neg") },
     ]},
     options: {
       responsive: true,
-      plugins: { legend: { labels: { color: "#e6edf7" } } },
+      plugins: { legend: { labels: { color: text } } },
       scales: {
-        x: { stacked: true, ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" } },
-        y: { stacked: true, ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" }, max: 100 },
+        x: { stacked: true, ticks: { color: muted }, grid: { color: border } },
+        y: { stacked: true, ticks: { color: muted }, grid: { color: border }, max: 100 },
       },
     },
   });
 }
 
 async function drawGraph(rid) {
+  graphRid = rid;
   const r = await fetch("/graph?run_id=" + encodeURIComponent(rid));
   const j = await r.json();
   if (cy) cy.destroy();
@@ -998,15 +1044,15 @@ async function drawGraph(rid) {
     elements: [...(j.nodes || []), ...(j.edges || [])],
     style: [
       { selector: "node", style: {
-          "label": "data(label)", "color": "#e6edf7", "font-size": "11px",
-          "background-color": "#60a5fa",
+          "label": "data(label)", "color": cssVar("--text"), "font-size": "11px",
+          "background-color": cssVar("--accent2"),
           "width":  (ele) => 20 + (ele.data("size") || 0) * 3,
           "height": (ele) => 20 + (ele.data("size") || 0) * 3,
           "text-valign": "bottom", "text-margin-y": 4,
       }},
       { selector: "edge", style: {
           "width": (ele) => 1 + (ele.data("weight") || 0) * 4,
-          "line-color": "#25324a", "curve-style": "bezier", "opacity": 0.7,
+          "line-color": cssVar("--border"), "curve-style": "bezier", "opacity": 0.7,
       }},
     ],
     layout: { name: "cose", animate: false, padding: 30 },
@@ -1293,6 +1339,7 @@ $("#ask-btn").addEventListener("click", ask);
 $("#q").addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
 $("#topic").addEventListener("keydown", e => { if (e.key === "Enter") start(); });
 
+applyTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
 routeFromHash();
 updateAppBadge();
 
