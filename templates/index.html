@@ -6,36 +6,6 @@
   <title>PulseTrace — Sentiment Intelligence</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
-<<<<<<< Updated upstream
-  <style>
-    :root {
-      --bg: #07090f; --panel: #131a26; --panel2: #1a2332; --border: #25324a;
-      --text: #e6edf7; --muted: #8aa0bd; --accent: #6ee7b7; --accent2: #60a5fa;
-      --accent3: #c084fc; --neg: #f87171; --pos: #6ee7b7; --neu: #94a3b8;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
-                 font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-                 overflow-x: hidden; }
-    h1, h2, h3 { font-weight: 600; letter-spacing: -0.01em; margin: 0; }
-    h1 { font-size: 22px; }
-    h2 { font-size: 14px; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
-    button, input, select, textarea {
-      background: var(--panel2); color: var(--text); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none;
-      font-family: inherit;
-    }
-    input:focus, select:focus, textarea:focus { border-color: var(--accent2); }
-    button { background: var(--accent2); color: #07090f; font-weight: 600; cursor: pointer; transition: transform .12s, filter .12s; }
-    button:hover { filter: brightness(1.1); }
-    button:active { transform: translateY(1px); }
-    button.secondary { background: var(--panel2); color: var(--text); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .muted { color: var(--muted); font-size: 12px; }
-    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px;
-            background: var(--panel2); border: 1px solid var(--border); font-size: 11px; color: var(--muted); }
-    #briefing-link { color: var(--accent); text-decoration: none; }
-=======
   <script>
     (function () {
       try {
@@ -49,7 +19,6 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
->>>>>>> Stashed changes
 
 :root {
   /* Sleek Modern Light Theme */
@@ -117,31 +86,11 @@ button.secondary { background: var(--panel2); color: var(--text); border: 1px so
 button.secondary:hover { background: var(--border); }
 button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; filter: none; }
 
-<<<<<<< Updated upstream
-    header { padding: 16px 24px; border-bottom: 1px solid var(--border);
-             display: flex; align-items: center; gap: 16px; backdrop-filter: blur(8px);
-             background: rgba(7,9,15,0.7); position: sticky; top: 0; z-index: 5; }
-    header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
-                  box-shadow: 0 0 12px var(--accent); }
-    header .nav-back { margin-left: auto; cursor: pointer; color: var(--muted);
-                      font-size: 12px; text-decoration: underline; }
-    main { display: grid; grid-template-columns: 360px 1fr; gap: 16px; padding: 16px 24px;
-           min-height: calc(100vh - 60px); }
-    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-    .row { display: flex; gap: 8px; align-items: center; }
-    label.toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
-    .log { font-family: ui-monospace, "JetBrains Mono", Menlo, monospace; font-size: 12px;
-           color: var(--muted); background: #0d141f; border: 1px solid var(--border); border-radius: 8px;
-           padding: 10px; height: 200px; overflow-y: auto; white-space: pre-wrap; }
-    .log .ev { color: var(--text); }
-    .log .err { color: var(--neg); }
-=======
 .muted { color: var(--muted); font-size: 13px; }
 .pill { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 999px;
         background: var(--panel2); border: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--text); transition: all 0.2s ease; }
 #briefing-link { color: var(--accent2); text-decoration: none; font-weight: 500; }
 #briefing-link:hover { opacity: 0.8; }
->>>>>>> Stashed changes
 
 .view { display: none; opacity: 0; transition: opacity .4s cubic-bezier(0.4,0,0.2,1); min-height: 100vh; }
 .view.active { display: block; opacity: 1; }
@@ -154,34 +103,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
     linear-gradient(90deg, var(--border) 1px, transparent 1px);
   background-size: 64px 64px; opacity: 0.3; mask-image: radial-gradient(ellipse at center 20%, #000 20%, transparent 80%); }
 
-<<<<<<< Updated upstream
-    .shots-wrap { padding: 24px; min-height: 100vh; }
-    .shots-wrap header { padding: 0 0 16px; border: none; background: transparent;
-                         position: static; }
-    .iter-block { margin-bottom: 28px; }
-    .iter-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .iter-head h3 { font-size: 14px; color: var(--text); }
-    .shots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-                  gap: 12px; }
-    .shot-card { background: var(--panel); border: 1px solid var(--border);
-                 border-radius: 10px; overflow: hidden; cursor: pointer;
-                 transition: transform .15s, border-color .15s; }
-    .shot-card:hover { transform: translateY(-2px); border-color: var(--accent2); }
-    .shot-card img { display: block; width: 100%; height: 160px; object-fit: cover;
-                     object-position: top; background: #0d141f; }
-    .shot-card .meta { padding: 8px 10px; font-size: 11px; color: var(--muted);
-                       display: flex; justify-content: space-between; }
-    .lightbox { position: fixed; inset: 0; background: rgba(7,9,15,0.94);
-                display: none; align-items: center; justify-content: center;
-                z-index: 60; padding: 32px; }
-    .lightbox.show { display: flex; }
-    .lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px;
-                    box-shadow: 0 16px 64px rgba(0,0,0,.6); }
-    .lightbox .close { position: absolute; top: 16px; right: 20px; cursor: pointer;
-                       color: var(--muted); font-size: 22px; }
-    .shots-empty { padding: 60px; text-align: center; color: var(--muted); }
-  </style>
-=======
 .hero { position: relative; z-index: 2; max-width: 900px; text-align: center; }
 .brand { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px;
          border: 1px solid var(--border); border-radius: 999px; background: var(--panel);
@@ -396,7 +317,6 @@ canvas { max-height: 280px; }
 .lightbox .close:hover { transform: scale(1.1); opacity: 1; }
 .shots-empty { padding: 80px; text-align: center; color: var(--muted); font-size: 15px; background: var(--panel2); border-radius: 16px; border: 1px dashed var(--border); }
 </style>
->>>>>>> Stashed changes
 </head>
 <body class="antialiased">
 
@@ -410,13 +330,8 @@ canvas { max-height: 280px; }
         Deploy autonomous agents to map, cluster, and synthesize real-time conversational data across social networks. Powered by deterministic intelligence.
       </p>
       <div class="cta-row">
-<<<<<<< Updated upstream
-        <button class="cta-primary" onclick="goto('byok')">Get started →</button>
-        <button class="secondary" onclick="goto('app')">Skip to app</button>
-=======
         <button class="cta-primary" onclick="goto('byok')">Launch Platform</button>
         <button class="secondary" onclick="goto('app')">Open Dashboard</button>
->>>>>>> Stashed changes
       </div>
     </div>
     
@@ -499,11 +414,6 @@ canvas { max-height: 280px; }
     <span id="run-pill" class="pill" style="display:none"></span>
     <a id="briefing-link" class="pill" href="#" data-kind="pdf"
        onclick="downloadBriefing(event)"
-<<<<<<< Updated upstream
-       style="display:none">📄 Download PDF</a>
-    <span class="nav-back" onclick="goto('landing')">← home</span>
-    <span class="nav-back" onclick="goto('byok')" style="margin-left:8px">⚙ BYOK</span>
-=======
        style="display:none; margin-left: 8px;">📄 Download PDF</a>
     <button id="theme-toggle" class="pill secondary" type="button"
             onclick="toggleTheme()" title="Toggle light/dark theme"
@@ -511,35 +421,11 @@ canvas { max-height: 280px; }
     <span class="nav-back" onclick="goto('landing')" style="margin-left: 12px;">← home</span>
     <span class="nav-back" onclick="goto('byok')" style="margin-left:12px">⚙ BYOK</span>
     <span class="nav-back" onclick="window.open('/docs','_blank')" style="margin-left:12px">📖 Docs</span>
->>>>>>> Stashed changes
     <span id="nav-shots" class="nav-back" onclick="goto('shots')"
           style="margin-left:12px;display:none">📸 Captures</span>
   </header>
 
   <main>
-<<<<<<< Updated upstream
-    <section class="panel">
-      <h2>Run</h2>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <input id="topic" placeholder="Topic, e.g. 'OpenAI Codex'" />
-        <div class="row" style="flex-wrap:wrap">
-          <label class="toggle"><input type="checkbox" id="src-reddit"> Reddit</label>
-          <label class="toggle"><input type="checkbox" id="src-hn"> HN</label>
-          <label class="toggle"><input type="checkbox" id="src-facebook" checked> Facebook</label>
-          <label class="toggle"><input type="checkbox" id="src-x"> X</label>
-          <label class="toggle"><input type="checkbox" id="src-instagram"> Instagram</label>
-        </div>
-        <button id="go">Start agent</button>
-      </div>
-
-      <h2 style="margin-top:18px">Pipeline</h2>
-      <div id="pipeline" class="pipeline">
-        <div class="pl-stage" data-stage="seed">
-          <div class="pl-ic">1</div>
-          <div class="pl-body">
-            <div class="pl-title">Seed queries</div>
-            <div class="pl-sub">LLM proposes search angles</div>
-=======
     <section>
       <div class="panel">
         <h2>Run Agent</h2>
@@ -552,7 +438,6 @@ canvas { max-height: 280px; }
             <label class="toggle"><input type="checkbox" id="src-facebook" checked> Facebook</label>
             <label class="toggle"><input type="checkbox" id="src-x"> X</label>
             <label class="toggle"><input type="checkbox" id="src-instagram"> Instagram</label>
->>>>>>> Stashed changes
           </div>
           <button id="go" class="cta-primary">Start agent</button>
         </div>
@@ -609,8 +494,6 @@ canvas { max-height: 280px; }
         </div>
       </div>
 
-<<<<<<< Updated upstream
-=======
       <div class="panel">
         <h2>Metrics</h2>
         <div class="grid3">
@@ -626,7 +509,6 @@ canvas { max-height: 280px; }
           <div class="muted" id="replay-caption" style="margin-top:8px">iteration 1 of 1</div>
         </div>
       </div>
->>>>>>> Stashed changes
     </section>
 
     <section style="display:flex;flex-direction:column;gap:0;min-width:0">
@@ -646,9 +528,6 @@ canvas { max-height: 280px; }
         </div>
       </div>
 
-<<<<<<< Updated upstream
-      <div class="panel">
-=======
       <div id="evidence" class="panel" style="display:none; margin-top: 24px;">
         <div class="ev-tabs" id="ev-tabs">
           <button class="ev-tab active" data-tab="summary">Executive Summary</button>
@@ -676,7 +555,6 @@ canvas { max-height: 280px; }
       </div>
 
       <div class="panel" style="margin-top: 24px;">
->>>>>>> Stashed changes
         <h2>Ask the corpus</h2>
         <div class="row">
           <input id="q" placeholder="Ask anything about the gathered posts..." style="flex:1" />
@@ -864,6 +742,7 @@ document.addEventListener("change", e => {
 });
 
 let runId = null, sentChart = null, cy = null;
+let proConChart = null, confChart = null, _evidence = null;
 
 const PL_ORDER = ["seed", "fetch", "cluster", "label", "brief"];
 const plEl = (s) => document.querySelector(`.pl-stage[data-stage="${s}"]`);
@@ -986,7 +865,8 @@ async function start() {
   if (cy) { cy.destroy(); cy = null; }
   if (sentChart) { sentChart.destroy(); sentChart = null; }
   log("Starting run for \"" + topic + "\" on [" + sources.join(", ") + "]...");
-  const body = { topic, sources };
+  const opinion = ($("#opinion").value || "").trim() || null;
+  const body = { topic, sources, opinion };
   const byok = readByok();
   if (byok && byok.provider && byok.api_key) body.byok = byok;
   const r = await fetch("/run", {
@@ -1081,8 +961,6 @@ function subscribe(rid) {
   };
 }
 
-<<<<<<< Updated upstream
-=======
 let replayTimer = null, replayFinalPosts = 0;
 
 async function applyReplayFrame(rid, iterN) {
@@ -1124,7 +1002,6 @@ async function setupReplay(rid) {
   };
 }
 
->>>>>>> Stashed changes
 function handle(ev) {
   switch (ev.type) {
     case "started":
@@ -1178,6 +1055,9 @@ function handle(ev) {
       plStatus("Briefing ready");
       break;
     }
+    case "evidence_ready":
+      fetch(ev.url).then(r => r.json()).then(renderEvidence).catch(() => {});
+      break;
     case "briefing_error":
       plMark("brief", "err");
       plMeta("brief", "error");
@@ -1198,6 +1078,159 @@ function handle(ev) {
       break;
   }
 }
+
+function evList(title, arr) {
+  if (!arr || !arr.length) return null;
+  const ul = elem("ul", { class: "ev-list" });
+  for (const item of arr) ul.appendChild(elem("li", null, String(item)));
+  return elem("div", { class: "ev-sec" }, title ? elem("strong", null, title) : null, ul);
+}
+
+function claimCard(c) {
+  c = c || {};
+  const strength = String(c.evidence_strength || "weak").toLowerCase();
+  const conf = Math.max(0, Math.min(1, Number(c.confidence) || 0));
+  const pct = Math.round(conf * 100);
+  const fillColor = strength === "strong" ? "var(--pos)"
+                  : strength === "moderate" ? "#fbbf24" : "var(--neu)";
+  const card = elem("div", { class: "claim" },
+    elem("h4", null, String(c.text || "")),
+    elem("span", { class: "badge " + strength },
+      strength + " · " + pct + "% confidence"),
+    elem("div", { class: "conf-bar" },
+      elem("div", { class: "conf-fill", style: "width:" + pct + "%;background:" + fillColor })),
+  );
+  if (c.reasoning) card.appendChild(elem("p", { class: "reasoning" }, String(c.reasoning)));
+  const cats = c.source_categories || [];
+  if (cats.length) {
+    const wrap = elem("div", { class: "cats" });
+    for (const cat of cats) wrap.appendChild(elem("span", { class: "chip" }, String(cat)));
+    card.appendChild(wrap);
+  }
+  return card;
+}
+
+function renderEvidence(ev) {
+  if (!ev) return;
+  _evidence = ev;
+  $("#evidence").style.display = "";
+  const noOp = !ev.opinion;
+  $("#evidence").classList.toggle("no-opinion", noOp);
+  if (noOp) {
+    const active = $("#ev-tabs .ev-tab.active");
+    if (active && (active.dataset.tab === "screenA" || active.dataset.tab === "screenB")) {
+      document.querySelectorAll("#ev-tabs .ev-tab").forEach(t =>
+        t.classList.toggle("active", t.dataset.tab === "summary"));
+      document.querySelectorAll("#evidence .ev-panel").forEach(p =>
+        p.hidden = p.dataset.panel !== "summary");
+    }
+  }
+
+  const sum = $("#evidence .ev-panel[data-panel=summary]"); clearNode(sum);
+  const es = ev.exec_summary || {};
+  if (es.plain_topic) sum.appendChild(elem("p", null, String(es.plain_topic)));
+  const f1 = evList("Key findings", es.key_findings); if (f1) sum.appendChild(f1);
+  const f2 = evList("Points of agreement", es.agreements); if (f2) sum.appendChild(f2);
+  const f3 = evList("Points of disagreement", es.disagreements); if (f3) sum.appendChild(f3);
+  if (es.conclusion) sum.appendChild(elem("p", null, String(es.conclusion)));
+
+  const ov = $("#evidence .ev-panel[data-panel=overview]"); clearNode(ov);
+  ov.appendChild(elem("p", null, ev.topic_overview ? String(ev.topic_overview) : "No overview."));
+  if (noOp && (ev.claims || []).length) {
+    ov.appendChild(elem("div", { class: "ev-sec" }, elem("strong", null, "Key claims")));
+    for (const c of ev.claims) ov.appendChild(claimCard(c));
+  }
+
+  const cons = $("#evidence .ev-panel[data-panel=consensus]"); clearNode(cons);
+  const cc = ev.community_consensus || {};
+  const s1 = evList("Most common praise", cc.top_praise); if (s1) cons.appendChild(s1);
+  const s2 = evList("Most common criticism", cc.top_criticism); if (s2) cons.appendChild(s2);
+  const s3 = evList("Frequently repeated misconceptions", cc.misconceptions); if (s3) cons.appendChild(s3);
+  const s4 = evList("Areas of uncertainty", cc.uncertainties); if (s4) cons.appendChild(s4);
+  if (!cons.firstChild) cons.appendChild(elem("p", null, "No consensus data."));
+
+  const sa = $("#evidence .ev-panel[data-panel=screenA]"); clearNode(sa);
+  for (const c of (ev.screen_a || [])) sa.appendChild(claimCard(c));
+  if (!sa.firstChild) sa.appendChild(elem("p", null, "No supporting claims."));
+
+  const sb = $("#evidence .ev-panel[data-panel=screenB]"); clearNode(sb);
+  for (const c of (ev.screen_b || [])) sb.appendChild(claimCard(c));
+  if (!sb.firstChild) sb.appendChild(elem("p", null, "No opposing claims."));
+
+  const unc = $("#evidence .ev-panel[data-panel=uncertainty]"); clearNode(unc);
+  const ul = evList("", ev.uncertainty);
+  unc.appendChild(ul || elem("p", null, "None noted."));
+
+  const ass = $("#evidence .ev-panel[data-panel=assessment]"); clearNode(ass);
+  ass.appendChild(elem("p", null, ev.final_assessment ? String(ev.final_assessment) : "No assessment."));
+
+  drawEvidenceCharts();
+}
+
+function drawEvidenceCharts() {
+  if (!_evidence) return;
+  const ev = _evidence;
+  if (proConChart) { proConChart.destroy(); proConChart = null; }
+  if (confChart) { confChart.destroy(); confChart = null; }
+
+  const pcCtx = $("#proConChart");
+  if (pcCtx) {
+    let labels, data, colors;
+    if (ev.opinion) {
+      labels = ["Pro", "Con"];
+      data = [(ev.screen_a || []).length, (ev.screen_b || []).length];
+      colors = ["#6ee7b7", "#f87171"];
+    } else {
+      labels = ["Neutral"];
+      data = [(ev.claims || []).length];
+      colors = ["#94a3b8"];
+    }
+    proConChart = new Chart(pcCtx, {
+      type: "bar",
+      data: { labels, datasets: [{ label: "claims", data, backgroundColor: colors }] },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: "#e6edf7" } } },
+        scales: {
+          x: { ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" } },
+          y: { ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" }, beginAtZero: true },
+        },
+      },
+    });
+  }
+
+  const claims = ev.claims || [];
+  const cfCtx = $("#confChart");
+  if (cfCtx && claims.length) {
+    const labels = claims.map(c => String(c.text || "").slice(0, 28));
+    const vals = claims.map(c => Math.round((Math.max(0, Math.min(1, Number(c.confidence) || 0))) * 100));
+    const colors = claims.map(c => {
+      const s = String(c.evidence_strength || "weak").toLowerCase();
+      return s === "strong" ? "#6ee7b7" : s === "moderate" ? "#fbbf24" : "#94a3b8";
+    });
+    confChart = new Chart(cfCtx, {
+      type: "bar",
+      data: { labels, datasets: [{ label: "confidence", data: vals, backgroundColor: colors }] },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        plugins: { legend: { labels: { color: "#e6edf7" } } },
+        scales: {
+          x: { ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" }, max: 100, beginAtZero: true },
+          y: { ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" } },
+        },
+      },
+    });
+  }
+}
+
+$("#ev-tabs").addEventListener("click", (e) => {
+  const b = e.target.closest(".ev-tab"); if (!b) return;
+  document.querySelectorAll("#ev-tabs .ev-tab").forEach(t => t.classList.toggle("active", t === b));
+  const name = b.dataset.tab;
+  document.querySelectorAll("#evidence .ev-panel").forEach(p => { p.hidden = p.dataset.panel !== name; });
+  if (name === "viz") drawEvidenceCharts();
+});
 
 function renderClusters(cs) {
   const el = $("#clusters");

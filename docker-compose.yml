@@ -1,0 +1,31 @@
+services:
+  pulsetrace:
+    build: .
+    image: pulsetrace:latest
+    container_name: pulsetrace
+    restart: unless-stopped
+    ports:
+      - "80:5000"
+    env_file:
+      - .env
+    environment:
+      PORT: 5000
+      PULSETRACE_BACKEND: ${PULSETRACE_BACKEND:-gemini}
+      DOCS_ADMIN_TOKEN: ${DOCS_ADMIN_TOKEN:-pulsetrace-admin}
+    volumes:
+      - ./data:/app/data
+      - ./info:/app/info
+      # lib/keys.py reads .env.api_keys from CWD at startup. Mount read-only
+      # so the file stays out of the image layer and out of any registry push.
+      - ./.env.api_keys:/app/.env.api_keys:ro
+    # Playwright needs more shm than the 64MB default.
+    shm_size: "1gb"
+    # OOM kill before host swaps to death on 2GB droplets.
+    mem_limit: 3g
+    mem_reservation: 1g
+    healthcheck:
+      test: ["CMD","python","-c","import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:5000/status',timeout=3).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

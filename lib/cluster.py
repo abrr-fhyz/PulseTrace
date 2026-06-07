@@ -33,6 +33,19 @@ def centroids(emb: np.ndarray, labels: np.ndarray) -> dict[int, np.ndarray]:
     return out
 
 
+def saturation(new_emb: np.ndarray, cents: dict[int, np.ndarray]) -> float:
+    """Mean over new posts of their max cosine to any existing centroid.
+
+    Inputs are unit-normalized, so cosine == dot. ~1.0 => the corpus is
+    saturating (new posts land on top of known clusters); ~0.0 => fresh ground.
+    """
+    if not cents or len(new_emb) == 0:
+        return 0.0
+    cmat = np.stack([cents[c] for c in cents])
+    sims = new_emb @ cmat.T
+    return float(sims.max(axis=1).mean())
+
+
 def entropy(labels: np.ndarray) -> float:
     valid = labels[labels >= 0]
     if len(valid) == 0:

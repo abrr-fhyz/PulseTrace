@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Docs Admin · PulseTrace</title>
+  <style>
+    body{margin:0;background:#0a0d14;color:#e6edf7;
+      font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;
+      display:flex;align-items:center;justify-content:center;min-height:100vh}
+    .card{background:#131a26;border:1px solid #25324a;border-radius:12px;
+      padding:32px;width:min(480px,92vw)}
+    h1{margin:0 0 6px;font-size:22px}
+    .sub{color:#8aa0bd;font-size:13px;margin-bottom:24px}
+    label{display:block;font-size:11px;color:#8aa0bd;text-transform:uppercase;
+      letter-spacing:.08em;margin:14px 0 6px}
+    input[type=text],input[type=password],input[type=datetime-local]{
+      width:100%;background:#1a2332;border:1px solid #25324a;color:#e6edf7;
+      padding:10px 12px;border-radius:6px;font-size:14px;font-family:inherit}
+    input:focus{outline:none;border-color:#60a5fa}
+    .row{display:flex;align-items:center;gap:10px;margin:14px 0}
+    .row input[type=checkbox]{width:18px;height:18px}
+    button{background:#60a5fa;color:#07090f;font-weight:600;border:none;
+      padding:12px 18px;border-radius:8px;font-size:14px;cursor:pointer;
+      margin-top:20px;width:100%}
+    button:hover{filter:brightness(1.1)}
+    .err{background:rgba(248,113,113,.12);border:1px solid #f87171;color:#f87171;
+      padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:16px}
+    .ok{background:rgba(110,231,183,.12);border:1px solid #6ee7b7;color:#6ee7b7;
+      padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:16px}
+    .status{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600}
+    .status.on{background:rgba(110,231,183,.15);color:#6ee7b7}
+    .status.off{background:rgba(248,113,113,.15);color:#f87171}
+    a{color:#60a5fa}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>/docs admin</h1>
+    <div class="sub">Visibility & scheduling for the public documentation page.</div>
+    {% if message %}<div class="ok">{{ message }}</div>{% endif %}
+    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+
+    <div class="sub">
+      Current status:
+      <span class="status {{ 'on' if access.allowed else 'off' }}">
+        {{ 'PUBLIC' if access.allowed else 'BLOCKED' }} · {{ access.reason }}
+      </span>
+    </div>
+
+    <form method="POST" action="/docs/admin/save">
+      <label>Admin token</label>
+      <input type="password" name="token" placeholder="DOCS_ADMIN_TOKEN" required>
+
+      <div class="row">
+        <input type="checkbox" name="enabled" id="enabled" {% if cfg.enabled %}checked{% endif %}>
+        <label for="enabled" style="margin:0">Enabled</label>
+      </div>
+
+      <div class="row">
+        <input type="checkbox" name="override_always_on" id="override" {% if cfg.override_always_on %}checked{% endif %}>
+        <label for="override" style="margin:0">Override schedule (always on)</label>
+      </div>
+
+      <label>Start (ISO local)</label>
+      <input type="datetime-local" name="start" value="{{ cfg.start }}">
+
+      <label>End (ISO local)</label>
+      <input type="datetime-local" name="end" value="{{ cfg.end }}">
+
+      <button type="submit">Save</button>
+    </form>
+
+    <div class="sub" style="margin-top:24px">
+      <a href="/docs">→ View /docs</a>
+    </div>
+  </div>
+</body>
+</html>

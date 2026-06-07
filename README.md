@@ -129,8 +129,8 @@ Full detail and mitigations in [`.claude/memory/source-risks.md`](.claude/memory
 ### Install
 
 ```bash
-git clone https://github.com/abrr-fhyz/FBScraper.git
-cd FBScraper
+git clone https://github.com/abrr-fhyz/PulseTrace.git
+cd PulseTrace
 git checkout shyan
 
 python3 -m venv .venv
