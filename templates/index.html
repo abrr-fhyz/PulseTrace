@@ -282,6 +282,42 @@
     .lightbox .close { position: absolute; top: 16px; right: 20px; cursor: pointer;
                        color: var(--muted); font-size: 22px; }
     .shots-empty { padding: 60px; text-align: center; color: var(--muted); }
+
+    #evidence textarea, #topic { width: 100%; }
+    .ev-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border);
+               margin-bottom: 14px; }
+    .ev-tab { background: transparent; color: var(--muted); border: none; border-radius: 0;
+              padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer;
+              border-bottom: 2px solid transparent; }
+    .ev-tab:hover { color: var(--text); filter: none; }
+    .ev-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    #evidence.no-opinion .op-only { display: none; }
+    .ev-panel { font-size: 14px; line-height: 1.5; }
+    .ev-panel > p { margin: 0 0 12px; }
+    .ev-panel h3 { margin: 0 0 10px; font-size: 13px; color: var(--muted);
+                   text-transform: uppercase; letter-spacing: 0.06em; }
+    .ev-panel h4 { margin: 0 0 6px; font-size: 14px; }
+    .ev-sec { margin: 0 0 16px; }
+    .ev-sec > strong { display: block; margin: 0 0 6px; color: var(--muted);
+                       font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .ev-list { margin: 0; padding-left: 18px; }
+    .ev-list li { margin: 0 0 4px; }
+    .claim { border: 1px solid var(--border); background: var(--panel2);
+             border-radius: 10px; padding: 12px 14px; margin: 0 0 12px; }
+    .claim h4 { margin: 0 0 8px; }
+    .claim .reasoning { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+    .conf-bar { height: 6px; background: var(--border); border-radius: 999px;
+                overflow: hidden; margin: 8px 0; }
+    .conf-fill { height: 100%; border-radius: 999px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px;
+             font-weight: 600; border: 1px solid var(--border); }
+    .badge.strong { color: var(--pos); border-color: var(--pos); }
+    .badge.moderate { color: #fbbf24; border-color: #fbbf24; }
+    .badge.weak { color: var(--neu); border-color: var(--neu); }
+    .cats { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+    .cats .chip { display: inline-block; padding: 2px 8px; border-radius: 999px;
+                  background: var(--panel); border: 1px solid var(--border);
+                  font-size: 11px; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -392,6 +428,7 @@
       <h2>Run</h2>
       <div style="display:flex;flex-direction:column;gap:10px">
         <input id="topic" placeholder="Topic, e.g. 'OpenAI Codex'" />
+        <textarea id="opinion" rows="2" placeholder="My Opinion (optional) — e.g. I want to play Elden Ring because I heard good things"></textarea>
         <div class="row" style="flex-wrap:wrap">
           <label class="toggle"><input type="checkbox" id="src-reddit"> Reddit</label>
           <label class="toggle"><input type="checkbox" id="src-hn"> HN</label>
@@ -482,6 +519,32 @@
           <h2>Clusters</h2>
           <div id="clusters" style="max-height:280px;overflow:auto"></div>
         </div>
+      </div>
+
+      <div id="evidence" class="panel" style="display:none">
+        <div class="ev-tabs" id="ev-tabs">
+          <button class="ev-tab active" data-tab="summary">Executive Summary</button>
+          <button class="ev-tab" data-tab="overview">Topic Overview</button>
+          <button class="ev-tab" data-tab="consensus">Community Consensus</button>
+          <button class="ev-tab" data-tab="viz">Evidence Charts</button>
+          <button class="ev-tab op-only" data-tab="screenA">Why It May Be Correct</button>
+          <button class="ev-tab op-only" data-tab="screenB">Why It May Be Wrong</button>
+          <button class="ev-tab" data-tab="uncertainty">Uncertainty</button>
+          <button class="ev-tab" data-tab="assessment">Final Assessment</button>
+        </div>
+        <div class="ev-panel" data-panel="summary"></div>
+        <div class="ev-panel" data-panel="overview" hidden></div>
+        <div class="ev-panel" data-panel="consensus" hidden></div>
+        <div class="ev-panel" data-panel="viz" hidden>
+          <div class="grid2">
+            <div><h3>Pro vs Con claims</h3><canvas id="proConChart"></canvas></div>
+            <div><h3>Confidence by claim</h3><canvas id="confChart"></canvas></div>
+          </div>
+        </div>
+        <div class="ev-panel" data-panel="screenA" hidden></div>
+        <div class="ev-panel" data-panel="screenB" hidden></div>
+        <div class="ev-panel" data-panel="uncertainty" hidden></div>
+        <div class="ev-panel" data-panel="assessment" hidden></div>
       </div>
 
       <div class="panel">
@@ -696,6 +759,7 @@ document.addEventListener("change", e => {
 });
 
 let runId = null, sentChart = null, cy = null;
+let proConChart = null, confChart = null, _evidence = null;
 let lastClusters = [], graphRid = null;
 
 const PL_ORDER = ["seed", "fetch", "cluster", "label", "brief"];
@@ -820,8 +884,16 @@ async function start() {
   $("#replay-wrap").style.display = "none";
   if (cy) { cy.destroy(); cy = null; }
   if (sentChart) { sentChart.destroy(); sentChart = null; }
+  if (proConChart) { proConChart.destroy(); proConChart = null; }
+  if (confChart) { confChart.destroy(); confChart = null; }
+  _evidence = null;
+  $("#evidence").style.display = "none";
+  document.querySelectorAll("#evidence .ev-panel").forEach(p => {
+    if (p.dataset.panel !== "viz") clearNode(p);
+  });
   log("Starting run for \"" + topic + "\" on [" + sources.join(", ") + "]...");
-  const body = { topic, sources };
+  const opinion = ($("#opinion").value || "").trim() || null;
+  const body = { topic, sources, opinion };
   const byok = readByok();
   if (byok && byok.provider && byok.api_key) body.byok = byok;
   const r = await fetch("/run", {
@@ -1012,6 +1084,9 @@ function handle(ev) {
       plStatus("Briefing ready");
       break;
     }
+    case "evidence_ready":
+      fetch(ev.url).then(r => r.json()).then(renderEvidence).catch(() => {});
+      break;
     case "briefing_error":
       plMark("brief", "err");
       plMeta("brief", "error");
@@ -1083,6 +1158,159 @@ function renderSentChart(cs) {
       },
     },
   });
+}
+
+$("#ev-tabs").addEventListener("click", (e) => {
+  const b = e.target.closest(".ev-tab"); if (!b) return;
+  document.querySelectorAll("#ev-tabs .ev-tab").forEach(t => t.classList.toggle("active", t === b));
+  const name = b.dataset.tab;
+  document.querySelectorAll("#evidence .ev-panel").forEach(p => { p.hidden = p.dataset.panel !== name; });
+  if (name === "viz") drawEvidenceCharts();
+});
+
+function evList(title, arr) {
+  if (!arr || !arr.length) return null;
+  const ul = elem("ul", { class: "ev-list" });
+  for (const item of arr) ul.appendChild(elem("li", null, String(item)));
+  return elem("div", { class: "ev-sec" }, title ? elem("strong", null, title) : null, ul);
+}
+
+function claimCard(c) {
+  c = c || {};
+  const strength = String(c.evidence_strength || "weak").toLowerCase();
+  const conf = Math.max(0, Math.min(1, Number(c.confidence) || 0));
+  const pct = Math.round(conf * 100);
+  const fillColor = strength === "strong" ? "var(--pos)"
+                  : strength === "moderate" ? "#fbbf24" : "var(--neu)";
+  const card = elem("div", { class: "claim" },
+    elem("h4", null, String(c.text || "")),
+    elem("span", { class: "badge " + strength },
+      strength + " · " + pct + "% confidence"),
+    elem("div", { class: "conf-bar" },
+      elem("div", { class: "conf-fill", style: "width:" + pct + "%;background:" + fillColor })),
+  );
+  if (c.reasoning) card.appendChild(elem("p", { class: "reasoning" }, String(c.reasoning)));
+  const cats = c.source_categories || [];
+  if (cats.length) {
+    const wrap = elem("div", { class: "cats" });
+    for (const cat of cats) wrap.appendChild(elem("span", { class: "chip" }, String(cat)));
+    card.appendChild(wrap);
+  }
+  return card;
+}
+
+function renderEvidence(ev) {
+  if (!ev) return;
+  _evidence = ev;
+  $("#evidence").style.display = "";
+  const noOp = !ev.opinion;
+  $("#evidence").classList.toggle("no-opinion", noOp);
+  if (noOp) {
+    const active = $("#ev-tabs .ev-tab.active");
+    if (active && (active.dataset.tab === "screenA" || active.dataset.tab === "screenB")) {
+      document.querySelectorAll("#ev-tabs .ev-tab").forEach(t =>
+        t.classList.toggle("active", t.dataset.tab === "summary"));
+      document.querySelectorAll("#evidence .ev-panel").forEach(p =>
+        p.hidden = p.dataset.panel !== "summary");
+    }
+  }
+
+  const sum = $("#evidence .ev-panel[data-panel=summary]"); clearNode(sum);
+  const es = ev.exec_summary || {};
+  if (es.plain_topic) sum.appendChild(elem("p", null, String(es.plain_topic)));
+  const f1 = evList("Key findings", es.key_findings); if (f1) sum.appendChild(f1);
+  const f2 = evList("Points of agreement", es.agreements); if (f2) sum.appendChild(f2);
+  const f3 = evList("Points of disagreement", es.disagreements); if (f3) sum.appendChild(f3);
+  if (es.conclusion) sum.appendChild(elem("p", null, String(es.conclusion)));
+
+  const ov = $("#evidence .ev-panel[data-panel=overview]"); clearNode(ov);
+  ov.appendChild(elem("p", null, ev.topic_overview ? String(ev.topic_overview) : "No overview."));
+  if (noOp && (ev.claims || []).length) {
+    ov.appendChild(elem("div", { class: "ev-sec" }, elem("strong", null, "Key claims")));
+    for (const c of ev.claims) ov.appendChild(claimCard(c));
+  }
+
+  const cons = $("#evidence .ev-panel[data-panel=consensus]"); clearNode(cons);
+  const cc = ev.community_consensus || {};
+  const s1 = evList("Most common praise", cc.top_praise); if (s1) cons.appendChild(s1);
+  const s2 = evList("Most common criticism", cc.top_criticism); if (s2) cons.appendChild(s2);
+  const s3 = evList("Frequently repeated misconceptions", cc.misconceptions); if (s3) cons.appendChild(s3);
+  const s4 = evList("Areas of uncertainty", cc.uncertainties); if (s4) cons.appendChild(s4);
+  if (!cons.firstChild) cons.appendChild(elem("p", null, "No consensus data."));
+
+  const sa = $("#evidence .ev-panel[data-panel=screenA]"); clearNode(sa);
+  for (const c of (ev.screen_a || [])) sa.appendChild(claimCard(c));
+  if (!sa.firstChild) sa.appendChild(elem("p", null, "No supporting claims."));
+
+  const sb = $("#evidence .ev-panel[data-panel=screenB]"); clearNode(sb);
+  for (const c of (ev.screen_b || [])) sb.appendChild(claimCard(c));
+  if (!sb.firstChild) sb.appendChild(elem("p", null, "No opposing claims."));
+
+  const unc = $("#evidence .ev-panel[data-panel=uncertainty]"); clearNode(unc);
+  const ul = evList("", ev.uncertainty);
+  unc.appendChild(ul || elem("p", null, "None noted."));
+
+  const ass = $("#evidence .ev-panel[data-panel=assessment]"); clearNode(ass);
+  ass.appendChild(elem("p", null, ev.final_assessment ? String(ev.final_assessment) : "No assessment."));
+
+  drawEvidenceCharts();
+}
+
+function drawEvidenceCharts() {
+  if (!_evidence) return;
+  const ev = _evidence;
+  if (proConChart) { proConChart.destroy(); proConChart = null; }
+  if (confChart) { confChart.destroy(); confChart = null; }
+
+  const pcCtx = $("#proConChart");
+  if (pcCtx) {
+    let labels, data, colors;
+    if (ev.opinion) {
+      labels = ["Pro", "Con"];
+      data = [(ev.screen_a || []).length, (ev.screen_b || []).length];
+      colors = ["#6ee7b7", "#f87171"];
+    } else {
+      labels = ["Neutral"];
+      data = [(ev.claims || []).length];
+      colors = ["#94a3b8"];
+    }
+    proConChart = new Chart(pcCtx, {
+      type: "bar",
+      data: { labels, datasets: [{ label: "claims", data, backgroundColor: colors }] },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: "#e6edf7" } } },
+        scales: {
+          x: { ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" } },
+          y: { ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" }, beginAtZero: true },
+        },
+      },
+    });
+  }
+
+  const claims = ev.claims || [];
+  const cfCtx = $("#confChart");
+  if (cfCtx && claims.length) {
+    const labels = claims.map(c => String(c.text || "").slice(0, 28));
+    const vals = claims.map(c => Math.round((Math.max(0, Math.min(1, Number(c.confidence) || 0))) * 100));
+    const colors = claims.map(c => {
+      const s = String(c.evidence_strength || "weak").toLowerCase();
+      return s === "strong" ? "#6ee7b7" : s === "moderate" ? "#fbbf24" : "#94a3b8";
+    });
+    confChart = new Chart(cfCtx, {
+      type: "bar",
+      data: { labels, datasets: [{ label: "confidence", data: vals, backgroundColor: colors }] },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        plugins: { legend: { labels: { color: "#e6edf7" } } },
+        scales: {
+          x: { ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" }, max: 100, beginAtZero: true },
+          y: { ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" } },
+        },
+      },
+    });
+  }
 }
 
 async function drawGraph(rid) {

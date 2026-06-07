@@ -17,6 +17,7 @@ from .influence import top_n
 from .events import BUS
 from .store import write_json, new_run_id
 from .llm import chat_json
+from .evidence import build as build_evidence
 
 
 MAX_ITERS = 4
@@ -32,29 +33,46 @@ SOURCES: dict[str, type[Connector]] = {
 }
 
 
-SEED_SYS = (
+_SEED_NEUTRAL = (
     "Generate 5 diverse, complementary search queries for social-media research "
     'on the user\'s topic. Output JSON: {"queries": ["..."]}'
 )
-NEXT_SYS = (
-    "Given cluster labels found so far and the topic, decide: stop or expand. "
-    "If expand, propose up to 3 new search queries targeting under-covered angles. "
-    'Output JSON: {"action": "stop"|"expand", "queries": ["..."]}'
+_SEED_OPINION = (
+    "Generate 6 diverse search queries for social-media research on the topic. "
+    "The user holds an opinion. Half the queries must seek evidence SUPPORTING "
+    "the opinion, half must seek evidence CHALLENGING / against it. "
+    'Output JSON: {"queries": ["..."]}'
 )
 
 
-def _llm_seed(topic: str) -> list[str]:
+def _llm_seed(topic: str, opinion: str | None = None) -> list[str]:
+    system = _SEED_OPINION if opinion else _SEED_NEUTRAL
+    cap = 6 if opinion else 5
+    user = f"Topic: {topic}"
+    if opinion:
+        user += f'\nUser opinion: "{opinion}"'
     try:
-        out = chat_json(SEED_SYS, f"Topic: {topic}", stage="seed")
+        out = chat_json(system, user, stage="seed")
     except Exception:
         return [topic]
     qs = [str(q) for q in out.get("queries", []) if q]
-    return qs[:5] or [topic]
+    return qs[:cap] or [topic]
 
 
-def _llm_next(topic: str, labels: list[str]) -> dict:
+def _llm_next(topic: str, labels: list[str], opinion: str | None = None) -> dict:
+    extra = (
+        f' The user opinion is "{opinion}"; prioritize under-covered angles that '
+        "could support OR challenge it."
+        if opinion else ""
+    )
+    system = (
+        "Given cluster labels found so far and the topic, decide: stop or expand. "
+        "If expand, propose up to 3 new search queries targeting under-covered "
+        "angles." + extra +
+        ' Output JSON: {"action": "stop"|"expand", "queries": ["..."]}'
+    )
     try:
-        return chat_json(NEXT_SYS, f"Topic: {topic}\nLabels so far:\n- " + "\n- ".join(labels), stage="next")
+        return chat_json(system, f"Topic: {topic}\nLabels so far:\n- " + "\n- ".join(labels), stage="next")
     except Exception:
         return {"action": "stop", "queries": []}
 
@@ -111,7 +129,8 @@ def _fetch_all(queries: list[tuple[str, str]], limit: int,
     return posts
 
 
-def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
+def run_agent(topic: str, sources: list[str], run_id: str | None = None,
+              opinion: str | None = None) -> str:
     run_id = run_id or new_run_id()
     sources = [s for s in sources if s in SOURCES] or ["facebook"]
     started_at = int(time.time())
@@ -122,7 +141,7 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
     last_H = 0.0
     stop_reason = "budget"
 
-    seeds = _llm_seed(topic)
+    seeds = _llm_seed(topic, opinion)
     BUS.publish(run_id, {"type": "seeded", "queries": seeds})
     pending = [(q, s) for q in seeds for s in sources]
     cluster_meta: list[dict] = []
@@ -253,7 +272,7 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
             break
         last_H = H
 
-        decision = _llm_next(topic, [c["label"] for c in cluster_meta])
+        decision = _llm_next(topic, [c["label"] for c in cluster_meta], opinion)
         if decision.get("action") == "stop":
             stop_reason = "agent_stop"
             break
@@ -283,6 +302,12 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None) -> str:
         })
     except Exception as e:
         BUS.publish(run_id, {"type": "briefing_error", "err": str(e)})
+    try:
+        build_evidence(run_id, opinion)
+        BUS.publish(run_id, {"type": "evidence_ready",
+                             "url": f"/run/{run_id}/evidence"})
+    except Exception as e:
+        BUS.publish(run_id, {"type": "evidence_error", "err": str(e)})
     BUS.publish(run_id, {
         "type": "done", "run_id": run_id, "stop_reason": stop_reason, "n_posts": len(seen),
     })
