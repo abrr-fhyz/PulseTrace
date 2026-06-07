@@ -14,6 +14,7 @@ import shutil
 import time
 from pathlib import Path
 
+from . import briefing_evidence
 from .llm import chat_json
 from .rag import _resolve_shot_url
 from .store import read_json, run_dir, write_json
@@ -37,7 +38,7 @@ def build(run_id: str, *, with_pdf: bool = True,
     Returns {"html": Path, "pdf": Path|None, "manifest": Path}. The briefing
     directory is recreated on each call, making this operation idempotent.
     """
-    run, clusters, posts_by_id = _load(run_id)
+    run, clusters, posts_by_id, evidence = _load(run_id)
 
     out_dir = run_dir(run_id) / "briefing"
     if out_dir.exists():
@@ -52,6 +53,8 @@ def build(run_id: str, *, with_pdf: bool = True,
     ]
     captures = _captures(run_id, ranked_clusters, posts_by_id)
     summary = _exec_summary(run.get("topic", ""), selected) if exec_summary else ""
+    evidence_top = briefing_evidence.render_top(evidence)
+    evidence_bottom = briefing_evidence.render_bottom(evidence)
 
     ctx = {
         "run_id": run_id,
@@ -61,6 +64,8 @@ def build(run_id: str, *, with_pdf: bool = True,
         "quote_groups": quote_groups,
         "captures": captures,
         "summary": summary,
+        "evidence_top": evidence_top,
+        "evidence_bottom": evidence_bottom,
         "generated_at": int(time.time()),
     }
 
@@ -80,6 +85,7 @@ def build(run_id: str, *, with_pdf: bool = True,
         "captures": len(captures),
         "pdf": bool(pdf_ok),
         "exec_summary": bool(summary),
+        "evidence": bool(evidence_top or evidence_bottom),
     }
     write_json(run_id, "briefing/briefing.json", manifest)
     return {
@@ -89,14 +95,15 @@ def build(run_id: str, *, with_pdf: bool = True,
     }
 
 
-def _load(run_id) -> tuple[dict, list[dict], dict[str, dict]]:
+def _load(run_id) -> tuple[dict, list[dict], dict[str, dict], dict]:
     run = read_json(run_id, "run.json")
     if not run:
         raise FileNotFoundError(f"run.json not found for run {run_id}")
     clusters = read_json(run_id, "clusters.json") or []
     posts = read_json(run_id, "posts.json") or []
     posts_by_id = {str(p.get("id")): p for p in posts if p.get("id")}
-    return run, clusters, posts_by_id
+    evidence = read_json(run_id, "evidence.json") or {}
+    return run, clusters, posts_by_id, evidence
 
 
 def _rank_clusters(clusters, posts_by_id) -> list[dict]:
@@ -276,6 +283,8 @@ def _render_html(ctx) -> str:
         )
 
     summary_block = f'<p class="summary">{summary}</p>' if summary else ""
+    evidence_top = ctx.get("evidence_top") or ""
+    evidence_bottom = ctx.get("evidence_bottom") or ""
 
     return f"""<!doctype html>
 <html lang="en">
@@ -285,41 +294,74 @@ def _render_html(ctx) -> str:
   <style>
     @page {{ size: A4; margin: 14mm; }}
     * {{ box-sizing: border-box; }}
-    body {{ margin: 0; color: #111827; font-family: system-ui, -apple-system, sans-serif; font-size: 10.5px; line-height: 1.35; }}
+    body {{ margin: 0; background: #0f172a; color: #e2e8f0; font-family: system-ui, -apple-system, sans-serif; font-size: 10.5px; line-height: 1.35; }}
     h1, h2, h3, p {{ margin: 0; }}
     h1 {{ font-size: 25px; line-height: 1.05; max-width: 78%; }}
-    h2 {{ font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: 6px; }}
-    h3 {{ font-size: 12px; line-height: 1.2; margin-bottom: 5px; }}
-    a {{ color: inherit; text-decoration: none; }}
-    .top {{ display: flex; justify-content: space-between; gap: 18px; border-bottom: 1px solid #d8dee9; padding-bottom: 10px; }}
-    .meta {{ text-align: right; color: #475569; font-size: 9.5px; min-width: 170px; }}
-    .meta b {{ color: #111827; }}
-    .summary {{ margin: 10px 0 12px; color: #334155; font-size: 11px; }}
+    h2 {{ font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; margin-bottom: 6px; border-left: 3px solid #22d3ee; padding-left: 8px; }}
+    h3 {{ font-size: 12px; line-height: 1.2; margin-bottom: 5px; color: #e2e8f0; }}
+    a {{ color: #22d3ee; text-decoration: none; }}
+    section {{ margin: 12px 0; }}
+    .top {{ display: flex; justify-content: space-between; gap: 18px; padding: 14px 16px; border-radius: 12px; background: linear-gradient(135deg, #22d3ee, #818cf8); color: #f8fafc; }}
+    .top h1 {{ color: #f8fafc; }}
+    .top h2 {{ color: rgba(248,250,252,.85); border-left: 3px solid rgba(248,250,252,.7); }}
+    .meta {{ text-align: right; color: rgba(248,250,252,.92); font-size: 9.5px; min-width: 170px; }}
+    .meta b {{ color: #f8fafc; }}
+    .summary {{ margin: 10px 0 12px; color: #cbd5e1; font-size: 11px; }}
     .metrics {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; }}
-    .metric {{ border: 1px solid #d8dee9; border-radius: 7px; padding: 8px; background: #f8fafc; }}
-    .metric b {{ display: block; font-size: 17px; color: #111827; }}
-    .metric span {{ display: block; color: #64748b; font-size: 8.5px; text-transform: uppercase; letter-spacing: .06em; }}
+    .metric {{ border: 1px solid #334155; border-radius: 10px; padding: 8px; background: #1e293b; box-shadow: 0 0 0 1px #334155, 0 4px 18px rgba(34,211,238,.08); }}
+    .metric b {{ display: block; font-size: 17px; color: #e2e8f0; }}
+    .metric span {{ display: block; color: #94a3b8; font-size: 8.5px; text-transform: uppercase; letter-spacing: .06em; }}
     .visuals {{ display: grid; grid-template-columns: 1fr 1.15fr; gap: 10px; align-items: stretch; margin: 10px 0 12px; }}
-    .visual-card {{ border: 1px solid #d8dee9; border-radius: 7px; padding: 8px; break-inside: avoid; }}
+    .visual-card {{ border: 1px solid #334155; border-radius: 10px; padding: 8px; background: #1e293b; break-inside: avoid; }}
     svg {{ display: block; width: 100%; height: auto; }}
     .grid {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }}
-    .cluster {{ border: 1px solid #d8dee9; border-radius: 6px; padding: 8px; break-inside: avoid; min-height: 153px; }}
+    .cluster {{ border: 1px solid #334155; border-radius: 10px; padding: 8px; background: #1e293b; break-inside: avoid; min-height: 153px; }}
     .cluster-head {{ display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }}
-    .count {{ white-space: nowrap; color: #64748b; font-size: 9px; }}
-    .desc {{ color: #64748b; font-size: 9.5px; margin-bottom: 6px; min-height: 13px; }}
-    .bar {{ display: flex; height: 6px; overflow: hidden; border-radius: 999px; background: #e5e7eb; margin: 5px 0 7px; }}
-    .pos {{ background: #16a34a; }} .neu {{ background: #94a3b8; }} .neg {{ background: #dc2626; }}
-    blockquote {{ margin: 0 0 6px; padding-left: 7px; border-left: 2px solid #d8dee9; }}
-    blockquote p {{ color: #111827; font-size: 9.7px; }}
-    cite {{ display: block; font-style: normal; color: #64748b; font-size: 8.5px; margin-top: 2px; }}
-    .captures {{ margin-top: 12px; border-top: 1px solid #d8dee9; padding-top: 8px; }}
+    .count {{ white-space: nowrap; color: #94a3b8; font-size: 9px; }}
+    .desc {{ color: #94a3b8; font-size: 9.5px; margin-bottom: 6px; min-height: 13px; }}
+    .bar {{ display: flex; height: 6px; overflow: hidden; border-radius: 999px; background: #334155; margin: 5px 0 7px; }}
+    .pos {{ background: #a3e635; }} .neu {{ background: #64748b; }} .neg {{ background: #fb7185; }}
+    blockquote {{ margin: 0 0 6px; padding-left: 7px; border-left: 2px solid #334155; }}
+    blockquote p {{ color: #e2e8f0; font-size: 9.7px; }}
+    cite {{ display: block; font-style: normal; color: #94a3b8; font-size: 8.5px; margin-top: 2px; }}
+    .captures {{ margin-top: 12px; border-top: 1px solid #334155; padding-top: 8px; }}
     .captures > div {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }}
-    .section-note {{ color: #64748b; font-size: 9px; margin-bottom: 8px; }}
+    .section-note {{ color: #94a3b8; font-size: 9px; margin-bottom: 8px; }}
     figure {{ margin: 0; break-inside: avoid; }}
-    figure img {{ width: 100%; max-height: 310px; object-fit: contain; object-position: top; border: 1px solid #d8dee9; border-radius: 4px; display: block; background: #f8fafc; }}
-    figcaption {{ color: #64748b; font-size: 8.5px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
-    .foot {{ margin-top: 8px; color: #94a3b8; font-size: 8.5px; display: flex; justify-content: space-between; }}
+    figure img {{ width: 100%; max-height: 310px; object-fit: contain; object-position: top; border: 1px solid #334155; border-radius: 6px; display: block; background: #0b1220; }}
+    figcaption {{ color: #94a3b8; font-size: 8.5px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+    .foot {{ margin-top: 8px; color: #64748b; font-size: 8.5px; display: flex; justify-content: space-between; }}
     .page-break {{ break-before: page; }}
+    .ev {{ margin: 12px 0; padding: 10px 12px; border: 1px solid #334155; border-radius: 10px; background: #1e293b; break-inside: avoid; }}
+    .ev h3 {{ font-size: 10.5px; margin: 8px 0 4px; }}
+    .ev ul {{ margin: 0 0 4px; padding-left: 16px; }}
+    .ev li {{ color: #cbd5e1; margin-bottom: 2px; }}
+    .ev p {{ color: #cbd5e1; }}
+    .ev-plain {{ color: #e2e8f0; font-size: 11px; margin-bottom: 6px; }}
+    .ev-conclusion {{ margin-top: 6px; color: #e2e8f0; font-weight: 600; }}
+    .ev-ad {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
+    .ev-cols {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }}
+    .ev-col {{ background: #0b1220; border: 1px solid #334155; border-radius: 8px; padding: 7px; }}
+    .ev-col h3 {{ font-size: 9.5px; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 4px; }}
+    .ev-charts {{ display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; margin-bottom: 8px; }}
+    .ev-charts svg {{ width: auto; max-width: 100%; background: #0b1220; border-radius: 10px; }}
+    .ev-cards {{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }}
+    .ev-screens {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
+    .ev-screen h3 {{ font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }}
+    .ev-claim {{ background: #0b1220; border: 1px solid #334155; border-radius: 8px; padding: 8px; break-inside: avoid; }}
+    .ev-claim-head {{ display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }}
+    .ev-badge {{ font-size: 8.5px; font-weight: 700; letter-spacing: .05em; }}
+    .ev-pill {{ font-size: 8.5px; font-weight: 700; text-transform: uppercase; border: 1px solid currentColor; border-radius: 999px; padding: 1px 6px; }}
+    .ev-conf {{ margin-left: auto; color: #94a3b8; font-size: 8.5px; }}
+    .ev-claim-text {{ color: #e2e8f0; font-size: 10px; margin-bottom: 5px; }}
+    .ev-minis {{ display: grid; gap: 2px; margin-bottom: 5px; }}
+    .ev-mini {{ display: flex; align-items: center; gap: 6px; }}
+    .ev-mini-label {{ width: 72px; color: #94a3b8; font-size: 8px; }}
+    .ev-mini-track {{ flex: 1; height: 5px; border-radius: 999px; background: #334155; overflow: hidden; }}
+    .ev-mini-fill {{ display: block; height: 5px; border-radius: 999px; }}
+    .ev-reason {{ color: #94a3b8; font-size: 9px; margin-bottom: 5px; }}
+    .ev-tags {{ display: flex; flex-wrap: wrap; gap: 4px; }}
+    .ev-tag {{ font-size: 8px; color: #cbd5e1; background: #1e293b; border: 1px solid #334155; border-radius: 999px; padding: 1px 6px; }}
   </style>
 </head>
 <body>
@@ -339,6 +381,7 @@ def _render_html(ctx) -> str:
     </div>
   </header>
   {summary_block}
+  {evidence_top}
   <section>
     <h2>Metrics</h2>
     <div class="metrics">{metrics_grid}</div>
@@ -353,6 +396,7 @@ def _render_html(ctx) -> str:
       {sentiment_chart}
     </div>
   </section>
+  {evidence_bottom}
   <section class="grid">
     {quote_cards}
   </section>
@@ -425,7 +469,7 @@ def _topic_graph_svg(clusters: list[dict]) -> str:
     edge_svg = "\n".join(
         '<line class="edge" '
         f'x1="{a["x"]:.1f}" y1="{a["y"]:.1f}" x2="{b["x"]:.1f}" y2="{b["y"]:.1f}" '
-        f'stroke="#94a3b8" stroke-width="{1 + max(0, sim) * 3:.1f}" '
+        f'stroke="#475569" stroke-width="{1 + max(0, sim) * 3:.1f}" '
         f'opacity="{0.22 + max(0, sim) * 0.45:.2f}" />'
         for a, b, sim in edges
     )

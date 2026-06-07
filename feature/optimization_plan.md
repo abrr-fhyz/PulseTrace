@@ -4,7 +4,7 @@
   3. Cache embeddings on disk by text-hash — sha1(text) -> vec in sqlite/parquet. Repeat topics = zero embed cost.Already partial in embed.py cache; persist across runs.                                                               
   4. Incremental clustering — don't re-cluster full corpus every iter. Use HDBSCAN on new posts only, assign to nearest existing centroid w/ cosine threshold; re-cluster from scratch only every 3 iters or on entropy jump.
   5. Cluster→label in parallel — currently sequential for cid in cents. ThreadPoolExecutor(8) over clusters. Label + stance per cluster independent. 4-8x label stage.         
-  6. Stance batching across clusters — one mega-prompt: "score these 64 posts, here is theme per post." One LLM call vs 8. Token-cheap w/ flash-lite.                          
+  6. Stance batching across clusters — one mega-prompt: "score these 64 posts, here is theme per post." One LLM call vs 8. Token-cheap w/ flash-lite.                         
   7. Smaller embedding for clustering, big for RAG — gemini-embedding-001 @ 768-dim for clustering (faster faiss, less RAM), full 3072 only for RAG index. Matryoshka truncation = free.
   8. Skip embed for near-dupes — minhash/simhash on raw text first. FB OCR floods near-dupes. Dedupe before embed = 30-50% fewer vectors.                                     
   9. Warm Playwright — keep one Chromium alive across iters as singleton, not new ctx per fetch_many. Already single-session per iter; extend to run-lifetime. Save 2-3s/iter cold start.

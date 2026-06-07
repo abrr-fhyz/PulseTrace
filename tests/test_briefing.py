@@ -242,6 +242,77 @@ def test_http_pdf_returns_501_when_builder_produces_no_pdf(tmp_path, monkeypatch
     assert "PDF unavailable" in res.json["error"]
 
 
+_EVIDENCE_BASE = {
+    "exec_summary": {
+        "plain_topic": "Mid-range phone reviews",
+        "key_findings": ["battery lasts all day"],
+        "agreements": ["fast charging"],
+        "disagreements": ["camera in low light"],
+        "conclusion": "solid value pick",
+    },
+    "topic_overview": "Discussion centers on value for money.",
+    "community_consensus": {
+        "top_praise": ["battery"],
+        "top_criticism": ["camera"],
+        "misconceptions": ["overheats"],
+        "uncertainties": ["long-term durability"],
+    },
+    "claims": [
+        {"text": "Battery lasts all day", "side": "pro", "confidence": 0.8,
+         "evidence_strength": "strong", "reasoning": "corroborating posts",
+         "source_categories": ["forums"], "cluster_ids": [0],
+         "ranking": {"credibility": 0.8, "data_quality": 0.6, "sample_size": 0.5,
+                     "recency": 0.7, "corroboration": 0.66}},
+        {"text": "Camera weak in low light", "side": "con", "confidence": 0.4,
+         "evidence_strength": "weak", "reasoning": "few complaints",
+         "source_categories": ["social"], "cluster_ids": [1],
+         "ranking": {"credibility": 0.3, "data_quality": 0.4, "sample_size": 0.2,
+                     "recency": 0.5, "corroboration": 0.3}},
+    ],
+    "screen_a": [
+        {"text": "Battery lasts all day", "side": "pro", "confidence": 0.8,
+         "evidence_strength": "strong", "reasoning": "corroborating posts",
+         "source_categories": ["forums"], "cluster_ids": [0],
+         "ranking": {"credibility": 0.8, "data_quality": 0.6, "sample_size": 0.5,
+                     "recency": 0.7, "corroboration": 0.66}},
+    ],
+    "screen_b": [
+        {"text": "Camera weak in low light", "side": "con", "confidence": 0.4,
+         "evidence_strength": "weak", "reasoning": "few complaints",
+         "source_categories": ["social"], "cluster_ids": [1],
+         "ranking": {"credibility": 0.3, "data_quality": 0.4, "sample_size": 0.2,
+                     "recency": 0.5, "corroboration": 0.3}},
+    ],
+    "uncertainty": ["sample skew toward enthusiasts"],
+    "final_assessment": "Evidence mostly supports the view.",
+}
+
+
+def test_briefing_includes_evidence_when_opinion(tmp_path, monkeypatch):
+    run_id, _, _, _ = _write_sample_run(tmp_path, monkeypatch)
+    ev = {**_EVIDENCE_BASE, "opinion": "this phone is great"}
+    (store.run_dir(run_id) / "evidence.json").write_text(json.dumps(ev))
+    with patch("lib.briefing.chat_json", return_value={"summary": "stub summary"}):
+        out = briefing.build(run_id, with_pdf=False)
+    html = out["html"].read_text()
+    assert "Executive" in html
+    assert "ev-claims" in html
+    manifest = json.loads(out["manifest"].read_text())
+    assert manifest["evidence"] is True
+
+
+def test_briefing_omits_evidence_when_opinion_none(tmp_path, monkeypatch):
+    run_id, _, _, _ = _write_sample_run(tmp_path, monkeypatch)
+    ev = {**_EVIDENCE_BASE, "opinion": None}
+    (store.run_dir(run_id) / "evidence.json").write_text(json.dumps(ev))
+    with patch("lib.briefing.chat_json", return_value={"summary": "stub summary"}):
+        out = briefing.build(run_id, with_pdf=False)
+    html = out["html"].read_text()
+    assert "ev-claims" not in html
+    manifest = json.loads(out["manifest"].read_text())
+    assert manifest["evidence"] is False
+
+
 def test_pdf_render_gated(tmp_path, monkeypatch):
     pytest.importorskip("weasyprint")
     run_id, run, _, _ = _write_sample_run(tmp_path, monkeypatch)
