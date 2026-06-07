@@ -1,5 +1,6 @@
 """Opinion-aware evidence layer: build evidence.json from a completed run."""
 from __future__ import annotations
+import copy
 import logging
 import time
 from .connectors.base import Post
@@ -71,13 +72,14 @@ def build(run_id: str, opinion: str | None) -> dict:
     return out
 
 
-def _enrich_claim(claim: dict, members_by_cid, max_members: int, now: int) -> dict:
-    cids = [int(x) for x in claim.get("cluster_ids", []) if isinstance(x, (int, float))]
+def _enrich_claim(claim: dict, members_by_cid: dict[int, list[Post]],
+                  max_members: int, now: int) -> dict:
+    cids = _coerce_cids(claim.get("cluster_ids", []))
     posts: list[Post] = []
     for cid in cids:
         posts.extend(members_by_cid.get(cid, []))
     ranking = es.rank(posts, max_members, now)
-    computed = sum(ranking.values()) / len(ranking) if ranking else 0.0
+    computed = sum(ranking.values()) / len(ranking)
     llm_conf = _clamp(claim.get("llm_confidence", 0.0))
     cats = sorted({es.category_for(p.source) for p in posts}) or ["unknown"]
     return {
@@ -117,7 +119,7 @@ def _llm_analyze(topic: str, opinion: str | None, clusters: list[dict]) -> dict:
         return out
     except Exception as e:
         _LOG.warning("evidence LLM failed: %s", e)
-        return dict(_NEUTRAL)
+        return copy.deepcopy(_NEUTRAL)
 
 
 def _to_post(d: dict) -> Post:
@@ -128,6 +130,16 @@ def _to_post(d: dict) -> Post:
         comments=int(d.get("comments", 0) or 0),
         shares=int(d.get("shares", 0) or 0), raw=d.get("raw", {}) or {},
     )
+
+
+def _coerce_cids(raw) -> list[int]:
+    out: list[int] = []
+    for x in raw if isinstance(raw, list) else []:
+        try:
+            out.append(int(x))
+        except (TypeError, ValueError):
+            continue
+    return out
 
 
 def _clamp(v) -> float:

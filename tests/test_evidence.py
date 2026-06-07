@@ -71,6 +71,22 @@ def test_build_neutral_when_no_opinion(tmp_path, monkeypatch):
         out = evidence.build(run_id, opinion=None)
     assert out["opinion"] is None
     assert out["screen_a"] == [] and out["screen_b"] == []
+    assert all(c["side"] == "neutral" for c in out["claims"])
+
+
+def test_build_handles_string_cluster_ids(tmp_path, monkeypatch):
+    monkeypatch.setattr("lib.store.ROOT", tmp_path / "runs")
+    run_id = "t4"
+    _seed_run(tmp_path, run_id)
+    llm = {**_FAKE_LLM, "claims": [
+        {"text": "Combat is deep", "side": "pro", "reasoning": "r",
+         "llm_confidence": 0.8, "cluster_ids": ["0"]},
+    ]}
+    with patch("lib.evidence.chat_json", return_value=llm):
+        out = evidence.build(run_id, opinion="I want to play it")
+    claim = out["claims"][0]
+    assert claim["cluster_ids"] == [0]
+    assert claim["source_categories"] != ["unknown"]
 
 
 def test_build_survives_llm_failure(tmp_path, monkeypatch):
