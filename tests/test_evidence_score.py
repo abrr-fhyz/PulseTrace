@@ -78,3 +78,9 @@ def test_empty_inputs_return_zeros_not_errors():
     assert es.corroboration([]) == 0.0
     r = es.rank([], max_members=0, now=0)
     assert all(v == 0.0 for v in r.values())
+
+
+def test_category_for_maps_known_and_defaults_social():
+    assert es.category_for("hn") == "forums"
+    assert es.category_for("facebook") == "social"
+    assert es.category_for("unknown") == "social"

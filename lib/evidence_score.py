@@ -14,6 +14,7 @@ SOURCE_CATEGORY: dict[str, str] = {
 _RANK_WEIGHTS = ("credibility", "data_quality", "sample_size", "recency", "corroboration")
 _COMPUTED_WEIGHT = 0.6
 _LLM_WEIGHT = 0.4
+assert _COMPUTED_WEIGHT + _LLM_WEIGHT == 1.0  # blend() bounds depend on this
 
 
 def engagement(posts: list[Post]) -> int:
@@ -45,7 +46,7 @@ def sample_size_norm(n_members: int, max_members: int) -> float:
 
 
 def recency_score(posts: list[Post], now: int) -> float:
-    tss = [p.ts for p in posts if p.ts]
+    tss = [p.ts for p in posts if p.ts > 0]
     if not tss:
         return 0.0
     return max(_recency(ts, now) for ts in tss)
@@ -63,13 +64,14 @@ def data_quality(posts: list[Post]) -> float:
 def rank(posts: list[Post], max_members: int, now: int) -> dict[str, float]:
     if not posts:
         return {k: 0.0 for k in _RANK_WEIGHTS}
-    return {
-        "credibility": credibility(posts),
-        "data_quality": data_quality(posts),
-        "sample_size": sample_size_norm(len(posts), max_members),
-        "recency": recency_score(posts, now),
-        "corroboration": corroboration(posts),
-    }
+    scores = (
+        credibility(posts),
+        data_quality(posts),
+        sample_size_norm(len(posts), max_members),
+        recency_score(posts, now),
+        corroboration(posts),
+    )
+    return dict(zip(_RANK_WEIGHTS, scores))
 
 
 def strength_bucket(ranking: dict[str, float]) -> str:
