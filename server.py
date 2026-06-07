@@ -222,12 +222,13 @@ def start_run():
         if not (byok.get("api_key") or "").strip():
             return jsonify({"error": "api_key required when byok set"}), 400
 
+    opinion = (data.get("opinion") or "").strip() or None
     run_id = new_run_id()
 
     def go():
         prior = _byok_apply(byok)
         try:
-            run_agent(topic, sources, run_id=run_id)
+            run_agent(topic, sources, run_id=run_id, opinion=opinion)
         except Exception as e:
             BUS.publish(run_id, {"type": "error", "err": str(e)})
         finally:
@@ -360,6 +361,14 @@ def briefing_manifest(run_id):
     if not p.exists():
         return jsonify({"error": "not generated"}), 404
     return Response(p.read_text(encoding="utf-8"), mimetype="application/json")
+
+
+@app.route("/run/<run_id>/evidence")
+def run_evidence(run_id):
+    data = read_json(run_id, "evidence.json")
+    if data is None:
+        return jsonify({"error": "not generated"}), 404
+    return jsonify(data)
 
 
 @app.route("/fb/cookies/status")
