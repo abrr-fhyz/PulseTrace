@@ -35,6 +35,15 @@ def test_seed_falls_back_to_topic_on_llm_error():
         assert agent._llm_seed("Topic", opinion=None) == ["Topic"]
 
 
+def test_seed_caps_neutral_at_5_opinion_at_6():
+    def fake(system, user, **kw):
+        return {"queries": [f"q{i}" for i in range(10)]}
+
+    with patch("lib.agent.chat_json", side_effect=fake):
+        assert len(agent._llm_seed("T", opinion=None)) == 5
+        assert len(agent._llm_seed("T", opinion="x")) == 6
+
+
 def test_next_injects_opinion_framing():
     captured = {}
 

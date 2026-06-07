@@ -34,7 +34,7 @@ SOURCES: dict[str, type[Connector]] = {
 
 
 _SEED_NEUTRAL = (
-    "Generate 6 diverse, complementary search queries for social-media research "
+    "Generate 5 diverse, complementary search queries for social-media research "
     'on the user\'s topic. Output JSON: {"queries": ["..."]}'
 )
 _SEED_OPINION = (
@@ -47,6 +47,7 @@ _SEED_OPINION = (
 
 def _llm_seed(topic: str, opinion: str | None = None) -> list[str]:
     system = _SEED_OPINION if opinion else _SEED_NEUTRAL
+    cap = 6 if opinion else 5
     user = f"Topic: {topic}"
     if opinion:
         user += f'\nUser opinion: "{opinion}"'
@@ -55,7 +56,7 @@ def _llm_seed(topic: str, opinion: str | None = None) -> list[str]:
     except Exception:
         return [topic]
     qs = [str(q) for q in out.get("queries", []) if q]
-    return qs[:6] or [topic]
+    return qs[:cap] or [topic]
 
 
 def _llm_next(topic: str, labels: list[str], opinion: str | None = None) -> dict:
