@@ -17,6 +17,7 @@ from .influence import top_n
 from .events import BUS
 from .store import write_json, new_run_id
 from .llm import chat_json
+from .evidence import build as build_evidence
 
 
 MAX_ITERS = 4
@@ -33,7 +34,7 @@ SOURCES: dict[str, type[Connector]] = {
 
 
 _SEED_NEUTRAL = (
-    "Generate 5 diverse, complementary search queries for social-media research "
+    "Generate 6 diverse, complementary search queries for social-media research "
     'on the user\'s topic. Output JSON: {"queries": ["..."]}'
 )
 _SEED_OPINION = (
@@ -301,7 +302,6 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
     except Exception as e:
         BUS.publish(run_id, {"type": "briefing_error", "err": str(e)})
     try:
-        from .evidence import build as build_evidence
         build_evidence(run_id, opinion)
         BUS.publish(run_id, {"type": "evidence_ready",
                              "url": f"/run/{run_id}/evidence"})

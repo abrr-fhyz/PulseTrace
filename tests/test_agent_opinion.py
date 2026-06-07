@@ -33,3 +33,28 @@ def test_seed_biases_pro_con_when_opinion_present():
 def test_seed_falls_back_to_topic_on_llm_error():
     with patch("lib.agent.chat_json", side_effect=RuntimeError("x")):
         assert agent._llm_seed("Topic", opinion=None) == ["Topic"]
+
+
+def test_next_injects_opinion_framing():
+    captured = {}
+
+    def fake(system, user, **kw):
+        captured["system"] = system
+        return {"action": "expand", "queries": ["q"]}
+
+    with patch("lib.agent.chat_json", side_effect=fake):
+        agent._llm_next("Elden Ring", ["combat"], opinion="I want to play it")
+    blob = captured["system"].lower()
+    assert "opinion" in blob and ("support" in blob or "challenge" in blob)
+
+
+def test_next_neutral_has_no_opinion():
+    captured = {}
+
+    def fake(system, user, **kw):
+        captured["system"] = system
+        return {"action": "stop", "queries": []}
+
+    with patch("lib.agent.chat_json", side_effect=fake):
+        agent._llm_next("Elden Ring", ["combat"], opinion=None)
+    assert "opinion" not in captured["system"].lower()
