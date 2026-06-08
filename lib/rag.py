@@ -1,10 +1,11 @@
-"""FAISS-backed RAG over a run's posts."""
+"""FAISS-backed RAG over a run's posts: hybrid retrieval + self-reflective loop."""
 from __future__ import annotations
 import json
 import numpy as np
 import faiss
 from .embed import embed_texts
 from .llm import chat_json
+from .retrieve import hybrid_search
 from .store import run_dir
 
 
@@ -80,34 +81,91 @@ ASK_SYS = (
     'Output JSON: {"answer": "...", "citations": ["id", ...]}'
 )
 
+JUDGE_SYS = (
+    "You are grading a draft answer against the ONLY evidence available (the posts). "
+    "Judge whether every claim in the answer is supported by the posts and whether "
+    "the posts cover the question. "
+    'Output JSON: {"confidence": 0.0-1.0, "supported": true/false, '
+    '"gap": "what evidence is missing or unsupported, empty if none"}'
+)
 
-def ask(run_id: str, question: str, k: int = 8) -> dict:
-    d = run_dir(run_id)
-    idx_path = d / "index.faiss"
+REFINE_SYS = (
+    "Rewrite the search query to retrieve evidence that fills the stated gap. "
+    "Keep it short and keyword-focused. "
+    'Output JSON: {"query": "rewritten query"}'
+)
+
+REFLECT_THRESHOLD = 0.6
+MAX_REFLECT_ITERS = 2
+
+
+def _ensure_index(run_id: str) -> bool:
+    idx_path = run_dir(run_id) / "index.faiss"
     if not idx_path.exists():
         build_index(run_id)
-    if not idx_path.exists():
-        return {"answer": "No data for this run.", "citations": [], "retrieved": []}
+    return idx_path.exists()
 
-    idx = faiss.read_index(str(idx_path))
-    ids = json.loads((d / "ids.json").read_text())
-    posts = {p["id"]: p for p in json.loads((d / "posts.json").read_text())}
 
-    qvec = embed_texts([question]).astype(np.float32)
-    _, I = idx.search(qvec, k)
-    hits = [ids[i] for i in I[0] if 0 <= i < len(ids)]
-    context = "\n\n".join(
-        f"[{pid}] {posts[pid]['text'][:600]}" for pid in hits if pid in posts
-    )
-    try:
-        out = chat_json(ASK_SYS, f"Question: {question}\n\nPosts:\n{context}", stage="rag")
-    except Exception as e:
-        return {"answer": f"LLM error: {e}", "citations": [], "retrieved": hits}
-    raw_cites = [str(c) for c in out.get("citations", [])]
-    cites_detail = [_citation_detail(run_id, c, posts) for c in raw_cites]
-    return {
-        "answer": str(out.get("answer", "")),
-        "citations": raw_cites,
-        "citations_detail": cites_detail,
-        "retrieved": hits,
-    }
+def _load_posts_dict(run_id: str) -> dict:
+    return {p["id"]: p for p in json.loads((run_dir(run_id) / "posts.json").read_text())}
+
+
+def ask(run_id: str, question: str, k: int = 8) -> dict:
+    if not _ensure_index(run_id):
+        return {"answer": "No data for this run.", "citations": [],
+                "citations_detail": [], "retrieved": [], "confidence": 0.0,
+                "iterations": 0}
+
+    posts = _load_posts_dict(run_id)
+    query = question
+    best: dict | None = None
+    best_conf = -1.0
+    iters = 0
+
+    while iters < MAX_REFLECT_ITERS:
+        iters += 1
+        hits = hybrid_search(run_id, query, k)
+        context = "\n\n".join(
+            f"[{pid}] {posts[pid]['text'][:600]}" for pid in hits if pid in posts
+        )
+        try:
+            out = chat_json(ASK_SYS, f"Question: {question}\n\nPosts:\n{context}",
+                            stage="rag")
+        except Exception as e:
+            return {"answer": f"LLM error: {e}", "citations": [],
+                    "citations_detail": [], "retrieved": hits,
+                    "confidence": 0.0, "iterations": iters}
+
+        raw_cites = [str(c) for c in out.get("citations", [])]
+        answer = {
+            "answer": str(out.get("answer", "")),
+            "citations": raw_cites,
+            "citations_detail": [_citation_detail(run_id, c, posts) for c in raw_cites],
+            "retrieved": hits,
+        }
+
+        try:
+            verdict = chat_json(JUDGE_SYS,
+                                f"Question: {question}\n\nAnswer: {answer['answer']}\n\n"
+                                f"Posts:\n{context}", stage="rag_judge")
+            conf = float(verdict.get("confidence", 1.0))
+            gap = str(verdict.get("gap", ""))
+        except Exception:
+            answer["confidence"] = 1.0
+            return {**answer, "iterations": iters}
+
+        if conf > best_conf:
+            best, best_conf = answer, conf
+
+        if conf >= REFLECT_THRESHOLD or iters >= MAX_REFLECT_ITERS:
+            break
+
+        try:
+            refined = chat_json(REFINE_SYS,
+                                f"Original question: {question}\nGap: {gap}",
+                                stage="rag_refine")
+            query = str(refined.get("query", query)) or query
+        except Exception:
+            break
+
+    return {**best, "confidence": best_conf, "iterations": iters}
