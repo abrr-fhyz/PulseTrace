@@ -543,6 +543,18 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 .lightbox .close { position: absolute; top: 24px; right: 32px; cursor: pointer; color: #fff; font-size: 28px; transition: transform 0.2s; opacity: 0.8; }
 .lightbox .close:hover { transform: scale(1.1); opacity: 1; }
 .shots-empty { padding: 80px; text-align: center; color: var(--muted); font-size: 15px; background: var(--panel2); border-radius: 16px; border: 1px dashed var(--border); }
+.orch-timeline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.orch-node { display: flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel2); font-size: 12.5px; font-weight: 600; color: var(--muted); transition: all .35s cubic-bezier(0.16,1,0.3,1); }
+.orch-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neu); flex: none; transition: all .35s; }
+.orch-node.active { border-color: var(--accent2); color: var(--text); box-shadow: 0 0 0 1px var(--accent2), 0 4px 12px rgba(59,130,246,0.12); }
+.orch-node.active .orch-dot { background: var(--accent2); animation: pl-pulse 1.6s ease-in-out infinite; }
+.orch-node.done { border-color: var(--pos); color: var(--text); }
+.orch-node.done .orch-dot { background: var(--pos); }
+.orch-node.warn { border-color: var(--accent3); color: var(--text); }
+.orch-node.warn .orch-dot { background: var(--accent3); }
+.orch-node.err { border-color: var(--neg); color: var(--text); }
+.orch-node.err .orch-dot { background: var(--neg); }
+.orch-info { font-weight: 500; color: var(--muted); font-size: 11.5px; }
 </style>
 </head>
 <body class="antialiased">
@@ -739,6 +751,39 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
                  style="width:100%;margin:0;padding:0; accent-color: var(--accent2);" />
           <div class="muted" id="replay-caption" style="margin-top:8px">iteration 1 of 1</div>
         </div>
+      </div>
+
+      <div class="panel">
+        <h2>Orchestration <span class="muted" style="font-weight:500;font-size:0.7em">LangGraph</span></h2>
+        <div class="muted" style="margin:-4px 0 14px;font-size:0.85em">
+          Explicit, resumable agent graph: crawl → score → alert/recover → done.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <input id="orch-topic" placeholder="Topic, e.g. 'electric cars'" />
+          <div class="row" style="flex-wrap:wrap">
+            <label class="toggle"><input type="checkbox" id="orch-src-reddit" checked> Reddit</label>
+            <label class="toggle"><input type="checkbox" id="orch-src-hn"> HN</label>
+            <label class="toggle"><input type="checkbox" id="orch-src-facebook"> Facebook</label>
+            <label class="toggle"><input type="checkbox" id="orch-src-youtube"> YouTube</label>
+            <label class="toggle"><input type="checkbox" id="orch-src-bluesky"> Bluesky</label>
+          </div>
+          <button id="orch-go" class="cta-primary">Run orchestration</button>
+        </div>
+
+        <div id="orch-timeline" class="orch-timeline" style="margin-top:18px">
+          <div class="orch-node" data-node="crawl"><span class="orch-dot"></span><span class="orch-name">crawl</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="score"><span class="orch-dot"></span><span class="orch-name">score</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="alert"><span class="orch-dot"></span><span class="orch-name">alert</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="recover"><span class="orch-dot"></span><span class="orch-name">recover</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="done"><span class="orch-dot"></span><span class="orch-name">done</span><span class="orch-info" data-info></span></div>
+        </div>
+
+        <div id="orch-result" class="grid3" style="display:none;margin-top:18px">
+          <div class="kpi"><span>Items</span><b id="orch-items">0</b></div>
+          <div class="kpi"><span>Peak score</span><b id="orch-peak">--</b></div>
+          <div class="kpi"><span>Retries</span><b id="orch-retries">0</b></div>
+        </div>
+        <div id="orch-alerted" class="muted" style="display:none;margin-top:10px"></div>
       </div>
     </section>
 
@@ -2525,6 +2570,90 @@ try {
     revealBriefingIfReady(cached);
   }
 } catch (e) {}
+
+/* ── Orchestration (LangGraph) panel ─────────────────────────────── */
+(function () {
+  const $o = (id) => document.getElementById(id);
+  const NODES = ["crawl", "score", "alert", "recover", "done"];
+  let orchES = null;
+
+  const chip = (n) => document.querySelector('#orch-timeline .orch-node[data-node="' + n + '"]');
+  const setInfo = (n, t) => { const c = chip(n); if (c) { const i = c.querySelector("[data-info]"); if (i && t != null) i.textContent = t; } };
+  const activate = (n) => { const c = chip(n); if (c) c.classList.add("active"); };
+  const settle = (n, cls) => { const c = chip(n); if (c) { c.classList.remove("active"); c.classList.add(cls); } };
+
+  function resetTimeline() {
+    NODES.forEach((n) => { const c = chip(n); if (c) { c.className = "orch-node"; setInfo(n, ""); } });
+    $o("orch-result").style.display = "none";
+    $o("orch-alerted").style.display = "none";
+  }
+
+  function finish(btn) {
+    if (orchES) { try { orchES.close(); } catch (e) {} orchES = null; }
+    btn.disabled = false; btn.textContent = "Run orchestration";
+  }
+
+  async function runOrch() {
+    const topic = ($o("orch-topic").value || "").trim();
+    if (!topic) { $o("orch-topic").focus(); return; }
+    const sources = [];
+    ["reddit", "hn", "facebook", "youtube", "bluesky"].forEach((s) => {
+      const el = $o("orch-src-" + s); if (el && el.checked) sources.push(s);
+    });
+    if (!sources.length) sources.push("reddit");
+
+    const btn = $o("orch-go");
+    btn.disabled = true; btn.textContent = "Running…";
+    resetTimeline();
+    if (orchES) { try { orchES.close(); } catch (e) {} orchES = null; }
+
+    let rid;
+    try {
+      const r = await fetch("/api/agent/run", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ topic, sources }),
+      });
+      const j = await r.json();
+      if (j.error || !j.run_id) { finish(btn); return; }
+      rid = j.run_id;
+    } catch (e) { finish(btn); return; }
+
+    activate("crawl");
+    orchES = new EventSource("/events?run_id=" + encodeURIComponent(rid));
+    orchES.onmessage = (ev) => {
+      let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.type === "orch_started") { resetTimeline(); activate("crawl"); return; }
+      if (m.type === "orch_step") {
+        const d = m.data || {};
+        if (m.node === "crawl") { settle("crawl", d.error ? "err" : "done"); setInfo("crawl", (d.items || 0) + " items"); if (!d.error) activate("score"); }
+        else if (m.node === "score") { settle("score", "done"); setInfo("score", "peak " + (d.peak != null ? Number(d.peak).toFixed(2) : "--")); activate(d.should_alert ? "alert" : "done"); }
+        else if (m.node === "alert") { settle("alert", "warn"); setInfo("alert", "fired"); activate("done"); }
+        else if (m.node === "recover") { settle("recover", "warn"); setInfo("recover", "retry " + (d.retry_count || 0)); activate("crawl"); }
+        else if (m.node === "done") { settle("done", "done"); }
+        return;
+      }
+      if (m.type === "orch_error") { settle("done", "err"); setInfo("done", "error"); return; }
+      if (m.type === "orch_done") {
+        const s = m.summary || {};
+        $o("orch-items").textContent = s.n_items != null ? s.n_items : 0;
+        $o("orch-peak").textContent = s.max_score != null ? Number(s.max_score).toFixed(2) : "--";
+        $o("orch-retries").textContent = s.retry_count != null ? s.retry_count : 0;
+        $o("orch-result").style.display = "grid";
+        const a = $o("orch-alerted");
+        if (s.error) { a.style.display = "block"; a.textContent = "Error: " + s.error; a.style.color = "var(--neg)"; }
+        else if (s.alerted) { a.style.display = "block"; a.textContent = "⚡ Engagement threshold tripped — alert fired."; a.style.color = "var(--accent3)"; }
+        settle("done", "done");
+        finish(btn);
+        return;
+      }
+      if (m.type === "_close") { finish(btn); }
+    };
+    orchES.onerror = () => { /* server ends the stream via _close; ignore transient errors */ };
+  }
+
+  const goBtn = document.getElementById("orch-go");
+  if (goBtn) goBtn.addEventListener("click", runOrch);
+})();
 </script>
 </body>
 </html>
