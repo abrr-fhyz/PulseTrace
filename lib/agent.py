@@ -8,6 +8,10 @@ from .connectors.hn import HNConnector
 from .connectors.facebook import FacebookConnector
 from .connectors.x import XConnector
 from .connectors.instagram import InstagramConnector
+from .connectors.youtube import YouTubeConnector
+from .connectors.polymarket import PolymarketConnector
+from .connectors.github import GitHubConnector
+from .connectors.bluesky import BlueskyConnector
 from .embed import embed_texts
 from .dedup import near_dupe_keep
 from .cluster import cluster_embeddings, centroids, entropy, saturation
@@ -30,6 +34,10 @@ SOURCES: dict[str, type[Connector]] = {
     "facebook": FacebookConnector,
     "x": XConnector,
     "instagram": InstagramConnector,
+    "youtube": YouTubeConnector,
+    "polymarket": PolymarketConnector,
+    "github": GitHubConnector,
+    "bluesky": BlueskyConnector,
 }
 
 
