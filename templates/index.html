@@ -341,6 +341,10 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 
 .cats { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
 .cats .chip { display: inline-flex; padding: 4px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); font-size: 11px; font-weight: 500; color: var(--muted); }
+.ev-intro { color: var(--muted); font-size: 13px; font-style: italic; line-height: 1.55; margin: 0 0 16px; }
+.ev-note { color: var(--muted); font-size: 12px; margin: 16px 0 0; padding-top: 12px; border-top: 1px dashed var(--border); }
+.rel-line { font-size: 14px; line-height: 1.6; color: var(--text); margin: 0 0 16px; }
+.rel-dot { font-weight: 700; }
 
 
 /* --- Modals --- */
@@ -565,7 +569,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
         <div class="grid3">
           <div class="kpi"><span>Posts</span><b id="m-posts">0</b></div>
           <div class="kpi"><span>Clusters</span><b id="m-clusters">0</b></div>
-          <div class="kpi"><span>Entropy</span><b id="m-entropy">--</b></div>
+          <div class="kpi"><span title="How spread out the conversation is across different talking points.">Topic spread</span><b id="m-entropy">--</b></div>
         </div>
 
         <div id="replay-wrap" style="display:none;margin-top:24px">
@@ -609,23 +613,25 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 
       <div id="evidence" class="panel" style="display:none; margin-top: 24px;">
         <div class="ev-tabs" id="ev-tabs">
-          <button class="ev-tab active" data-tab="summary">Executive Summary</button>
-          <button class="ev-tab" data-tab="overview">Topic Overview</button>
-          <button class="ev-tab" data-tab="consensus">Community Consensus</button>
-          <button class="ev-tab" data-tab="viz">Evidence Charts</button>
-          <button class="ev-tab op-only" data-tab="screenA">Why It May Be Correct</button>
-          <button class="ev-tab op-only" data-tab="screenB">Why It May Be Wrong</button>
-          <button class="ev-tab" data-tab="uncertainty">Uncertainty</button>
-          <button class="ev-tab" data-tab="assessment">Final Assessment</button>
+          <button class="ev-tab active" data-tab="summary">The Short Version</button>
+          <button class="ev-tab" data-tab="overview">What's This Actually About?</button>
+          <button class="ev-tab" data-tab="consensus">Do Most People Agree?</button>
+          <button class="ev-tab" data-tab="viz">Proof — The Posts Behind This</button>
+          <button class="ev-tab op-only" data-tab="screenA">Reasons People Think This Is True</button>
+          <button class="ev-tab op-only" data-tab="screenB">Reasons People Think This Isn't True</button>
+          <button class="ev-tab" data-tab="uncertainty">How Sure Are We?</button>
+          <button class="ev-tab" data-tab="assessment">Our Take</button>
         </div>
         <div class="ev-panel" data-panel="summary"></div>
         <div class="ev-panel" data-panel="overview" hidden></div>
         <div class="ev-panel" data-panel="consensus" hidden></div>
         <div class="ev-panel" data-panel="viz" hidden>
+          <p class="ev-intro">A quick visual of what we found. The numbers come from the posts we read — nothing made up.</p>
           <div class="grid2">
-            <div><h3>Pro vs Con claims</h3><canvas id="proConChart"></canvas></div>
-            <div><h3>Confidence by claim</h3><canvas id="confChart"></canvas></div>
+            <div><h3 title="Counts how many posts argued for vs against the topic.">For vs. against — how the posts split</h3><canvas id="proConChart"></canvas></div>
+            <div><h3 title="How well the posts back up each point. Longer bar = more posts saying it.">How well-backed each point is</h3><canvas id="confChart"></canvas></div>
           </div>
+          <p class="ev-note">Where this comes from: the posts we collected for this topic over the last 30 days.</p>
         </div>
         <div class="ev-panel" data-panel="screenA" hidden></div>
         <div class="ev-panel" data-panel="screenB" hidden></div>
@@ -634,9 +640,9 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
       </div>
 
       <div class="panel" style="margin-top: 24px;">
-        <h2>Ask the corpus</h2>
+        <h2>Ask about what people said</h2>
         <div class="row">
-          <input id="q" placeholder="Ask anything about the gathered posts..." style="flex:1" />
+          <input id="q" placeholder="Ask anything about the posts we found..." style="flex:1" />
           <button id="ask-btn">Ask</button>
         </div>
         <div id="answer" class="answer" style="margin-top:16px"></div>
@@ -1185,6 +1191,21 @@ function evList(title, arr) {
   return elem("div", { class: "ev-sec" }, title ? elem("strong", null, title) : null, ul);
 }
 
+function evIntro(text) {
+  return elem("p", { class: "ev-intro" }, text);
+}
+
+function strengthWords(strength) {
+  if (strength === "strong") return "Lots of posts back this up";
+  if (strength === "moderate") return "A fair few posts mention this";
+  return "Only a little to go on so far";
+}
+function confidenceWords(pct) {
+  if (pct >= 70) return "We're fairly sure";
+  if (pct >= 40) return "Could go either way";
+  return "Hard to say for sure";
+}
+
 function claimCard(c) {
   c = c || {};
   const strength = String(c.evidence_strength || "weak").toLowerCase();
@@ -1195,7 +1216,7 @@ function claimCard(c) {
   const card = elem("div", { class: "claim" },
     elem("h4", null, String(c.text || "")),
     elem("span", { class: "badge " + strength },
-      strength + " · " + pct + "% confidence"),
+      confidenceWords(pct) + " · " + strengthWords(strength)),
     elem("div", { class: "conf-bar" },
       elem("div", { class: "conf-fill", style: "width:" + pct + "%;background:" + fillColor })),
   );
@@ -1207,6 +1228,16 @@ function claimCard(c) {
     card.appendChild(wrap);
   }
   return card;
+}
+
+function reliabilityNote() {
+  const n = parseInt(($("#m-posts") || {}).textContent || "0", 10) || 0;
+  if (n >= 100) return { dot: "🟢", lvl: "Pretty reliable",
+    why: "We found a good number of posts, so this gives a solid sense of the conversation." };
+  if (n >= 30) return { dot: "🟡", lvl: "Take with a grain of salt",
+    why: "We only found a handful of posts, so the full picture might be different." };
+  return { dot: "🔴", lvl: "Hard to verify",
+    why: "We found very few posts, so treat all of this as a rough first impression." };
 }
 
 function renderEvidence(ev) {
@@ -1227,41 +1258,56 @@ function renderEvidence(ev) {
 
   const sum = $("#evidence .ev-panel[data-panel=summary]"); clearNode(sum);
   const es = ev.exec_summary || {};
+  sum.appendChild(evIntro("The quick rundown — what people are saying, in a sentence or two."));
   if (es.plain_topic) sum.appendChild(elem("p", null, String(es.plain_topic)));
-  const f1 = evList("Key findings", es.key_findings); if (f1) sum.appendChild(f1);
-  const f2 = evList("Points of agreement", es.agreements); if (f2) sum.appendChild(f2);
-  const f3 = evList("Points of disagreement", es.disagreements); if (f3) sum.appendChild(f3);
+  const f1 = evList("What stood out", es.key_findings); if (f1) sum.appendChild(f1);
+  const f2 = evList("What people agree on", es.agreements); if (f2) sum.appendChild(f2);
+  const f3 = evList("Where people clash", es.disagreements); if (f3) sum.appendChild(f3);
   if (es.conclusion) sum.appendChild(elem("p", null, String(es.conclusion)));
 
   const ov = $("#evidence .ev-panel[data-panel=overview]"); clearNode(ov);
-  ov.appendChild(elem("p", null, ev.topic_overview ? String(ev.topic_overview) : "No overview."));
+  ov.appendChild(evIntro("The main things people keep bringing up about this topic."));
+  ov.appendChild(elem("p", null, ev.topic_overview ? String(ev.topic_overview)
+    : "We didn't gather enough to break this down yet."));
   if (noOp && (ev.claims || []).length) {
-    ov.appendChild(elem("div", { class: "ev-sec" }, elem("strong", null, "Key claims")));
+    ov.appendChild(elem("div", { class: "ev-sec" }, elem("strong", null, "The main talking points")));
     for (const c of ev.claims) ov.appendChild(claimCard(c));
   }
 
   const cons = $("#evidence .ev-panel[data-panel=consensus]"); clearNode(cons);
+  cons.appendChild(evIntro("Are people mostly on the same page, or split? Here's the gist."));
   const cc = ev.community_consensus || {};
-  const s1 = evList("Most common praise", cc.top_praise); if (s1) cons.appendChild(s1);
-  const s2 = evList("Most common criticism", cc.top_criticism); if (s2) cons.appendChild(s2);
-  const s3 = evList("Frequently repeated misconceptions", cc.misconceptions); if (s3) cons.appendChild(s3);
-  const s4 = evList("Areas of uncertainty", cc.uncertainties); if (s4) cons.appendChild(s4);
-  if (!cons.firstChild) cons.appendChild(elem("p", null, "No consensus data."));
+  const s1 = evList("What people like", cc.top_praise); if (s1) cons.appendChild(s1);
+  const s2 = evList("What people don't like", cc.top_criticism); if (s2) cons.appendChild(s2);
+  const s3 = evList("Common misunderstandings", cc.misconceptions); if (s3) cons.appendChild(s3);
+  const s4 = evList("What's still unclear", cc.uncertainties); if (s4) cons.appendChild(s4);
+  if (cons.childNodes.length <= 1) cons.appendChild(elem("p", null, "Not enough posts to tell yet."));
 
   const sa = $("#evidence .ev-panel[data-panel=screenA]"); clearNode(sa);
+  sa.appendChild(evIntro("Real arguments people are making in favour of this."));
   for (const c of (ev.screen_a || [])) sa.appendChild(claimCard(c));
-  if (!sa.firstChild) sa.appendChild(elem("p", null, "No supporting claims."));
+  if (sa.childNodes.length <= 1) sa.appendChild(elem("p", null, "Nobody made a clear case for this in what we found."));
 
   const sb = $("#evidence .ev-panel[data-panel=screenB]"); clearNode(sb);
+  sb.appendChild(evIntro("Real arguments people are making against this."));
   for (const c of (ev.screen_b || [])) sb.appendChild(claimCard(c));
-  if (!sb.firstChild) sb.appendChild(elem("p", null, "No opposing claims."));
+  if (sb.childNodes.length <= 1) sb.appendChild(elem("p", null, "Nobody pushed back clearly in what we found."));
 
   const unc = $("#evidence .ev-panel[data-panel=uncertainty]"); clearNode(unc);
-  const ul = evList("", ev.uncertainty);
-  unc.appendChild(ul || elem("p", null, "None noted."));
+  const rel = reliabilityNote();
+  unc.appendChild(elem("p", { class: "rel-line" },
+    elem("span", { class: "rel-dot" }, rel.dot + " " + rel.lvl), " — " + rel.why));
+  const ul = evList("What we're not sure about", ev.uncertainty);
+  if (ul) unc.appendChild(ul);
+  unc.appendChild(elem("p", { class: "ev-note" },
+    "This is based on what people are posting online — not an official study."));
 
   const ass = $("#evidence .ev-panel[data-panel=assessment]"); clearNode(ass);
-  ass.appendChild(elem("p", null, ev.final_assessment ? String(ev.final_assessment) : "No assessment."));
+  ass.appendChild(evIntro("Putting it all together — here's how we'd sum it up."));
+  ass.appendChild(elem("p", null, ev.final_assessment ? String(ev.final_assessment)
+    : "We didn't gather enough to give a confident take."));
+  ass.appendChild(elem("p", { class: "ev-note" },
+    "Remember — this reflects online conversation, not scientific consensus."));
 
   drawEvidenceCharts();
 }
