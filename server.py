@@ -20,6 +20,7 @@ _load_api_keys()
 import re as _re
 
 from lib.agent import run_agent
+from lib.orchestration.runner import run_graph_streamed
 from lib.briefing import build as build_briefing
 from lib.events import BUS, sse_format
 from lib.store import read_json, new_run_id, run_dir
@@ -237,6 +238,28 @@ def start_run():
 
     threading.Thread(target=go, daemon=True).start()
     return jsonify({"run_id": run_id, "byok": bool(byok)})
+
+
+@app.route("/api/agent/run", methods=["POST"])
+def start_orchestration_run():
+    """Run the LangGraph orchestration graph; progress streams over /events."""
+    data = request.get_json(force=True, silent=True) or {}
+    topic = (data.get("topic") or "").strip()
+    sources = data.get("sources") or ["reddit"]
+    if not topic:
+        return jsonify({"error": "topic required"}), 400
+
+    run_id = new_run_id()
+
+    def go() -> None:
+        try:
+            run_graph_streamed(topic, sources, run_id)
+        except Exception as e:
+            BUS.publish(run_id, {"type": "orch_error", "err": str(e)})
+            BUS.close(run_id)
+
+    threading.Thread(target=go, daemon=True).start()
+    return jsonify({"run_id": run_id})
 
 
 @app.route("/providers")
