@@ -254,6 +254,204 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 .cluster .bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--border); }
 .cluster .bar span { display: block; height: 100%; transition: width 0.5s ease; }
 .pos { background: var(--pos); } .neu { background: var(--neu); } .neg { background: var(--neg); }
+.cluster.clickable { cursor: pointer; }
+.cluster.clickable:hover { box-shadow: 0 8px 24px -6px rgba(0,0,0,0.12); }
+.cluster .hint { font-size: 11px; color: var(--accent2); font-weight: 500; opacity: 0; margin-top: 10px; transition: opacity 0.2s ease; }
+.cluster.clickable:hover .hint { opacity: 1; }
+.cluster .hd .pill { text-decoration: underline; text-underline-offset: 2px; }
+
+/* --- Cluster drawer --- */
+.drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.28); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 120; }
+.drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+.drawer { position: fixed; top: 0; right: 0; height: 100%; width: 420px; max-width: 100vw; background: var(--panel); border-left: 1px solid var(--border); box-shadow: -8px 0 40px rgba(0,0,0,0.18); transform: translateX(100%); transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 121; display: flex; flex-direction: column; }
+.drawer.open { transform: translateX(0); }
+.drawer-head { padding: 24px 24px 16px; border-bottom: 1px solid var(--border); position: relative; }
+.drawer-head .strip { position: absolute; top: 0; left: 0; right: 0; height: 5px; }
+.drawer-head h3 { margin: 8px 0 6px; font-size: 19px; font-weight: 700; color: var(--text); }
+.drawer-head .why { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 8px 0 12px; }
+.drawer-head .count { font-size: 12px; color: var(--muted); }
+.drawer-close { position: absolute; top: 16px; right: 16px; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); cursor: pointer; font-size: 16px; line-height: 1; padding: 0; }
+.drawer-moodbar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--border); margin: 12px 0 4px; }
+.drawer-moodbar span { display: block; height: 100%; }
+.drawer-mood-lbl { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.drawer-search { margin: 14px 24px 0; }
+.drawer-search input { width: 100%; box-sizing: border-box; }
+.drawer-body { flex: 1; overflow-y: auto; padding: 16px 24px 32px; display: flex; flex-direction: column; gap: 12px; }
+.post-card { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--panel2); transition: border-color 0.2s, box-shadow 0.2s; }
+.post-card:hover { border-color: var(--accent2); box-shadow: var(--card-shadow); }
+.post-card .meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.post-card .src { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+.post-card .txt { font-size: 13px; line-height: 1.55; color: var(--text); }
+.post-card .foot { display: flex; align-items: center; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.post-card .foot a { color: var(--accent2); font-weight: 600; text-decoration: none; }
+.post-card .foot a:hover { text-decoration: underline; }
+.post-card .stag { padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.post-card .stag.pos { background: rgba(16,185,129,0.15); color: var(--pos); }
+.post-card .stag.neu { background: rgba(148,163,184,0.18); color: var(--neu); }
+.post-card .stag.neg { background: rgba(248,113,113,0.15); color: var(--neg); }
+.drawer-empty { text-align: center; color: var(--muted); font-size: 14px; padding: 48px 16px; }
+@media (max-width: 560px) { .drawer { width: 100vw; } }
+
+/* --- What People Are Saying --- */
+.mood-meter { margin: 4px 0 20px; }
+.mood-bar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: var(--border); }
+.mood-bar span { display: block; height: 100%; transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+.mood-lbl { font-size: 14px; font-weight: 600; color: var(--text); margin-top: 10px; }
+.mood-lbl small { font-weight: 400; color: var(--muted); }
+.carousel { display: flex; align-items: stretch; gap: 12px; }
+.car-nav { flex: 0 0 auto; width: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); font-size: 20px; cursor: pointer; padding: 0; }
+.car-nav:hover { border-color: var(--accent2); color: var(--accent2); }
+.car-stage { flex: 1; min-width: 0; }
+.voice-card { border: 1px solid var(--border); border-radius: 16px; padding: 20px; background: var(--panel2); animation: vc-fade 0.4s ease; }
+.voice-card .vq { font-size: 16px; line-height: 1.6; color: var(--text); font-style: italic; }
+.voice-card .vmeta { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.voice-card .vmeta .src { font-weight: 600; }
+.voice-card .vmeta a { color: var(--accent2); font-weight: 600; text-decoration: none; }
+.voice-card .vmeta a:hover { text-decoration: underline; }
+.voice-card .vbadge { padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.vbadge.pos { background: rgba(16,185,129,0.15); color: var(--pos); }
+.vbadge.neu { background: rgba(148,163,184,0.18); color: var(--neu); }
+.vbadge.neg { background: rgba(248,113,113,0.15); color: var(--neg); }
+@keyframes vc-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.car-dots { display: flex; gap: 6px; justify-content: center; margin-top: 12px; }
+.car-dots .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); cursor: pointer; transition: background 0.2s, transform 0.2s; }
+.car-dots .dot.on { background: var(--accent2); transform: scale(1.3); }
+.notable-item { border-left: 3px solid var(--border); padding: 10px 0 10px 14px; margin-bottom: 14px; }
+.notable-item .nq { font-size: 14px; line-height: 1.55; color: var(--text); }
+.notable-item .nwhy { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.notable-item .nwhy a { color: var(--accent2); font-weight: 600; text-decoration: none; }
+.notable-item .nwhy a:hover { text-decoration: underline; }
+.notable-item.pos { border-left-color: var(--pos); }
+.notable-item.neu { border-left-color: var(--neu); }
+.notable-item.neg { border-left-color: var(--neg); }
+@media (prefers-reduced-motion: reduce) { .voice-card, .mood-bar span { animation: none; transition: none; } }
+
+/* ============ Pipeline full-screen loader (task 5) ============ */
+#pl2 { position: fixed; inset: 0; z-index: 200; display: none; background: var(--bg);
+  color: var(--text); overflow: hidden; }
+#pl2::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse at 22% 28%, color-mix(in srgb, var(--accent2) 18%, transparent) 0%, transparent 55%),
+    radial-gradient(ellipse at 82% 78%, color-mix(in srgb, var(--accent3) 14%, transparent) 0%, transparent 50%);
+  animation: pl2-drift 16s ease-in-out infinite alternate; }
+#pl2.open { display: grid; grid-template-columns: 290px 1fr; }
+@keyframes pl2-drift { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(4%, 3%) scale(1.08); } }
+.pl2-rail { padding: 40px 28px; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 0; position: relative; z-index: 2;
+  background: color-mix(in srgb, var(--panel) 75%, transparent); backdrop-filter: blur(10px); }
+.pl2-step { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start;
+  border-radius: 10px; padding: 4px 6px; margin: 0 -6px; transition: background 0.2s; }
+.pl2-step:hover { background: color-mix(in srgb, var(--accent2) 8%, transparent); }
+.pl2-seg { height: 24px; width: 2px; margin-left: 14px; background: var(--border); transition: background 0.4s; }
+.pl2-seg.done { background: var(--accent2); }
+.pl2-dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 13px; font-weight: 700; background: var(--border); color: var(--muted); opacity: 0.6;
+  transition: all 0.4s ease; flex: 0 0 auto; }
+.pl2-step.active .pl2-dot { background: var(--panel); color: var(--accent2);
+  border: 2px solid var(--accent2); opacity: 1;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent2) 50%, transparent);
+  animation: pl2-pulse 1.8s ease-out infinite; }
+.pl2-step.done .pl2-dot { background: var(--accent2); color: #fff; opacity: 1; }
+@keyframes pl2-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent2) 50%, transparent); }
+  100% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--accent2) 0%, transparent); } }
+.pl2-lbl { font-size: 13px; color: var(--muted); padding-top: 4px; line-height: 1.4; transition: color 0.3s; }
+.pl2-step.active .pl2-lbl { color: var(--text); font-weight: 700; font-size: 15px; }
+.pl2-step.done .pl2-lbl { color: var(--muted); font-weight: 500; }
+.pl2-eta { margin-top: auto; padding-top: 24px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.pl2-reassure { font-size: 12px; font-style: italic; color: var(--muted); margin-top: 12px;
+  min-height: 32px; transition: opacity 0.3s; }
+.pl2-cancel { margin-top: 16px; }
+.pl2-cancel a { font-size: 13px; color: var(--muted); cursor: pointer; text-decoration: none; }
+.pl2-cancel a:hover { color: var(--text); }
+.pl2-main { position: relative; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 40px; z-index: 2; }
+.pl2-h { font-size: 28px; font-weight: 700; color: var(--text); margin: 0 0 8px; text-align: center;
+  letter-spacing: -0.02em; animation: vc-fade 0.4s; }
+.pl2-sub { font-size: 15px; color: var(--muted); margin: 0 0 32px; text-align: center; max-width: 460px; animation: vc-fade 0.5s; }
+.pl2-anim { width: min(460px, 80vw); height: 240px; display: grid; place-items: center; }
+.pl2-count { font-size: 42px; font-weight: 800; color: var(--accent2); font-variant-numeric: tabular-nums; }
+.pl2-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px; }
+.pl2-chip { font-size: 12px; padding: 4px 12px; border-radius: 999px; background: var(--panel);
+  border: 1px solid var(--border); color: var(--text); box-shadow: var(--card-shadow); animation: pl2-pop 0.4s ease; }
+
+/* stage 0 — checkmark with ripple */
+.pl2-check { position: relative; width: 96px; height: 96px; display: grid; place-items: center; }
+.pl2-check .mk { font-size: 64px; color: var(--accent); animation: pl2-pop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+.pl2-check .ring { position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid var(--accent); animation: pl2-ripple 1.8s ease-out infinite; }
+.pl2-check .ring:nth-child(2) { animation-delay: 0.6s; }
+@keyframes pl2-ripple { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(1.6); opacity: 0; } }
+
+/* stage 1 — globe + orbiting source badges */
+.pl2-solar { position: relative; width: 200px; height: 200px; display: grid; place-items: center; }
+.pl2-globe { font-size: 72px; animation: pl2-spin 8s linear infinite; filter: drop-shadow(0 0 16px color-mix(in srgb, var(--accent2) 40%, transparent)); }
+.pl2-orbit { position: absolute; inset: 0; animation: pl2-spin 14s linear infinite; }
+.pl2-orbit.rev { animation-direction: reverse; animation-duration: 18s; }
+.pl2-sat { position: absolute; top: 50%; left: 50%; width: 34px; height: 34px; margin: -17px;
+  border-radius: 50%; background: var(--panel); border: 1px solid var(--border);
+  display: grid; place-items: center; font-size: 16px; box-shadow: var(--card-shadow);
+  animation: pl2-counterspin 14s linear infinite; }
+@keyframes pl2-spin { to { transform: rotate(360deg); } }
+@keyframes pl2-counterspin { to { transform: rotate(-360deg); } }
+
+/* stage 2 — flipping card stack + bar */
+.pl2-cards { position: relative; width: 120px; height: 150px; perspective: 600px; }
+.pl2-cards .pc { position: absolute; inset: 0; border-radius: 12px; background: var(--panel);
+  border: 1px solid var(--border); box-shadow: var(--card-shadow); padding: 14px;
+  display: flex; flex-direction: column; gap: 8px; transform-origin: top center; }
+.pl2-cards .pc .l { height: 7px; border-radius: 4px; background: var(--panel2); }
+.pl2-cards .pc .l:nth-child(2) { width: 70%; } .pl2-cards .pc .l:nth-child(3) { width: 85%; }
+.pl2-cards .pc1 { animation: pl2-flip 1.4s ease-in-out infinite; }
+.pl2-cards .pc2 { transform: translateY(5px) scale(0.97); opacity: 0.7; }
+.pl2-cards .pc3 { transform: translateY(10px) scale(0.94); opacity: 0.4; }
+@keyframes pl2-flip { 0%,15% { transform: rotateX(0); } 55%,100% { transform: rotateX(-120deg); opacity: 0; } }
+.pl2-bar { width: 80%; height: 6px; border-radius: 3px; background: var(--panel2); overflow: hidden; margin-top: 24px; }
+.pl2-bar i { display: block; height: 100%; width: 0; border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent2), var(--accent3)); transition: width 0.5s ease; }
+
+/* stage 3 — falling sentiment dots */
+.pl2-cols { display: flex; gap: 24px; align-items: flex-end; height: 160px; }
+.pl2-col { display: flex; flex-direction: column-reverse; align-items: center; gap: 3px; width: 72px; }
+.pl2-col .lab { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.pl2-pip { width: 12px; height: 12px; border-radius: 50%; animation: pl2-drop 0.3s ease; }
+@keyframes pl2-drop { from { transform: translateY(-22px) scaleY(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* stage 4 — converging clusters */
+.pl2-galaxy { position: relative; width: 320px; height: 200px; }
+.pl2-cl { position: absolute; display: grid; place-items: center; border-radius: 50%;
+  width: 70px; height: 70px; animation: pl2-pop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+.pl2-cl .blob { position: absolute; inset: 0; border-radius: 50%; opacity: 0.18; animation: pl2-bob 3s ease-in-out infinite; }
+.pl2-cl .nm { position: relative; font-size: 11px; font-weight: 600; color: var(--text);
+  background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.pl2-spark { position: absolute; width: 7px; height: 7px; border-radius: 50%; transition: all 0.9s cubic-bezier(0.34,1.2,0.64,1); }
+@keyframes pl2-bob { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+
+/* stage 5 — typewriter document */
+.pl2-doc { width: 360px; background: var(--panel); border-radius: 12px; box-shadow: var(--card-shadow);
+  padding: 20px; text-align: left; border: 1px solid var(--border); }
+.pl2-doc h5 { margin: 14px 0 6px; font-size: 14px; color: var(--text); font-weight: 700; }
+.pl2-doc h5:first-child { margin-top: 0; }
+.pl2-doc .ln { height: 8px; border-radius: 4px; background: var(--panel2); margin: 6px 0; width: 0; transition: width 0.3s ease; }
+
+@keyframes pl2-pop { from { transform: scale(0); opacity: 0; } 60% { transform: scale(1.12); } to { transform: scale(1); opacity: 1; } }
+.pl2-particle { position: absolute; bottom: -10px; border-radius: 50%;
+  background: color-mix(in srgb, var(--accent2) 30%, transparent); animation: pl2-float linear infinite; z-index: 1; }
+@keyframes pl2-float { to { transform: translateY(-110vh); opacity: 0; } }
+.pl2-banner { margin-top: 16px; font-size: 13px; padding: 8px 14px; border-radius: 10px;
+  background: color-mix(in srgb, #f59e0b 16%, transparent); color: #d97706; border: 1px solid color-mix(in srgb, #f59e0b 40%, transparent); }
+.pl2-confetti { position: absolute; width: 8px; height: 8px; top: -10px; animation: pl2-fall 1.2s ease-in forwards; z-index: 3; }
+@keyframes pl2-fall { to { transform: translateY(60vh) rotate(360deg); opacity: 0; } }
+.pl2-err-actions { display: flex; gap: 12px; margin-top: 20px; }
+.pl2-err-actions button { font-size: 14px; }
+@media (max-width: 760px) { #pl2.open { grid-template-columns: 1fr; }
+  .pl2-rail { flex-direction: row; overflow-x: auto; padding: 16px; border-right: none;
+    border-bottom: 1px solid var(--border); }
+  .pl2-seg, .pl2-eta, .pl2-reassure, .pl2-cancel { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #pl2::before, .pl2-globe, .pl2-orbit, .pl2-sat, .pl2-step.active .pl2-dot,
+  .pl2-cards .pc1, .pl2-cl .blob, .pl2-check .ring { animation: none; }
+  .pl2-particle, .pl2-confetti { display: none; } }
 
 
 /* --- QA & Evidence --- */
@@ -304,6 +502,10 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 
 .cats { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
 .cats .chip { display: inline-flex; padding: 4px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); font-size: 11px; font-weight: 500; color: var(--muted); }
+.ev-intro { color: var(--muted); font-size: 13px; font-style: italic; line-height: 1.55; margin: 0 0 16px; }
+.ev-note { color: var(--muted); font-size: 12px; margin: 16px 0 0; padding-top: 12px; border-top: 1px dashed var(--border); }
+.rel-line { font-size: 14px; line-height: 1.6; color: var(--text); margin: 0 0 16px; }
+.rel-dot { font-weight: 700; }
 
 
 /* --- Modals --- */
@@ -479,7 +681,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             <div class="pl-ic">1</div>
             <div class="pl-body">
               <div class="pl-title">Seed queries</div>
-              <div class="pl-sub">LLM proposes search angles</div>
+              <div class="pl-sub">Working out what to search for</div>
             </div>
             <div class="pl-meta" data-meta>idle</div>
             <div class="pl-bar"></div>
@@ -488,7 +690,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             <div class="pl-ic">2</div>
             <div class="pl-body">
               <div class="pl-title">Fetch &amp; OCR</div>
-              <div class="pl-sub">Facebook scroll + Gemini Vision</div>
+              <div class="pl-sub">Collecting posts from social media</div>
             </div>
             <div class="pl-meta" data-meta>idle</div>
             <div class="pl-bar"></div>
@@ -497,7 +699,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             <div class="pl-ic">3</div>
             <div class="pl-body">
               <div class="pl-title">Embed &amp; cluster</div>
-              <div class="pl-sub">Gemini embeddings → HDBSCAN</div>
+              <div class="pl-sub">Grouping similar posts together</div>
             </div>
             <div class="pl-meta" data-meta>idle</div>
             <div class="pl-bar"></div>
@@ -506,7 +708,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             <div class="pl-ic">4</div>
             <div class="pl-body">
               <div class="pl-title">Label &amp; sentiment</div>
-              <div class="pl-sub">Per-cluster LLM naming + stance</div>
+              <div class="pl-sub">Naming each group and reading the mood</div>
             </div>
             <div class="pl-meta" data-meta>idle</div>
             <div class="pl-bar"></div>
@@ -515,7 +717,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             <div class="pl-ic">5</div>
             <div class="pl-body">
               <div class="pl-title">Executive briefing</div>
-              <div class="pl-sub">PDF + HTML for download</div>
+              <div class="pl-sub">Writing up the report to download</div>
             </div>
             <div class="pl-meta" data-meta>idle</div>
             <div class="pl-bar"></div>
@@ -528,7 +730,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
         <div class="grid3">
           <div class="kpi"><span>Posts</span><b id="m-posts">0</b></div>
           <div class="kpi"><span>Clusters</span><b id="m-clusters">0</b></div>
-          <div class="kpi"><span>Entropy</span><b id="m-entropy">--</b></div>
+          <div class="kpi"><span title="How spread out the conversation is across different talking points.">Topic spread</span><b id="m-entropy">--</b></div>
         </div>
 
         <div id="replay-wrap" style="display:none;margin-top:24px">
@@ -570,25 +772,44 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
         </div>
       </div>
 
+      <div id="voices" class="panel" style="display:none; margin-top: 24px;">
+        <h2>What People Are Saying</h2>
+        <p class="ev-intro" id="voices-why"></p>
+        <div class="mood-meter">
+          <div class="mood-bar" id="voices-mood"></div>
+          <div class="mood-lbl" id="voices-mood-lbl"></div>
+        </div>
+        <div class="carousel" id="voices-carousel">
+          <button class="car-nav" id="car-prev" aria-label="Previous quote">‹</button>
+          <div class="car-stage" id="car-stage"></div>
+          <button class="car-nav" id="car-next" aria-label="Next quote">›</button>
+        </div>
+        <div class="car-dots" id="car-dots"></div>
+        <h3 style="margin-top:24px">Notable reactions</h3>
+        <div id="voices-notable"></div>
+      </div>
+
       <div id="evidence" class="panel" style="display:none; margin-top: 24px;">
         <div class="ev-tabs" id="ev-tabs">
-          <button class="ev-tab active" data-tab="summary">Executive Summary</button>
-          <button class="ev-tab" data-tab="overview">Topic Overview</button>
-          <button class="ev-tab" data-tab="consensus">Community Consensus</button>
-          <button class="ev-tab" data-tab="viz">Evidence Charts</button>
-          <button class="ev-tab op-only" data-tab="screenA">Why It May Be Correct</button>
-          <button class="ev-tab op-only" data-tab="screenB">Why It May Be Wrong</button>
-          <button class="ev-tab" data-tab="uncertainty">Uncertainty</button>
-          <button class="ev-tab" data-tab="assessment">Final Assessment</button>
+          <button class="ev-tab active" data-tab="summary">The Short Version</button>
+          <button class="ev-tab" data-tab="overview">What's This Actually About?</button>
+          <button class="ev-tab" data-tab="consensus">Do Most People Agree?</button>
+          <button class="ev-tab" data-tab="viz">Proof — The Posts Behind This</button>
+          <button class="ev-tab op-only" data-tab="screenA">Reasons People Think This Is True</button>
+          <button class="ev-tab op-only" data-tab="screenB">Reasons People Think This Isn't True</button>
+          <button class="ev-tab" data-tab="uncertainty">How Sure Are We?</button>
+          <button class="ev-tab" data-tab="assessment">Our Take</button>
         </div>
         <div class="ev-panel" data-panel="summary"></div>
         <div class="ev-panel" data-panel="overview" hidden></div>
         <div class="ev-panel" data-panel="consensus" hidden></div>
         <div class="ev-panel" data-panel="viz" hidden>
+          <p class="ev-intro">A quick visual of what we found. The numbers come from the posts we read — nothing made up.</p>
           <div class="grid2">
-            <div><h3>Pro vs Con claims</h3><canvas id="proConChart"></canvas></div>
-            <div><h3>Confidence by claim</h3><canvas id="confChart"></canvas></div>
+            <div><h3 title="Counts how many posts argued for vs against the topic.">For vs. against — how the posts split</h3><canvas id="proConChart"></canvas></div>
+            <div><h3 title="How well the posts back up each point. Longer bar = more posts saying it.">How well-backed each point is</h3><canvas id="confChart"></canvas></div>
           </div>
+          <p class="ev-note">Where this comes from: the posts we collected for this topic over the last 30 days.</p>
         </div>
         <div class="ev-panel" data-panel="screenA" hidden></div>
         <div class="ev-panel" data-panel="screenB" hidden></div>
@@ -597,9 +818,9 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
       </div>
 
       <div class="panel" style="margin-top: 24px;">
-        <h2>Ask the corpus</h2>
+        <h2>Ask about what people said</h2>
         <div class="row">
-          <input id="q" placeholder="Ask anything about the gathered posts..." style="flex:1" />
+          <input id="q" placeholder="Ask anything about the posts we found..." style="flex:1" />
           <button id="ask-btn">Ask</button>
         </div>
         <div id="answer" class="answer" style="margin-top:16px"></div>
@@ -620,6 +841,32 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
     <div id="shots-body"></div>
   </div>
 </section>
+
+<div id="pl2" role="dialog" aria-label="Loading your results" aria-live="polite">
+  <div class="pl2-rail" id="pl2-rail"></div>
+  <div class="pl2-main">
+    <div id="pl2-particles"></div>
+    <h2 class="pl2-h" id="pl2-h">Got your question</h2>
+    <p class="pl2-sub" id="pl2-sub"></p>
+    <div class="pl2-anim" id="pl2-anim"></div>
+    <div id="pl2-extra"></div>
+  </div>
+</div>
+
+<div id="cluster-backdrop" class="drawer-backdrop"></div>
+<aside id="cluster-drawer" class="drawer" aria-hidden="true" aria-label="Cluster posts">
+  <div class="drawer-head">
+    <div class="strip" id="drawer-strip"></div>
+    <button class="drawer-close" id="drawer-close" aria-label="Close">×</button>
+    <h3 id="drawer-title">Topic</h3>
+    <div class="why" id="drawer-why"></div>
+    <div class="drawer-moodbar" id="drawer-mood"></div>
+    <div class="drawer-mood-lbl" id="drawer-mood-lbl"></div>
+    <div class="count" id="drawer-count"></div>
+  </div>
+  <div class="drawer-search"><input id="drawer-search" placeholder="Search these posts..." /></div>
+  <div class="drawer-body" id="drawer-body"></div>
+</aside>
 
 <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
   <span class="close" onclick="closeLightbox(event)">✕</span>
@@ -809,6 +1056,8 @@ function plReset() {
     plState(s, null);
     plMeta(s, "idle");
   }
+  const v = $("#voices"); if (v) v.style.display = "none";
+  if (_vTimer) { clearInterval(_vTimer); _vTimer = null; }
 }
 function plStatus(_t) {}
 
@@ -937,6 +1186,7 @@ async function start() {
   plReset();
   plActivate("seed");
   plStatus("Run starting…");
+  PL2.start();
   if (sources.includes("facebook")) {
     $("#nav-shots").style.display = "inline-block";
   }
@@ -1050,6 +1300,7 @@ async function setupReplay(rid) {
 }
 
 function handle(ev) {
+  PL2.event(ev);
   switch (ev.type) {
     case "started":
       plReset();
@@ -1133,6 +1384,21 @@ function evList(title, arr) {
   return elem("div", { class: "ev-sec" }, title ? elem("strong", null, title) : null, ul);
 }
 
+function evIntro(text) {
+  return elem("p", { class: "ev-intro" }, text);
+}
+
+function strengthWords(strength) {
+  if (strength === "strong") return "Lots of posts back this up";
+  if (strength === "moderate") return "A fair few posts mention this";
+  return "Only a little to go on so far";
+}
+function confidenceWords(pct) {
+  if (pct >= 70) return "We're fairly sure";
+  if (pct >= 40) return "Could go either way";
+  return "Hard to say for sure";
+}
+
 function claimCard(c) {
   c = c || {};
   const strength = String(c.evidence_strength || "weak").toLowerCase();
@@ -1143,7 +1409,7 @@ function claimCard(c) {
   const card = elem("div", { class: "claim" },
     elem("h4", null, String(c.text || "")),
     elem("span", { class: "badge " + strength },
-      strength + " · " + pct + "% confidence"),
+      confidenceWords(pct) + " · " + strengthWords(strength)),
     elem("div", { class: "conf-bar" },
       elem("div", { class: "conf-fill", style: "width:" + pct + "%;background:" + fillColor })),
   );
@@ -1155,6 +1421,16 @@ function claimCard(c) {
     card.appendChild(wrap);
   }
   return card;
+}
+
+function reliabilityNote() {
+  const n = parseInt(($("#m-posts") || {}).textContent || "0", 10) || 0;
+  if (n >= 100) return { dot: "🟢", lvl: "Pretty reliable",
+    why: "We found a good number of posts, so this gives a solid sense of the conversation." };
+  if (n >= 30) return { dot: "🟡", lvl: "Take with a grain of salt",
+    why: "We only found a handful of posts, so the full picture might be different." };
+  return { dot: "🔴", lvl: "Hard to verify",
+    why: "We found very few posts, so treat all of this as a rough first impression." };
 }
 
 function renderEvidence(ev) {
@@ -1175,43 +1451,59 @@ function renderEvidence(ev) {
 
   const sum = $("#evidence .ev-panel[data-panel=summary]"); clearNode(sum);
   const es = ev.exec_summary || {};
+  sum.appendChild(evIntro("The quick rundown — what people are saying, in a sentence or two."));
   if (es.plain_topic) sum.appendChild(elem("p", null, String(es.plain_topic)));
-  const f1 = evList("Key findings", es.key_findings); if (f1) sum.appendChild(f1);
-  const f2 = evList("Points of agreement", es.agreements); if (f2) sum.appendChild(f2);
-  const f3 = evList("Points of disagreement", es.disagreements); if (f3) sum.appendChild(f3);
+  const f1 = evList("What stood out", es.key_findings); if (f1) sum.appendChild(f1);
+  const f2 = evList("What people agree on", es.agreements); if (f2) sum.appendChild(f2);
+  const f3 = evList("Where people clash", es.disagreements); if (f3) sum.appendChild(f3);
   if (es.conclusion) sum.appendChild(elem("p", null, String(es.conclusion)));
 
   const ov = $("#evidence .ev-panel[data-panel=overview]"); clearNode(ov);
-  ov.appendChild(elem("p", null, ev.topic_overview ? String(ev.topic_overview) : "No overview."));
+  ov.appendChild(evIntro("The main things people keep bringing up about this topic."));
+  ov.appendChild(elem("p", null, ev.topic_overview ? String(ev.topic_overview)
+    : "We didn't gather enough to break this down yet."));
   if (noOp && (ev.claims || []).length) {
-    ov.appendChild(elem("div", { class: "ev-sec" }, elem("strong", null, "Key claims")));
+    ov.appendChild(elem("div", { class: "ev-sec" }, elem("strong", null, "The main talking points")));
     for (const c of ev.claims) ov.appendChild(claimCard(c));
   }
 
   const cons = $("#evidence .ev-panel[data-panel=consensus]"); clearNode(cons);
+  cons.appendChild(evIntro("Are people mostly on the same page, or split? Here's the gist."));
   const cc = ev.community_consensus || {};
-  const s1 = evList("Most common praise", cc.top_praise); if (s1) cons.appendChild(s1);
-  const s2 = evList("Most common criticism", cc.top_criticism); if (s2) cons.appendChild(s2);
-  const s3 = evList("Frequently repeated misconceptions", cc.misconceptions); if (s3) cons.appendChild(s3);
-  const s4 = evList("Areas of uncertainty", cc.uncertainties); if (s4) cons.appendChild(s4);
-  if (!cons.firstChild) cons.appendChild(elem("p", null, "No consensus data."));
+  const s1 = evList("What people like", cc.top_praise); if (s1) cons.appendChild(s1);
+  const s2 = evList("What people don't like", cc.top_criticism); if (s2) cons.appendChild(s2);
+  const s3 = evList("Common misunderstandings", cc.misconceptions); if (s3) cons.appendChild(s3);
+  const s4 = evList("What's still unclear", cc.uncertainties); if (s4) cons.appendChild(s4);
+  if (cons.childNodes.length <= 1) cons.appendChild(elem("p", null, "Not enough posts to tell yet."));
 
   const sa = $("#evidence .ev-panel[data-panel=screenA]"); clearNode(sa);
+  sa.appendChild(evIntro("Real arguments people are making in favour of this."));
   for (const c of (ev.screen_a || [])) sa.appendChild(claimCard(c));
-  if (!sa.firstChild) sa.appendChild(elem("p", null, "No supporting claims."));
+  if (sa.childNodes.length <= 1) sa.appendChild(elem("p", null, "Nobody made a clear case for this in what we found."));
 
   const sb = $("#evidence .ev-panel[data-panel=screenB]"); clearNode(sb);
+  sb.appendChild(evIntro("Real arguments people are making against this."));
   for (const c of (ev.screen_b || [])) sb.appendChild(claimCard(c));
-  if (!sb.firstChild) sb.appendChild(elem("p", null, "No opposing claims."));
+  if (sb.childNodes.length <= 1) sb.appendChild(elem("p", null, "Nobody pushed back clearly in what we found."));
 
   const unc = $("#evidence .ev-panel[data-panel=uncertainty]"); clearNode(unc);
-  const ul = evList("", ev.uncertainty);
-  unc.appendChild(ul || elem("p", null, "None noted."));
+  const rel = reliabilityNote();
+  unc.appendChild(elem("p", { class: "rel-line" },
+    elem("span", { class: "rel-dot" }, rel.dot + " " + rel.lvl), " — " + rel.why));
+  const ul = evList("What we're not sure about", ev.uncertainty);
+  if (ul) unc.appendChild(ul);
+  unc.appendChild(elem("p", { class: "ev-note" },
+    "This is based on what people are posting online — not an official study."));
 
   const ass = $("#evidence .ev-panel[data-panel=assessment]"); clearNode(ass);
-  ass.appendChild(elem("p", null, ev.final_assessment ? String(ev.final_assessment) : "No assessment."));
+  ass.appendChild(evIntro("Putting it all together — here's how we'd sum it up."));
+  ass.appendChild(elem("p", null, ev.final_assessment ? String(ev.final_assessment)
+    : "We didn't gather enough to give a confident take."));
+  ass.appendChild(elem("p", { class: "ev-note" },
+    "Remember — this reflects online conversation, not scientific consensus."));
 
   drawEvidenceCharts();
+  loadVoices();
 }
 
 function drawEvidenceCharts() {
@@ -1288,7 +1580,9 @@ function renderClusters(cs) {
     const pos = Math.round(s.pos * 100);
     const neg = Math.round(s.neg * 100);
     const neu = Math.max(0, 100 - pos - neg);
-    const card = elem("div", { class: "cluster" },
+    const card = elem("div", { class: "cluster clickable", "data-cid": String(c.id),
+        role: "button", tabindex: "0",
+        "aria-label": "Explore posts in " + String(c.label || "this group") },
       elem("div", { class: "hd" },
         elem("b", null, String(c.label || "Unlabeled")),
         elem("span", { class: "pill" }, c.n + " posts"),
@@ -1298,10 +1592,540 @@ function renderClusters(cs) {
         elem("span", { class: "neu", style: "width:" + neu + "%" }),
         elem("span", { class: "neg", style: "width:" + neg + "%" }),
       ),
+      elem("div", { class: "hint" }, "Click to read the posts behind this →"),
     );
+    card.addEventListener("click", () => openClusterDrawer(c.id));
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openClusterDrawer(c.id); }
+    });
     el.appendChild(card);
   }
 }
+
+const SOURCE_META = {
+  reddit:     { icon: "🟠", label: "Reddit" },
+  hn:         { icon: "🟧", label: "Hacker News" },
+  hackernews: { icon: "🟧", label: "Hacker News" },
+  facebook:   { icon: "🔵", label: "Facebook" },
+  x:          { icon: "⚫", label: "X" },
+  twitter:    { icon: "⚫", label: "Twitter / X" },
+  instagram:  { icon: "🟣", label: "Instagram" },
+  youtube:    { icon: "🔴", label: "YouTube" },
+  polymarket: { icon: "🟦", label: "Polymarket" },
+  github:     { icon: "⬛", label: "GitHub" },
+  bluesky:    { icon: "🦋", label: "Bluesky" },
+};
+function sourceMeta(s) {
+  return SOURCE_META[String(s || "").toLowerCase()] || { icon: "💬", label: s || "Web" };
+}
+
+function moodLabel(sent) {
+  const s = sent || {};
+  const pos = Number(s.pos) || 0, neg = Number(s.neg) || 0;
+  if (pos > neg + 0.12) return "Most people feel good about this";
+  if (neg > pos + 0.12) return "More people are unhappy than happy";
+  return "People are pretty split on this";
+}
+
+function relTime(ts) {
+  if (!ts) return "";
+  const d = (Date.now() / 1000) - Number(ts);
+  if (d < 3600) return Math.max(1, Math.round(d / 60)) + "m ago";
+  if (d < 86400) return Math.round(d / 3600) + "h ago";
+  return Math.round(d / 86400) + "d ago";
+}
+
+let _drawerPosts = [];
+function openClusterDrawer(cid) {
+  const drawer = $("#cluster-drawer"), backdrop = $("#cluster-backdrop");
+  drawer.classList.add("open"); backdrop.classList.add("open");
+  drawer.setAttribute("aria-hidden", "false");
+  $("#drawer-title").textContent = "Loading…";
+  $("#drawer-why").textContent = "";
+  $("#drawer-count").textContent = "";
+  clearNode($("#drawer-body"));
+  $("#drawer-search").value = "";
+  if (!runId) return;
+  fetch("/run/" + encodeURIComponent(runId) + "/cluster/" + encodeURIComponent(cid))
+    .then(r => r.json())
+    .then(fillDrawer)
+    .catch(() => { $("#drawer-title").textContent = "Couldn't load this group"; });
+}
+
+function fillDrawer(d) {
+  if (!d || d.error) { $("#drawer-title").textContent = "Couldn't load this group"; return; }
+  const s = d.sentiment || { pos: 0, neu: 1, neg: 0 };
+  const pos = Math.round((s.pos || 0) * 100), neg = Math.round((s.neg || 0) * 100);
+  const neu = Math.max(0, 100 - pos - neg);
+  const color = pos > neg ? "var(--pos)" : neg > pos ? "var(--neg)" : "var(--neu)";
+  $("#drawer-strip").style.background = color;
+  $("#drawer-title").textContent = d.label || "Topic";
+  $("#drawer-why").textContent = d.desc
+    ? "Why these are grouped: " + d.desc
+    : "These posts were grouped together because they talk about the same thing in similar ways.";
+  const mood = $("#drawer-mood"); clearNode(mood);
+  mood.appendChild(elem("span", { class: "pos", style: "width:" + pos + "%" }));
+  mood.appendChild(elem("span", { class: "neu", style: "width:" + neu + "%" }));
+  mood.appendChild(elem("span", { class: "neg", style: "width:" + neg + "%" }));
+  $("#drawer-mood-lbl").textContent = moodLabel(s) + " · 😊 " + pos + "%  😐 " + neu + "%  😞 " + neg + "%";
+  $("#drawer-count").textContent = "Found in " + (d.n || 0) + " post" + (d.n === 1 ? "" : "s");
+  _drawerPosts = d.posts || [];
+  paintDrawerPosts("");
+}
+
+function paintDrawerPosts(filter) {
+  const body = $("#drawer-body"); clearNode(body);
+  const q = (filter || "").toLowerCase();
+  const list = q
+    ? _drawerPosts.filter(p => (p.text || "").toLowerCase().includes(q))
+    : _drawerPosts;
+  if (!list.length) {
+    body.appendChild(elem("div", { class: "drawer-empty" },
+      _drawerPosts.length ? "No posts match your search."
+                          : "We're still gathering posts for this group. Check back soon."));
+    return;
+  }
+  for (const p of list) {
+    const m = sourceMeta(p.source);
+    const meta = elem("div", { class: "meta" },
+      elem("span", { class: "src" }, m.icon + " " + m.label),
+      p.author ? elem("span", null, "· " + String(p.author)) : null,
+      p.ts ? elem("span", null, "· " + relTime(p.ts)) : null,
+    );
+    const foot = elem("div", { class: "foot" });
+    if (p.reactions) foot.appendChild(elem("span", null, "👍 " + p.reactions + " liked this"));
+    if (p.comments) foot.appendChild(elem("span", null, "💬 " + p.comments));
+    if (p.url) {
+      const a = elem("a", { href: p.url, target: "_blank", rel: "noopener" }, "See original →");
+      foot.appendChild(a);
+    }
+    body.appendChild(elem("div", { class: "post-card" },
+      meta,
+      elem("div", { class: "txt" }, String(p.text || "")),
+      foot,
+    ));
+  }
+}
+
+function closeClusterDrawer() {
+  $("#cluster-drawer").classList.remove("open");
+  $("#cluster-backdrop").classList.remove("open");
+  $("#cluster-drawer").setAttribute("aria-hidden", "true");
+}
+$("#drawer-close").addEventListener("click", closeClusterDrawer);
+$("#cluster-backdrop").addEventListener("click", closeClusterDrawer);
+$("#drawer-search").addEventListener("input", (e) => paintDrawerPosts(e.target.value));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("#cluster-drawer").classList.contains("open")) closeClusterDrawer();
+});
+
+const BUCKET_EMOJI = { pos: "😊", neu: "😐", neg: "😞" };
+const BUCKET_WHY = {
+  pos: "A clearly positive take",
+  neu: "A balanced or factual point",
+  neg: "A strongly critical view",
+};
+const _reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let _voices = [], _vIdx = 0, _vTimer = null;
+
+function loadVoices() {
+  if (!runId) return;
+  fetch("/run/" + encodeURIComponent(runId) + "/voices")
+    .then(r => r.json())
+    .then(fillVoices)
+    .catch(() => {});
+}
+
+function fillVoices(d) {
+  if (!d || (!(d.voices || []).length && !(d.notable || []).length)) return;
+  $("#voices").style.display = "";
+
+  const s = d.sentiment || { pos: 0, neu: 1, neg: 0 };
+  const pos = Math.round((s.pos || 0) * 100), neg = Math.round((s.neg || 0) * 100);
+  const neu = Math.max(0, 100 - pos - neg);
+  const mb = $("#voices-mood"); clearNode(mb);
+  mb.appendChild(elem("span", { class: "pos", style: "width:" + pos + "%" }));
+  mb.appendChild(elem("span", { class: "neu", style: "width:" + neu + "%" }));
+  mb.appendChild(elem("span", { class: "neg", style: "width:" + neg + "%" }));
+  $("#voices-mood-lbl").textContent = "";
+  $("#voices-mood-lbl").appendChild(document.createTextNode(moodLabel(s) + " "));
+  $("#voices-mood-lbl").appendChild(elem("small", null,
+    "(😊 " + pos + "% liked it · 😐 " + neu + "% mixed · 😞 " + neg + "% didn't)"));
+
+  const themes = (d.themes || []).filter(Boolean);
+  $("#voices-why").textContent = themes.length
+    ? "People are mostly reacting to " + joinPlain(themes) + "."
+    : "Here's a sample of what people are actually posting.";
+
+  _voices = d.voices || [];
+  _vIdx = 0;
+  buildDots();
+  showVoice(0);
+  if (_vTimer) clearInterval(_vTimer);
+  if (!_reduceMotion && _voices.length > 1) {
+    _vTimer = setInterval(() => showVoice(_vIdx + 1), 5500);
+  }
+
+  const nb = $("#voices-notable"); clearNode(nb);
+  for (const v of (d.notable || [])) {
+    const why = BUCKET_WHY[v.bucket] || "Worth a look";
+    const item = elem("div", { class: "notable-item " + (v.bucket || "neu") },
+      elem("div", { class: "nq" }, "“" + truncate(v.text, 160) + "”"),
+      elem("div", { class: "nwhy" },
+        why + " · about " + (v.cluster || "this topic") + " ",
+        v.url ? elem("a", { href: v.url, target: "_blank", rel: "noopener" }, "[View post →]") : null),
+    );
+    nb.appendChild(item);
+  }
+  if (!nb.firstChild) nb.appendChild(elem("p", { class: "ev-intro" }, "No standout reactions yet."));
+}
+
+function joinPlain(arr) {
+  if (arr.length === 1) return arr[0];
+  if (arr.length === 2) return arr[0] + " and " + arr[1];
+  return arr.slice(0, -1).join(", ") + ", and " + arr[arr.length - 1];
+}
+function truncate(t, n) {
+  t = String(t || "");
+  return t.length > n ? t.slice(0, n).trimEnd() + "…" : t;
+}
+
+function showVoice(i) {
+  if (!_voices.length) return;
+  _vIdx = (i + _voices.length) % _voices.length;
+  const v = _voices[_vIdx];
+  const m = sourceMeta(v.source);
+  const stage = $("#car-stage"); clearNode(stage);
+  const meta = elem("div", { class: "vmeta" },
+    elem("span", { class: "vbadge " + (v.bucket || "neu") },
+      (BUCKET_EMOJI[v.bucket] || "💬") + " " + (v.bucket === "pos" ? "positive" : v.bucket === "neg" ? "negative" : "mixed")),
+    elem("span", { class: "src" }, m.icon + " " + m.label),
+    v.ts ? elem("span", null, "· " + relTime(v.ts)) : null,
+    v.url ? elem("a", { href: v.url, target: "_blank", rel: "noopener" }, "View post →") : null,
+  );
+  stage.appendChild(elem("div", { class: "voice-card" },
+    elem("div", { class: "vq" }, "“" + truncate(v.text, 220) + "”"),
+    meta,
+  ));
+  document.querySelectorAll("#car-dots .dot").forEach((d, k) => d.classList.toggle("on", k === _vIdx));
+}
+
+function buildDots() {
+  const dots = $("#car-dots"); clearNode(dots);
+  _voices.forEach((_, k) => {
+    const d = elem("div", { class: "dot" + (k === 0 ? " on" : "") });
+    d.addEventListener("click", () => { showVoice(k); resetVoiceTimer(); });
+    dots.appendChild(d);
+  });
+}
+function resetVoiceTimer() {
+  if (_vTimer) clearInterval(_vTimer);
+  if (!_reduceMotion && _voices.length > 1) _vTimer = setInterval(() => showVoice(_vIdx + 1), 5500);
+}
+$("#car-prev").addEventListener("click", () => { showVoice(_vIdx - 1); resetVoiceTimer(); });
+$("#car-next").addEventListener("click", () => { showVoice(_vIdx + 1); resetVoiceTimer(); });
+
+/* ===================== Pipeline full-screen loader ===================== */
+const PL2 = (function () {
+  const h = elem;
+  const STAGES = [
+    { label: "Got your question",            sub: "We've got what you're looking for — getting started." },
+    { label: "Searching the internet",       sub: "Collecting posts, comments and discussions from across social media." },
+    { label: "Reading through everything",   sub: "Going through each post to understand what people are saying." },
+    { label: "Figuring out how people feel", sub: "Sorting posts into positive, mixed and negative." },
+    { label: "Finding the main talking points", sub: "Grouping similar posts to see which topics keep coming up." },
+    { label: "Putting your report together", sub: "Almost done — writing up what we found so it's easy to read." },
+    { label: "Your results are ready!",      sub: "Here's everything we found. Take your time exploring." },
+  ];
+  const APPROX = [1, 12, 14, 8, 8, 14];
+  const REASSURE = [
+    "We anonymise usernames — we only show what people said, not who.",
+    "The more posts we find, the more reliable the results.",
+    "Results cover the last 30 days of posts by default.",
+    "We check Reddit, Hacker News, Facebook and more — all in one go.",
+  ];
+  const rm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let cur = -1, count = 0, plats = {}, finished = false;
+  let simTimer = null, chainTimer = null, chainTimer2 = null, reassureTimer = null,
+      etaTimer = null, animTimer = null, reassureIdx = 0;
+
+  const el = (id) => document.getElementById(id);
+
+  function buildRail() {
+    const r = el("pl2-rail"); clearNode(r);
+    STAGES.forEach((s, i) => {
+      const step = h("div", { class: "pl2-step", "data-i": String(i) },
+        h("div", { class: "pl2-dot" }, String(i + 1)),
+        h("div", { class: "pl2-lbl" }, s.label));
+      r.appendChild(step);
+      if (i < 6) r.appendChild(h("div", { class: "pl2-seg" }));
+    });
+    r.appendChild(h("div", { class: "pl2-eta", id: "pl2-eta" }));
+    r.appendChild(h("div", { class: "pl2-reassure", id: "pl2-reassure" }));
+    const a = h("a", { tabindex: "0" }, "Cancel and start over");
+    a.addEventListener("click", confirmCancel);
+    r.appendChild(h("div", { class: "pl2-cancel" }, a));
+  }
+
+  function paintRail() {
+    document.querySelectorAll("#pl2-rail .pl2-step").forEach((step) => {
+      const i = +step.dataset.i;
+      step.classList.toggle("done", i < cur);
+      step.classList.toggle("active", i === cur);
+    });
+    document.querySelectorAll("#pl2-rail .pl2-seg").forEach((seg, i) => seg.classList.toggle("done", i < cur));
+  }
+
+  function tickEta() {
+    const eta = el("pl2-eta"); if (!eta) return;
+    let left = 0;
+    for (let i = Math.max(cur, 0); i < APPROX.length; i++) left += APPROX[i];
+    eta.textContent = left <= 0 ? "Finishing up…"
+      : left < 10 ? "Almost there…" : "About " + left + " seconds left";
+  }
+
+  function setStage(i) {
+    if (finished || i <= cur || i > 6) return;
+    cur = i; paintRail(); tickEta();
+    el("pl2-h").textContent = STAGES[i].label;
+    el("pl2-sub").textContent = STAGES[i].sub;
+    renderAnim(i);
+  }
+  function setMin(i) { if (i > cur) setStage(i); }
+  function clearAnim() { if (animTimer) { clearInterval(animTimer); clearTimeout(animTimer); animTimer = null; } }
+
+  function renderAnim(i) {
+    clearAnim();
+    const a = el("pl2-anim"); clearNode(a);
+    if (i === 0) {
+      a.appendChild(h("div", { class: "pl2-check" },
+        h("span", { class: "ring" }), h("span", { class: "ring" }),
+        h("span", { class: "mk" }, "✓")));
+    } else if (i === 1) {
+      const solar = h("div", { class: "pl2-solar" }, h("div", { class: "pl2-globe" }, "🌐"));
+      const sats = [
+        ["", "🟠", "top:4%;left:50%"], ["", "🔵", "top:96%;left:50%"],
+        ["rev", "🟧", "top:50%;left:4%"], ["rev", "🔴", "top:50%;left:96%"],
+      ];
+      const o1 = h("div", { class: "pl2-orbit" }), o2 = h("div", { class: "pl2-orbit rev" });
+      sats.forEach(s => (s[0] ? o2 : o1).appendChild(h("div", { class: "pl2-sat", style: s[2] }, s[1])));
+      solar.appendChild(o1); solar.appendChild(o2);
+      a.appendChild(h("div", { style: "text-align:center" }, solar,
+        h("div", { class: "pl2-count", id: "pl2-count" }, "0"),
+        h("div", { class: "muted", style: "font-size:13px" }, "posts found so far"),
+        h("div", { class: "pl2-chips", id: "pl2-chips" })));
+      paintCount();
+    } else if (i === 2) {
+      const stack = h("div", { class: "pl2-cards" });
+      ["pc1", "pc2", "pc3"].forEach(cl => stack.appendChild(
+        h("div", { class: "pc " + cl }, h("div", { class: "l" }), h("div", { class: "l" }), h("div", { class: "l" }))));
+      a.appendChild(h("div", { style: "display:flex;flex-direction:column;align-items:center;width:100%" },
+        stack, h("div", { class: "pl2-bar" }, h("i", { id: "pl2-readbar" })),
+        h("div", { class: "muted", style: "font-size:13px;margin-top:8px" }, "Reading posts…")));
+      let p = 0; const bar = el("pl2-readbar");
+      if (!rm) animTimer = setInterval(() => { p = Math.min(85, p + 7); if (bar) bar.style.width = p + "%"; }, 350);
+      else if (bar) bar.style.width = "85%";
+    } else if (i === 3) {
+      const cols = [["pos", "Positive 😊"], ["neu", "Mixed 😐"], ["neg", "Negative 😞"]];
+      const wrap = h("div", { class: "pl2-cols" });
+      for (const c of cols) wrap.appendChild(h("div", { class: "pl2-col", id: "pl2c-" + c[0] }, h("div", { class: "lab" }, c[1])));
+      a.appendChild(wrap);
+      if (!rm) animTimer = setInterval(() => {
+        const c = cols[Math.floor(Math.random() * 3)][0];
+        const col = el("pl2c-" + c);
+        if (col && col.children.length < 9) col.appendChild(h("div", { class: "pl2-pip " + c, style: "background:var(--" + c + ")" }));
+      }, 140);
+    } else if (i === 4) {
+      animGalaxy(a);
+    } else if (i === 5) {
+      a.appendChild(h("div", { class: "pl2-doc", id: "pl2-doc" }));
+      typeDoc();
+    }
+  }
+
+  function animGalaxy(a) {
+    const box = h("div", { class: "pl2-galaxy", id: "pl2-galaxy" });
+    const clusters = [
+      { x: 16, y: 16, c: "var(--neg)", nm: "Cost concerns" },
+      { x: 58, y: 50, c: "var(--accent2)", nm: "Safety questions" },
+      { x: 30, y: 72, c: "var(--pos)", nm: "Personal stories" },
+    ];
+    clusters.forEach((cl) => {
+      box.appendChild(h("div", { class: "pl2-cl", style: "left:" + cl.x + "%;top:" + cl.y + "%" },
+        h("div", { class: "blob", style: "background:" + cl.c }),
+        h("div", { class: "nm" }, cl.nm)));
+    });
+    a.appendChild(box);
+    if (rm) return;
+    const sparks = [];
+    for (let k = 0; k < 14; k++) {
+      const sp = h("div", { class: "pl2-spark", style:
+        "left:" + (Math.random() * 90) + "%;top:" + (Math.random() * 90) + "%;" +
+        "background:" + clusters[k % 3].c + ";opacity:0.7" });
+      box.appendChild(sp); sparks.push(sp);
+    }
+    animTimer = setTimeout(() => {
+      sparks.forEach((sp, k) => {
+        const cl = clusters[k % 3];
+        sp.style.left = (cl.x + 4 + Math.random() * 18) + "%";
+        sp.style.top = (cl.y + 4 + Math.random() * 18) + "%";
+      });
+    }, 250);
+  }
+
+  function paintCount() {
+    const c = el("pl2-count"); if (c) c.textContent = count;
+    const chips = el("pl2-chips"); if (!chips) return;
+    clearNode(chips);
+    for (const k in plats) {
+      if (!plats[k]) continue;
+      const m = sourceMeta(k);
+      chips.appendChild(h("span", { class: "pl2-chip" }, m.icon + " " + m.label + " " + plats[k]));
+    }
+  }
+
+  function typeDoc() {
+    const doc = el("pl2-doc"); if (!doc) return;
+    const heads = ["The Short Version", "What's This Actually About?", "Do Most People Agree?", "Our Take"];
+    let n = 0;
+    function next() {
+      if (finished || n >= heads.length || !document.body.contains(doc)) return;
+      doc.appendChild(h("h5", null, heads[n]));
+      for (let k = 0; k < 2; k++) {
+        const ln = h("div", { class: "ln" }); doc.appendChild(ln);
+        setTimeout(() => { ln.style.width = (60 + Math.random() * 30) + "%"; }, 100 + k * 120);
+      }
+      n++; if (!rm) animTimer = setTimeout(next, 900);
+    }
+    next();
+  }
+
+  function rotateReassure() {
+    const re = el("pl2-reassure"); if (!re) return;
+    re.style.opacity = "0";
+    setTimeout(() => { re.textContent = REASSURE[reassureIdx % REASSURE.length]; reassureIdx++; re.style.opacity = "1"; }, 300);
+  }
+
+  function spawnParticles() {
+    if (rm) return;
+    const host = el("pl2-particles"); if (!host) return;
+    for (let i = 0; i < 6; i++) {
+      const sz = 4 + Math.random() * 3;
+      host.appendChild(h("div", { class: "pl2-particle", style:
+        "width:" + sz + "px;height:" + sz + "px;left:" + (Math.random() * 100) + "%;" +
+        "animation-duration:" + (9 + Math.random() * 6) + "s;animation-delay:" + (Math.random() * 9) + "s" }));
+    }
+  }
+
+  function startSim() {
+    let i = 1, acc = 0;
+    if (simTimer) clearInterval(simTimer);
+    simTimer = setInterval(() => { acc += 1; if (i < 6 && acc >= APPROX[i]) { acc = 0; setMin(i); i++; } }, 1000);
+  }
+
+  function start() {
+    finished = false; cur = -1; count = 0; plats = {};
+    buildRail();
+    el("pl2").classList.add("open");
+    clearNode(el("pl2-particles"));
+    clearNode(el("pl2-extra"));
+    spawnParticles();
+    setStage(0);
+    setTimeout(() => setMin(1), 700);
+    rotateReassure();
+    reassureTimer = setInterval(rotateReassure, 8000);
+    etaTimer = setInterval(tickEta, 5000);
+    startSim();
+  }
+
+  function event(ev) {
+    if (!el("pl2").classList.contains("open")) return;
+    switch (ev.type) {
+      case "started": case "seeded": case "iter_start": setMin(1); break;
+      case "posts_fetched":
+        setMin(1);
+        if (ev.n_total != null) count = ev.n_total;
+        if (ev.source) plats[ev.source] = (plats[ev.source] || 0) + (ev.n_new || 0);
+        paintCount();
+        break;
+      case "clustered":
+        setMin(2);
+        clearTimeout(chainTimer); clearTimeout(chainTimer2);
+        chainTimer = setTimeout(() => setMin(3), 1400);
+        chainTimer2 = setTimeout(() => setMin(4), 2800);
+        break;
+      case "labeled": setMin(5); break;
+      case "briefing_ready": case "evidence_ready": setMin(5); break;
+      case "embed_error": fail("while sorting the posts into groups"); break;
+      case "briefing_error": fail("while writing up your report"); break;
+      case "error": fail("while gathering your results"); break;
+      case "done": complete(); break;
+    }
+  }
+
+  function stopTimers() {
+    [simTimer, chainTimer, chainTimer2, reassureTimer, etaTimer, animTimer].forEach(t => {
+      if (t) { clearInterval(t); clearTimeout(t); } });
+    simTimer = chainTimer = chainTimer2 = reassureTimer = etaTimer = animTimer = null;
+  }
+
+  function complete() {
+    if (finished) return; finished = true;
+    cur = 6; paintRail();
+    el("pl2-h").textContent = STAGES[6].label;
+    el("pl2-sub").textContent = STAGES[6].sub;
+    clearAnim(); const a = el("pl2-anim"); clearNode(a);
+    a.appendChild(h("div", { style: "font-size:90px" }, "🎉"));
+    confetti();
+    setTimeout(() => { el("pl2").classList.remove("open"); stopTimers(); }, 1400);
+  }
+
+  function confetti() {
+    if (rm) return;
+    const host = el("pl2-particles");
+    const cols = ["#10b981", "#6ee7b7", "#94a3b8", "#fbbf24", "#f87171"];
+    for (let i = 0; i < 24; i++) {
+      const c = h("div", { class: "pl2-confetti", style:
+        "left:" + (20 + Math.random() * 60) + "%;background:" + cols[i % cols.length] +
+        ";animation-delay:" + (Math.random() * 0.3) + "s" });
+      host.appendChild(c);
+      setTimeout(() => c.remove(), 1600);
+    }
+  }
+
+  function fail(where) {
+    if (finished) return; finished = true; stopTimers();
+    document.querySelectorAll("#pl2-rail .pl2-step.active .pl2-dot").forEach(d => {
+      d.textContent = "!"; d.style.background = "#f59e0b"; d.style.borderColor = "#f59e0b";
+    });
+    el("pl2-h").textContent = "Something went wrong";
+    el("pl2-sub").textContent = "We hit a problem " + where + ". This sometimes happens — it's not your fault.";
+    clearAnim(); const a = el("pl2-anim"); clearNode(a); a.appendChild(h("div", { style: "font-size:72px" }, "🔌"));
+    const ex = el("pl2-extra"); clearNode(ex);
+    const retry = h("button", null, "Try again");
+    retry.addEventListener("click", () => { hide(); const g = $("#go"); if (g) g.click(); });
+    const change = h("button", { class: "secondary" }, "Change my question");
+    change.addEventListener("click", hide);
+    ex.appendChild(h("div", { class: "pl2-err-actions" }, retry, change));
+  }
+
+  function partial(platform) {
+    el("pl2-extra").appendChild(h("div", { class: "pl2-banner" },
+      "We couldn't reach " + platform + ", so those posts aren't included. Everything else is fine."));
+  }
+
+  function confirmCancel() {
+    const ex = el("pl2-extra"); clearNode(ex);
+    const yes = h("button", { class: "secondary" }, "Yes, cancel"); yes.addEventListener("click", hide);
+    const no = h("button", null, "Keep waiting"); no.addEventListener("click", () => clearNode(ex));
+    ex.appendChild(h("p", { class: "muted", style: "font-size:13px" }, "Are you sure? We'll lose all progress."));
+    ex.appendChild(h("div", { class: "pl2-err-actions" }, yes, no));
+  }
+
+  function hide() { finished = true; stopTimers(); el("pl2").classList.remove("open"); clearNode(el("pl2-extra")); }
+
+  return { start, event, complete, fail, partial, hide };
+})();
 
 function renderSentChart(cs) {
   const labels = cs.map(c => String(c.label || "?").slice(0, 18));
