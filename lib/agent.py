@@ -17,7 +17,8 @@ from .dedup import near_dupe_keep
 from .cluster import cluster_embeddings, centroids, entropy, saturation
 from .label import label_cluster
 from .stance import cluster_sentiments
-from .influence import top_n
+from .relevance import token_overlap_relevance, extract_core_subject
+from .rerank import rank_posts, llm_rerank
 from .events import BUS
 from .store import write_json, new_run_id
 from .llm import chat_json
@@ -28,6 +29,10 @@ MAX_ITERS = 4
 MAX_POSTS = 500
 EPS = 0.05
 SAT_EPS = 0.8
+REL_FLOOR = 0.12          # posts below this relevance to the topic are noise
+RERANK_SHORTLIST = 30     # candidates sent to the LLM relevance reranker
+MIN_ONTOPIC = 6           # keep all posts if fewer survive the gate (recall guard)
+EXPAND_REL_FLOOR = 0.12   # drop expansion queries that drift off the core subject
 SOURCES: dict[str, type[Connector]] = {
     "reddit": RedditConnector,
     "hn": HNConnector,
@@ -76,7 +81,9 @@ def _llm_next(topic: str, labels: list[str], opinion: str | None = None) -> dict
     system = (
         "Given cluster labels found so far and the topic, decide: stop or expand. "
         "If expand, propose up to 3 new search queries targeting under-covered "
-        "angles." + extra +
+        "angles. Every query MUST stay about the topic's core subject — do not "
+        "drift to adjacent themes a label happened to surface (e.g. if the topic "
+        "is a technology, do not pivot to job-hunting or resumes)." + extra +
         ' Output JSON: {"action": "stop"|"expand", "queries": ["..."]}'
     )
     try:
@@ -141,6 +148,7 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
               opinion: str | None = None) -> str:
     run_id = run_id or new_run_id()
     sources = [s for s in sources if s in SOURCES] or ["facebook"]
+    core = extract_core_subject(topic) or topic
     started_at = int(time.time())
     BUS.publish(run_id, {"type": "started", "run_id": run_id, "topic": topic, "sources": sources})
 
@@ -191,6 +199,17 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
                 "dropped": len(posts) - len(keep_idx),
             })
             posts = [posts[i] for i in keep_idx]
+
+        on_topic = [p for p in posts
+                    if token_overlap_relevance(core, p.text) >= REL_FLOOR]
+        if len(on_topic) >= MIN_ONTOPIC and len(on_topic) < len(posts):
+            BUS.publish(run_id, {
+                "type": "relevance_gated",
+                "kept": len(on_topic),
+                "dropped": len(posts) - len(on_topic),
+            })
+            posts = on_topic
+
         try:
             emb = embed_texts([p.text for p in posts])
         except Exception as e:
@@ -241,11 +260,24 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
             sentiments = {cid: {"pos": 0.0, "neu": 1.0, "neg": 0.0, "error": str(e)}
                           for cid in cids}
 
+        shortlist = rank_posts(topic, posts, n=RERANK_SHORTLIST)
+        ranked_global = llm_rerank(topic, shortlist, n=len(shortlist))
+        rank_index = {p.id: i for i, p in enumerate(ranked_global)}
+        BUS.publish(run_id, {"type": "reranked", "n": len(ranked_global)})
+
+        def _cluster_tops(members: list[Post]) -> list[Post]:
+            in_short = sorted((m for m in members if m.id in rank_index),
+                              key=lambda m: rank_index[m.id])
+            if len(in_short) >= 5:
+                return in_short[:5]
+            rest = rank_posts(topic, [m for m in members if m.id not in rank_index], n=5)
+            return (in_short + rest)[:5]
+
         cluster_meta = []
         for cid in cids:
             members = members_by_cid[cid]
             meta = metas[cid]
-            tops = top_n(members, n=5)
+            tops = _cluster_tops(members)
             cluster_meta.append({
                 "id": int(cid),
                 "label": meta.get("label", f"cluster {cid}"),
@@ -258,6 +290,7 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
 
         write_json(run_id, "posts.json", [p.to_dict() for p in posts])
         write_json(run_id, "clusters.json", cluster_meta)
+        write_json(run_id, "ranked.json", [p.to_dict() for p in ranked_global[:15]])
         BUS.publish(run_id, {
             "type": "labeled",
             "clusters": [
@@ -284,7 +317,10 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
         if decision.get("action") == "stop":
             stop_reason = "agent_stop"
             break
-        next_q = [str(q) for q in decision.get("queries", []) if q][:3]
+        next_q = [str(q) for q in decision.get("queries", []) if q]
+        anchored = [q for q in next_q
+                    if token_overlap_relevance(core, q) >= EXPAND_REL_FLOOR]
+        next_q = (anchored or next_q)[:3]
         if not next_q:
             stop_reason = "no_queries"
             break
