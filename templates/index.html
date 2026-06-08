@@ -6,6 +6,9 @@
   <title>PulseTrace — Sentiment Intelligence</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+  <script src="https://unpkg.com/layout-base/layout-base.js"></script>
+  <script src="https://unpkg.com/cose-base/cose-base.js"></script>
+  <script src="https://unpkg.com/cytoscape-fcose/cytoscape-fcose.js"></script>
   <script>
     (function () {
       try {
@@ -217,8 +220,30 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 .kpi b { font-size: 28px; font-weight: 700; color: var(--text); display: block; margin-top: 8px; font-family: 'JetBrains Mono', monospace; letter-spacing: -0.05em; }
 .kpi span { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
 
-#graph { height: 420px; background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; }
-canvas { max-height: 280px; }
+.graph-wrap { position: relative; height: 480px; border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--accent2) 7%, transparent), transparent 50%),
+    radial-gradient(120% 120% at 100% 100%, color-mix(in srgb, var(--accent3) 7%, transparent), transparent 50%),
+    var(--panel2);
+}
+#graph { width: 100%; height: 100%; }
+#graph canvas { max-height: none; }
+.graph-legend { position: absolute; top: 12px; left: 12px; z-index: 3; display: flex; gap: 14px;
+  padding: 8px 12px; border-radius: 10px; backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--panel) 70%, transparent); border: 1px solid var(--border);
+  font-size: 11px; color: var(--muted); font-weight: 600; }
+.graph-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.graph-zoom { position: absolute; bottom: 12px; right: 12px; z-index: 3; display: flex; flex-direction: column; gap: 6px; }
+.graph-zoom button { width: 34px; height: 34px; padding: 0; border-radius: 9px; font-size: 16px; font-weight: 700;
+  display: grid; place-items: center; background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border: 1px solid var(--border); color: var(--text); cursor: pointer; backdrop-filter: blur(8px);
+  transition: transform .15s, border-color .15s; }
+.graph-zoom button:hover { transform: translateY(-1px); border-color: var(--accent2); }
+.graph-hint { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center;
+  color: var(--muted); font-size: 13px; pointer-events: none; opacity: 1; transition: opacity .4s; }
+.graph-hint.hidden { opacity: 0; }
+#sentChart, #proConChart, #confChart { max-height: 280px; }
 
 
 /* --- Clusters --- */
@@ -514,7 +539,20 @@ canvas { max-height: 280px; }
     <section style="display:flex;flex-direction:column;gap:0;min-width:0">
       <div class="panel">
         <h2>Topic graph</h2>
-        <div id="graph"></div>
+        <div class="graph-wrap">
+          <div class="graph-legend">
+            <span><i style="background:var(--pos)"></i>Positive</span>
+            <span><i style="background:var(--neu)"></i>Neutral</span>
+            <span><i style="background:var(--neg)"></i>Negative</span>
+          </div>
+          <div id="graph"></div>
+          <div class="graph-zoom">
+            <button type="button" id="gZoomIn" title="Zoom in">+</button>
+            <button type="button" id="gZoomOut" title="Zoom out">−</button>
+            <button type="button" id="gFit" title="Fit to view">⤢</button>
+          </div>
+          <div class="graph-hint" id="graphHint">Run a topic to render the sentiment graph</div>
+        </div>
       </div>
 
       <div class="grid2">
@@ -863,6 +901,7 @@ async function start() {
   clearNode($("#clusters"));
   clearNode($("#answer"));
   if (cy) { cy.destroy(); cy = null; }
+  { const h = $("#graphHint"); if (h) h.classList.remove("hidden"); }
   if (sentChart) { sentChart.destroy(); sentChart = null; }
   log("Starting run for \"" + topic + "\" on [" + sources.join(", ") + "]...");
   const opinion = ($("#opinion").value || "").trim() || null;
@@ -1281,28 +1320,95 @@ function renderSentChart(cs) {
   });
 }
 
+if (window.cytoscapeFcose) cytoscape.use(window.cytoscapeFcose);
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function hexToRgb(h) {
+  h = h.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+function sentimentColor(s) {
+  s = s || {};
+  const pos = +s.pos || 0, neu = +s.neu || 0, neg = +s.neg || 0;
+  const total = pos + neu + neg || 1;
+  const [cp, cu, cn] = [cssVar("--pos"), cssVar("--neu"), cssVar("--neg")].map(hexToRgb);
+  const mix = [0, 1, 2].map((i) =>
+    Math.round((cp[i] * pos + cu[i] * neu + cn[i] * neg) / total));
+  return `rgb(${mix[0]},${mix[1]},${mix[2]})`;
+}
+
+function sizeOf(ele) { return 26 + Math.sqrt(ele.data("size") || 0) * 10; }
+
 async function drawGraph(rid) {
   const r = await fetch("/graph?run_id=" + encodeURIComponent(rid));
   const j = await r.json();
+  const nodes = (j.nodes || []).map((n) => ({
+    data: { ...n.data, _color: sentimentColor(n.data.sentiment) },
+  }));
+  const edges = j.edges || [];
+  const hint = $("#graphHint");
+  if (hint) hint.classList.toggle("hidden", nodes.length > 0);
   if (cy) cy.destroy();
+  if (!nodes.length) { cy = null; return; }
+
+  const txt = cssVar("--text"), muted = cssVar("--muted"),
+        accent = cssVar("--accent2"), panel = cssVar("--panel");
+
   cy = cytoscape({
     container: $("#graph"),
-    elements: [...(j.nodes || []), ...(j.edges || [])],
+    elements: [...nodes, ...edges],
+    minZoom: 0.2, maxZoom: 3, pixelRatio: "auto",
     style: [
       { selector: "node", style: {
-          "label": "data(label)", "color": "#e6edf7", "font-size": "11px",
-          "background-color": "#60a5fa",
-          "width":  (ele) => 20 + (ele.data("size") || 0) * 3,
-          "height": (ele) => 20 + (ele.data("size") || 0) * 3,
-          "text-valign": "bottom", "text-margin-y": 4,
+          "label": "data(label)", "color": txt, "font-size": "12px",
+          "font-weight": 600, "font-family": "Inter, sans-serif",
+          "background-color": "data(_color)",
+          "border-width": 2, "border-color": panel, "border-opacity": 0.9,
+          "width": sizeOf, "height": sizeOf,
+          "text-valign": "bottom", "text-margin-y": 6,
+          "text-max-width": "120px", "text-wrap": "ellipsis",
+          "text-background-color": panel, "text-background-opacity": 0.55,
+          "text-background-padding": "2px", "text-background-shape": "roundrectangle",
+          "overlay-opacity": 0, "transition-property": "opacity border-color border-width",
+          "transition-duration": "0.18s",
       }},
       { selector: "edge", style: {
-          "width": (ele) => 1 + (ele.data("weight") || 0) * 4,
-          "line-color": "#25324a", "curve-style": "bezier", "opacity": 0.7,
+          "width": (ele) => 1.2 + (ele.data("weight") || 0) * 5,
+          "line-color": muted, "opacity": (ele) => 0.15 + (ele.data("weight") || 0) * 0.45,
+          "curve-style": "straight",
       }},
+      { selector: "node.faded", style: { "opacity": 0.18 } },
+      { selector: "edge.faded", style: { "opacity": 0.04 } },
+      { selector: "node.hl", style: { "border-color": accent, "border-width": 3 } },
+      { selector: "edge.hl", style: { "line-color": accent, "opacity": 0.85 } },
+      { selector: "node:selected", style: { "border-color": accent, "border-width": 4 } },
     ],
-    layout: { name: "cose", animate: false, padding: 30 },
+    layout: {
+      name: window.cytoscapeFcose ? "fcose" : "cose",
+      animate: true, animationDuration: 600, padding: 40,
+      nodeSeparation: 140, idealEdgeLength: 130, nodeRepulsion: 9000,
+    },
   });
+
+  cy.on("mouseover", "node", (e) => {
+    const nb = e.target.closedNeighborhood();
+    cy.elements().addClass("faded");
+    nb.removeClass("faded").addClass("hl");
+  });
+  cy.on("mouseout", "node", () => cy.elements().removeClass("faded hl"));
+  cy.on("layoutstop", () => cy.fit(undefined, 40));
+
+  $("#gZoomIn").onclick = () => cy && cy.zoom({ level: cy.zoom() * 1.3, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+  $("#gZoomOut").onclick = () => cy && cy.zoom({ level: cy.zoom() / 1.3, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+  $("#gFit").onclick = () => cy && cy.fit(undefined, 40);
+
+  if (!window._graphResize) {
+    window._graphResize = true;
+    window.addEventListener("resize", () => { if (cy) { cy.resize(); cy.fit(undefined, 40); } });
+  }
 }
 
 async function ask() {
