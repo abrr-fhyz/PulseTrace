@@ -463,6 +463,10 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             <label class="toggle"><input type="checkbox" id="src-facebook" checked> Facebook</label>
             <label class="toggle"><input type="checkbox" id="src-x"> X</label>
             <label class="toggle"><input type="checkbox" id="src-instagram"> Instagram</label>
+            <label class="toggle"><input type="checkbox" id="src-youtube"> YouTube</label>
+            <label class="toggle"><input type="checkbox" id="src-polymarket"> Polymarket</label>
+            <label class="toggle"><input type="checkbox" id="src-github"> GitHub</label>
+            <label class="toggle"><input type="checkbox" id="src-bluesky"> Bluesky</label>
           </div>
           <button id="go" class="cta-primary">Start agent</button>
         </div>
@@ -891,6 +895,10 @@ async function start() {
   if ($("#src-facebook").checked) sources.push("facebook");
   if ($("#src-x").checked) sources.push("x");
   if ($("#src-instagram").checked) sources.push("instagram");
+  if ($("#src-youtube").checked) sources.push("youtube");
+  if ($("#src-polymarket").checked) sources.push("polymarket");
+  if ($("#src-github").checked) sources.push("github");
+  if ($("#src-bluesky").checked) sources.push("bluesky");
 
   if (sources.includes("facebook")) {
     const ok = await ensureFreshCookies();
