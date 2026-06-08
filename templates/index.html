@@ -326,6 +326,80 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 .notable-item.neg { border-left-color: var(--neg); }
 @media (prefers-reduced-motion: reduce) { .voice-card, .mood-bar span { animation: none; transition: none; } }
 
+/* ============ Pipeline full-screen loader (task 5) ============ */
+#pl2 { position: fixed; inset: 0; z-index: 200; display: none; background:
+  radial-gradient(ellipse at 20% 40%, #fdf6ec 0%, #f7f0e8 55%, #ede8e0 100%);
+  animation: pl2-drift 14s ease-in-out infinite alternate; overflow: hidden; }
+#pl2.open { display: grid; grid-template-columns: 280px 1fr; }
+@keyframes pl2-drift {
+  0% { background-position: 0% 0%; } 100% { background-position: 30% 18%; } }
+.pl2-rail { padding: 40px 28px; border-right: 1px solid rgba(0,0,0,0.06);
+  display: flex; flex-direction: column; gap: 0; position: relative; z-index: 2;
+  background: rgba(255,255,255,0.4); backdrop-filter: blur(6px); }
+.pl2-step { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; }
+.pl2-seg { height: 26px; width: 2px; margin-left: 14px; background: #e5e7eb; }
+.pl2-step.done ~ .pl2-seg, .pl2-seg.done { background: var(--accent2, #3b82f6); }
+.pl2-dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 13px; font-weight: 700; background: #d1d5db; color: #fff; opacity: 0.5;
+  transition: all 0.4s ease; flex: 0 0 auto; }
+.pl2-step.active .pl2-dot { background: #fff; color: var(--accent2, #3b82f6);
+  border: 2px solid var(--accent2, #3b82f6); opacity: 1; box-shadow: 0 0 0 0 rgba(59,130,246,0.4);
+  animation: pl2-pulse 1.8s ease-out infinite; }
+.pl2-step.done .pl2-dot { background: var(--accent2, #3b82f6); opacity: 1; }
+@keyframes pl2-pulse { 0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+  100% { box-shadow: 0 0 0 14px rgba(59,130,246,0); } }
+.pl2-lbl { font-size: 13px; color: #9ca3af; padding-top: 4px; line-height: 1.4; }
+.pl2-step.active .pl2-lbl { color: #111827; font-weight: 700; font-size: 15px; }
+.pl2-step.done .pl2-lbl { color: #6b7280; font-weight: 500; }
+.pl2-eta { margin-top: auto; padding-top: 24px; font-size: 13px; color: #6b7280; }
+.pl2-reassure { font-size: 12px; font-style: italic; color: #9ca3af; margin-top: 12px;
+  min-height: 32px; transition: opacity 0.3s; }
+.pl2-cancel { margin-top: 16px; }
+.pl2-cancel a { font-size: 13px; color: #9ca3af; cursor: pointer; text-decoration: none; }
+.pl2-cancel a:hover { color: #374151; }
+.pl2-main { position: relative; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 40px; z-index: 2; }
+.pl2-h { font-size: 28px; font-weight: 700; color: #1a1a2e; margin: 0 0 8px; text-align: center; }
+.pl2-sub { font-size: 15px; color: #6b7280; margin: 0 0 32px; text-align: center; max-width: 460px; }
+.pl2-anim { width: min(460px, 80vw); height: 240px; display: grid; place-items: center; }
+.pl2-count { font-size: 40px; font-weight: 700; color: var(--accent2, #3b82f6); }
+.pl2-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px; }
+.pl2-chip { font-size: 12px; padding: 4px 12px; border-radius: 999px; background: #fff;
+  border: 1px solid rgba(0,0,0,0.08); color: #374151; box-shadow: 0 1px 3px rgba(0,0,0,0.04); animation: vc-fade 0.4s; }
+.pl2-globe { font-size: 80px; animation: pl2-spin 8s linear infinite; }
+@keyframes pl2-spin { to { transform: rotate(360deg); } }
+.pl2-bar { width: 80%; height: 6px; border-radius: 3px; background: #e5e7eb; overflow: hidden; margin-top: 20px; }
+.pl2-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#60a5fa,#3b82f6);
+  border-radius: 3px; transition: width 0.5s ease; }
+.pl2-cols { display: flex; gap: 24px; align-items: flex-end; height: 160px; }
+.pl2-col { display: flex; flex-direction: column-reverse; align-items: center; gap: 3px; width: 70px; }
+.pl2-col .lab { font-size: 12px; color: #6b7280; margin-top: 8px; }
+.pl2-pip { width: 12px; height: 12px; border-radius: 50%; animation: pl2-drop 0.3s ease; }
+@keyframes pl2-drop { from { transform: translateY(-20px) scaleY(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+.pl2-doc { width: 360px; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  padding: 20px; text-align: left; }
+.pl2-doc h5 { margin: 14px 0 6px; font-size: 14px; color: #1a1a2e; font-weight: 700; }
+.pl2-doc h5:first-child { margin-top: 0; }
+.pl2-doc .ln { height: 8px; border-radius: 4px; background: #eef0f3; margin: 6px 0; width: 0; transition: width 0.3s ease; }
+.pl2-cursor::after { content: "▌"; color: var(--accent2,#3b82f6); animation: pl2-blink 1s step-end infinite; }
+@keyframes pl2-blink { 50% { opacity: 0; } }
+.pl2-particle { position: absolute; bottom: -10px; border-radius: 50%;
+  background: rgba(59,130,246,0.18); animation: pl2-float linear infinite; z-index: 1; }
+@keyframes pl2-float { to { transform: translateY(-110vh); opacity: 0; } }
+.pl2-banner { margin-top: 16px; font-size: 13px; padding: 8px 14px; border-radius: 10px;
+  background: rgba(251,191,36,0.15); color: #b45309; border: 1px solid rgba(251,191,36,0.4); }
+.pl2-confetti { position: absolute; width: 8px; height: 8px; top: -10px; animation: pl2-fall 1.2s ease-in forwards; z-index: 3; }
+@keyframes pl2-fall { to { transform: translateY(60vh) rotate(360deg); opacity: 0; } }
+.pl2-err-actions { display: flex; gap: 12px; margin-top: 20px; }
+.pl2-err-actions button { font-size: 14px; }
+@media (max-width: 760px) { #pl2.open { grid-template-columns: 1fr; }
+  .pl2-rail { flex-direction: row; overflow-x: auto; padding: 16px; border-right: none;
+    border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .pl2-seg { display: none; } .pl2-eta, .pl2-reassure, .pl2-cancel { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #pl2 { animation: none; } .pl2-globe, .pl2-step.active .pl2-dot { animation: none; }
+  .pl2-particle, .pl2-confetti { display: none; } }
+
 
 /* --- QA & Evidence --- */
 .answer { font-size: 15px; line-height: 1.6; color: var(--text); }
@@ -554,7 +628,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             <div class="pl-ic">1</div>
             <div class="pl-body">
               <div class="pl-title">Seed queries</div>
-              <div class="pl-sub">LLM proposes search angles</div>
+              <div class="pl-sub">Working out what to search for</div>
             </div>
             <div class="pl-meta" data-meta>idle</div>
             <div class="pl-bar"></div>
@@ -563,7 +637,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             <div class="pl-ic">2</div>
             <div class="pl-body">
               <div class="pl-title">Fetch &amp; OCR</div>
-              <div class="pl-sub">Facebook scroll + Gemini Vision</div>
+              <div class="pl-sub">Collecting posts from social media</div>
             </div>
             <div class="pl-meta" data-meta>idle</div>
             <div class="pl-bar"></div>
@@ -572,7 +646,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             <div class="pl-ic">3</div>
             <div class="pl-body">
               <div class="pl-title">Embed &amp; cluster</div>
-              <div class="pl-sub">Gemini embeddings → HDBSCAN</div>
+              <div class="pl-sub">Grouping similar posts together</div>
             </div>
             <div class="pl-meta" data-meta>idle</div>
             <div class="pl-bar"></div>
@@ -581,7 +655,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             <div class="pl-ic">4</div>
             <div class="pl-body">
               <div class="pl-title">Label &amp; sentiment</div>
-              <div class="pl-sub">Per-cluster LLM naming + stance</div>
+              <div class="pl-sub">Naming each group and reading the mood</div>
             </div>
             <div class="pl-meta" data-meta>idle</div>
             <div class="pl-bar"></div>
@@ -590,7 +664,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             <div class="pl-ic">5</div>
             <div class="pl-body">
               <div class="pl-title">Executive briefing</div>
-              <div class="pl-sub">PDF + HTML for download</div>
+              <div class="pl-sub">Writing up the report to download</div>
             </div>
             <div class="pl-meta" data-meta>idle</div>
             <div class="pl-bar"></div>
@@ -714,6 +788,17 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
     <div id="shots-body"></div>
   </div>
 </section>
+
+<div id="pl2" role="dialog" aria-label="Loading your results" aria-live="polite">
+  <div class="pl2-rail" id="pl2-rail"></div>
+  <div class="pl2-main">
+    <div id="pl2-particles"></div>
+    <h2 class="pl2-h" id="pl2-h">Got your question</h2>
+    <p class="pl2-sub" id="pl2-sub"></p>
+    <div class="pl2-anim" id="pl2-anim"></div>
+    <div id="pl2-extra"></div>
+  </div>
+</div>
 
 <div id="cluster-backdrop" class="drawer-backdrop"></div>
 <aside id="cluster-drawer" class="drawer" aria-hidden="true" aria-label="Cluster posts">
@@ -1048,6 +1133,7 @@ async function start() {
   plReset();
   plActivate("seed");
   plStatus("Run starting…");
+  PL2.start();
   if (sources.includes("facebook")) {
     $("#nav-shots").style.display = "inline-block";
   }
@@ -1161,6 +1247,7 @@ async function setupReplay(rid) {
 }
 
 function handle(ev) {
+  PL2.event(ev);
   switch (ev.type) {
     case "started":
       plReset();
@@ -1684,6 +1771,269 @@ function resetVoiceTimer() {
 }
 $("#car-prev").addEventListener("click", () => { showVoice(_vIdx - 1); resetVoiceTimer(); });
 $("#car-next").addEventListener("click", () => { showVoice(_vIdx + 1); resetVoiceTimer(); });
+
+/* ===================== Pipeline full-screen loader ===================== */
+const PL2 = (function () {
+  const h = elem;
+  const STAGES = [
+    { label: "Got your question",            sub: "We've got what you're looking for — getting started." },
+    { label: "Searching the internet",       sub: "Collecting posts, comments and discussions from across social media." },
+    { label: "Reading through everything",   sub: "Going through each post to understand what people are saying." },
+    { label: "Figuring out how people feel", sub: "Sorting posts into positive, mixed and negative." },
+    { label: "Finding the main talking points", sub: "Grouping similar posts to see which topics keep coming up." },
+    { label: "Putting your report together", sub: "Almost done — writing up what we found so it's easy to read." },
+    { label: "Your results are ready!",      sub: "Here's everything we found. Take your time exploring." },
+  ];
+  const APPROX = [1, 12, 14, 8, 8, 14];
+  const REASSURE = [
+    "We anonymise usernames — we only show what people said, not who.",
+    "The more posts we find, the more reliable the results.",
+    "Results cover the last 30 days of posts by default.",
+    "We check Reddit, Hacker News, Facebook and more — all in one go.",
+  ];
+  const rm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let cur = -1, count = 0, plats = {}, finished = false;
+  let simTimer = null, chainTimer = null, chainTimer2 = null, reassureTimer = null,
+      etaTimer = null, animTimer = null, reassureIdx = 0;
+
+  const el = (id) => document.getElementById(id);
+
+  function buildRail() {
+    const r = el("pl2-rail"); clearNode(r);
+    STAGES.forEach((s, i) => {
+      const step = h("div", { class: "pl2-step", "data-i": String(i) },
+        h("div", { class: "pl2-dot" }, String(i + 1)),
+        h("div", { class: "pl2-lbl" }, s.label));
+      r.appendChild(step);
+      if (i < 6) r.appendChild(h("div", { class: "pl2-seg" }));
+    });
+    r.appendChild(h("div", { class: "pl2-eta", id: "pl2-eta" }));
+    r.appendChild(h("div", { class: "pl2-reassure", id: "pl2-reassure" }));
+    const a = h("a", { tabindex: "0" }, "Cancel and start over");
+    a.addEventListener("click", confirmCancel);
+    r.appendChild(h("div", { class: "pl2-cancel" }, a));
+  }
+
+  function paintRail() {
+    document.querySelectorAll("#pl2-rail .pl2-step").forEach((step) => {
+      const i = +step.dataset.i;
+      step.classList.toggle("done", i < cur);
+      step.classList.toggle("active", i === cur);
+    });
+    document.querySelectorAll("#pl2-rail .pl2-seg").forEach((seg, i) => seg.classList.toggle("done", i < cur));
+  }
+
+  function tickEta() {
+    const eta = el("pl2-eta"); if (!eta) return;
+    let left = 0;
+    for (let i = Math.max(cur, 0); i < APPROX.length; i++) left += APPROX[i];
+    eta.textContent = left <= 0 ? "Finishing up…"
+      : left < 10 ? "Almost there…" : "About " + left + " seconds left";
+  }
+
+  function setStage(i) {
+    if (finished || i <= cur || i > 6) return;
+    cur = i; paintRail(); tickEta();
+    el("pl2-h").textContent = STAGES[i].label;
+    el("pl2-sub").textContent = STAGES[i].sub;
+    renderAnim(i);
+  }
+  function setMin(i) { if (i > cur) setStage(i); }
+  function clearAnim() { if (animTimer) { clearInterval(animTimer); clearTimeout(animTimer); animTimer = null; } }
+
+  function renderAnim(i) {
+    clearAnim();
+    const a = el("pl2-anim"); clearNode(a);
+    if (i === 0) {
+      a.appendChild(h("div", { style: "font-size:90px;color:var(--pos)" }, "✓"));
+    } else if (i === 1) {
+      a.appendChild(h("div", { style: "text-align:center" },
+        h("div", { class: "pl2-globe" }, "🌐"),
+        h("div", { class: "pl2-count", id: "pl2-count" }, "0"),
+        h("div", { class: "muted", style: "font-size:13px" }, "posts found so far"),
+        h("div", { class: "pl2-chips", id: "pl2-chips" })));
+      paintCount();
+    } else if (i === 2) {
+      a.appendChild(h("div", { style: "text-align:center;width:100%" },
+        h("div", { style: "font-size:64px" }, "📖"),
+        h("div", { class: "pl2-bar" }, h("i", { id: "pl2-readbar" })),
+        h("div", { class: "muted", style: "font-size:13px;margin-top:8px" }, "Reading posts…")));
+      let p = 0; const bar = el("pl2-readbar");
+      if (!rm) animTimer = setInterval(() => { p = Math.min(85, p + 7); if (bar) bar.style.width = p + "%"; }, 350);
+      else if (bar) bar.style.width = "85%";
+    } else if (i === 3) {
+      const cols = [["pos", "Positive 😊"], ["neu", "Mixed 😐"], ["neg", "Negative 😞"]];
+      const wrap = h("div", { class: "pl2-cols" });
+      for (const c of cols) wrap.appendChild(h("div", { class: "pl2-col", id: "pl2c-" + c[0] }, h("div", { class: "lab" }, c[1])));
+      a.appendChild(wrap);
+      if (!rm) animTimer = setInterval(() => {
+        const c = cols[Math.floor(Math.random() * 3)][0];
+        const col = el("pl2c-" + c);
+        if (col && col.children.length < 9) col.appendChild(h("div", { class: "pl2-pip " + c, style: "background:var(--" + c + ")" }));
+      }, 140);
+    } else if (i === 4) {
+      a.appendChild(h("div", { style: "text-align:center" },
+        h("div", { style: "font-size:64px" }, "🗂️"),
+        h("div", { class: "pl2-chips", style: "margin-top:16px" }, h("span", { class: "pl2-chip" }, "Grouping similar posts…"))));
+    } else if (i === 5) {
+      a.appendChild(h("div", { class: "pl2-doc", id: "pl2-doc" }));
+      typeDoc();
+    }
+  }
+
+  function paintCount() {
+    const c = el("pl2-count"); if (c) c.textContent = count;
+    const chips = el("pl2-chips"); if (!chips) return;
+    clearNode(chips);
+    for (const k in plats) {
+      if (!plats[k]) continue;
+      const m = sourceMeta(k);
+      chips.appendChild(h("span", { class: "pl2-chip" }, m.icon + " " + m.label + " " + plats[k]));
+    }
+  }
+
+  function typeDoc() {
+    const doc = el("pl2-doc"); if (!doc) return;
+    const heads = ["The Short Version", "What's This Actually About?", "Do Most People Agree?", "Our Take"];
+    let n = 0;
+    function next() {
+      if (finished || n >= heads.length || !document.body.contains(doc)) return;
+      doc.appendChild(h("h5", null, heads[n]));
+      for (let k = 0; k < 2; k++) {
+        const ln = h("div", { class: "ln" }); doc.appendChild(ln);
+        setTimeout(() => { ln.style.width = (60 + Math.random() * 30) + "%"; }, 100 + k * 120);
+      }
+      n++; if (!rm) animTimer = setTimeout(next, 900);
+    }
+    next();
+  }
+
+  function rotateReassure() {
+    const re = el("pl2-reassure"); if (!re) return;
+    re.style.opacity = "0";
+    setTimeout(() => { re.textContent = REASSURE[reassureIdx % REASSURE.length]; reassureIdx++; re.style.opacity = "1"; }, 300);
+  }
+
+  function spawnParticles() {
+    if (rm) return;
+    const host = el("pl2-particles"); if (!host) return;
+    for (let i = 0; i < 6; i++) {
+      const sz = 4 + Math.random() * 3;
+      host.appendChild(h("div", { class: "pl2-particle", style:
+        "width:" + sz + "px;height:" + sz + "px;left:" + (Math.random() * 100) + "%;" +
+        "animation-duration:" + (9 + Math.random() * 6) + "s;animation-delay:" + (Math.random() * 9) + "s" }));
+    }
+  }
+
+  function startSim() {
+    let i = 1, acc = 0;
+    if (simTimer) clearInterval(simTimer);
+    simTimer = setInterval(() => { acc += 1; if (i < 6 && acc >= APPROX[i]) { acc = 0; setMin(i); i++; } }, 1000);
+  }
+
+  function start() {
+    finished = false; cur = -1; count = 0; plats = {};
+    buildRail();
+    el("pl2").classList.add("open");
+    clearNode(el("pl2-particles"));
+    clearNode(el("pl2-extra"));
+    spawnParticles();
+    setStage(0);
+    setTimeout(() => setMin(1), 700);
+    rotateReassure();
+    reassureTimer = setInterval(rotateReassure, 8000);
+    etaTimer = setInterval(tickEta, 5000);
+    startSim();
+  }
+
+  function event(ev) {
+    if (!el("pl2").classList.contains("open")) return;
+    switch (ev.type) {
+      case "started": case "seeded": case "iter_start": setMin(1); break;
+      case "posts_fetched":
+        setMin(1);
+        if (ev.n_total != null) count = ev.n_total;
+        if (ev.source) plats[ev.source] = (plats[ev.source] || 0) + (ev.n_new || 0);
+        paintCount();
+        break;
+      case "clustered":
+        setMin(2);
+        clearTimeout(chainTimer); clearTimeout(chainTimer2);
+        chainTimer = setTimeout(() => setMin(3), 1400);
+        chainTimer2 = setTimeout(() => setMin(4), 2800);
+        break;
+      case "labeled": setMin(5); break;
+      case "briefing_ready": case "evidence_ready": setMin(5); break;
+      case "embed_error": fail("while sorting the posts into groups"); break;
+      case "briefing_error": fail("while writing up your report"); break;
+      case "error": fail("while gathering your results"); break;
+      case "done": complete(); break;
+    }
+  }
+
+  function stopTimers() {
+    [simTimer, chainTimer, chainTimer2, reassureTimer, etaTimer, animTimer].forEach(t => {
+      if (t) { clearInterval(t); clearTimeout(t); } });
+    simTimer = chainTimer = chainTimer2 = reassureTimer = etaTimer = animTimer = null;
+  }
+
+  function complete() {
+    if (finished) return; finished = true;
+    cur = 6; paintRail();
+    el("pl2-h").textContent = STAGES[6].label;
+    el("pl2-sub").textContent = STAGES[6].sub;
+    clearAnim(); const a = el("pl2-anim"); clearNode(a);
+    a.appendChild(h("div", { style: "font-size:90px" }, "🎉"));
+    confetti();
+    setTimeout(() => { el("pl2").classList.remove("open"); stopTimers(); }, 1400);
+  }
+
+  function confetti() {
+    if (rm) return;
+    const host = el("pl2-particles");
+    const cols = ["#10b981", "#6ee7b7", "#94a3b8", "#fbbf24", "#f87171"];
+    for (let i = 0; i < 24; i++) {
+      const c = h("div", { class: "pl2-confetti", style:
+        "left:" + (20 + Math.random() * 60) + "%;background:" + cols[i % cols.length] +
+        ";animation-delay:" + (Math.random() * 0.3) + "s" });
+      host.appendChild(c);
+      setTimeout(() => c.remove(), 1600);
+    }
+  }
+
+  function fail(where) {
+    if (finished) return; finished = true; stopTimers();
+    document.querySelectorAll("#pl2-rail .pl2-step.active .pl2-dot").forEach(d => {
+      d.textContent = "!"; d.style.background = "#f59e0b"; d.style.borderColor = "#f59e0b";
+    });
+    el("pl2-h").textContent = "Something went wrong";
+    el("pl2-sub").textContent = "We hit a problem " + where + ". This sometimes happens — it's not your fault.";
+    clearAnim(); const a = el("pl2-anim"); clearNode(a); a.appendChild(h("div", { style: "font-size:72px" }, "🔌"));
+    const ex = el("pl2-extra"); clearNode(ex);
+    const retry = h("button", null, "Try again");
+    retry.addEventListener("click", () => { hide(); const g = $("#go"); if (g) g.click(); });
+    const change = h("button", { class: "secondary" }, "Change my question");
+    change.addEventListener("click", hide);
+    ex.appendChild(h("div", { class: "pl2-err-actions" }, retry, change));
+  }
+
+  function partial(platform) {
+    el("pl2-extra").appendChild(h("div", { class: "pl2-banner" },
+      "We couldn't reach " + platform + ", so those posts aren't included. Everything else is fine."));
+  }
+
+  function confirmCancel() {
+    const ex = el("pl2-extra"); clearNode(ex);
+    const yes = h("button", { class: "secondary" }, "Yes, cancel"); yes.addEventListener("click", hide);
+    const no = h("button", null, "Keep waiting"); no.addEventListener("click", () => clearNode(ex));
+    ex.appendChild(h("p", { class: "muted", style: "font-size:13px" }, "Are you sure? We'll lose all progress."));
+    ex.appendChild(h("div", { class: "pl2-err-actions" }, yes, no));
+  }
+
+  function hide() { finished = true; stopTimers(); el("pl2").classList.remove("open"); clearNode(el("pl2-extra")); }
+
+  return { start, event, complete, fail, partial, hide };
+})();
 
 function renderSentChart(cs) {
   const labels = cs.map(c => String(c.label || "?").slice(0, 18));
