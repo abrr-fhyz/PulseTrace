@@ -1,31 +1,30 @@
 #!/usr/bin/env python3
-"""Head-to-head: PulseTrace agent vs last30days engine on identical topics.
+"""PulseTrace search-quality eval, scored against a frozen last30days baseline.
 
-Both run on the same cheap, keyless sources (reddit + hackernews) and the same
-Gemini brain, so the comparison isolates *agent/ranking quality*, not API-key
-access. A pooled Gemini judge grades the union of both ranked lists once; each
-system is then scored against those shared grades (mirrors last30days' own
-judged-pool eval methodology).
+PulseTrace runs live (run_agent -> clusters' top_posts) and is graded by a
+Gemini relevance judge (Precision@5, nDCG@5, mean grade). The last30days column
+is a frozen baseline (eval/l30d_baseline.json) captured once on the matched
+model — the upstream engine is NOT a dependency of this repo. To re-capture the
+baseline, clone github.com/mvanhorn/last30days-skill and run the pre-refactor
+harness; see .claude/memory/last30days-benchmark.md.
 
 Usage:
     .venv/bin/python eval/compare_agents.py            # default 3 topics
-    .venv/bin/python eval/compare_agents.py --topics "rag" "codex pricing"
+    GEMINI_CHAT_MODEL=gemini-3.1-flash-lite .venv/bin/python eval/compare_agents.py
 
 Writes raw results to /tmp/agent_compare.json and prints a summary table.
-Needs: gemini_paid_api_key in .env.api_keys; uv for the last30days side.
+Needs gemini_paid_api_key in .env.api_keys.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import math
-import subprocess
-import sys
 import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-L30D = ROOT / "last30days-skill"
+import sys
 sys.path.insert(0, str(ROOT))
 
 from dotenv import load_dotenv  # noqa: E402
@@ -40,9 +39,9 @@ from lib import store  # noqa: E402
 from lib.llm import chat_json  # noqa: E402
 
 K = 8
-RELEVANT = 2  # grade >= 2 counts as relevant for precision
+RELEVANT = 2
 SOURCES_PT = ["reddit", "hn"]
-SEARCH_L30D = "reddit,hackernews"
+BASELINE_FILE = ROOT / "eval" / "l30d_baseline.json"
 DEFAULT_TOPICS = [
     "retrieval augmented generation",
     "thoughts on OpenAI Codex pricing",
@@ -50,14 +49,19 @@ DEFAULT_TOPICS = [
 ]
 
 
-# ---------- run each system, normalize to ranked [{url,text,source}] ----------
+def _load_baseline() -> dict:
+    try:
+        return json.loads(BASELINE_FILE.read_text())
+    except (OSError, ValueError):
+        return {"per_topic": {}, "aggregate": {}}
+
 
 def run_pulsetrace(topic: str) -> tuple[list[dict], float]:
     t0 = time.time()
     run_id = store.new_run_id()
     try:
         run_agent(topic, SOURCES_PT, run_id=run_id)
-    except Exception as e:  # a crash is a real quality signal; record empty
+    except Exception as e:
         print(f"  [pt] run_agent error: {e}", flush=True)
         return [], time.time() - t0
     elapsed = time.time() - t0
@@ -67,7 +71,6 @@ def run_pulsetrace(topic: str) -> tuple[list[dict], float]:
     except Exception:
         return [], elapsed
     by_id = {p["id"]: p for p in posts}
-    # Round-robin across clusters' influence-ranked top_posts for diversity.
     ranked: list[dict] = []
     seen: set[str] = set()
     pools = [c.get("top_posts", []) for c in clusters]
@@ -83,40 +86,7 @@ def run_pulsetrace(topic: str) -> tuple[list[dict], float]:
     return ranked[:K], elapsed
 
 
-def run_last30days(topic: str) -> tuple[list[dict], float]:
-    engine = "skills/last30days/scripts/last30days.py"
-    cmd = ["uv", "run", "python", engine, topic, "--emit=json",
-           "--quick", "--search", SEARCH_L30D]
-    t0 = time.time()
-    try:
-        res = subprocess.run(cmd, cwd=str(L30D), capture_output=True,
-                             text=True, timeout=300)
-    except subprocess.SubprocessError as e:
-        print(f"  [l30d] subprocess error: {e}", flush=True)
-        return [], time.time() - t0
-    elapsed = time.time() - t0
-    try:
-        report = json.loads(res.stdout)
-    except json.JSONDecodeError:
-        print("  [l30d] non-JSON stdout", flush=True)
-        return [], elapsed
-    ranked: list[dict] = []
-    for row in report.get("ranked_candidates", [])[:K]:
-        srcs = row.get("sources") or []
-        if not srcs and isinstance(row.get("source"), str):
-            srcs = [row["source"]]
-        ranked.append({
-            "url": str(row.get("url") or ""),
-            "text": str(row.get("title") or row.get("text") or ""),
-            "source": ", ".join(srcs) if srcs else "",
-        })
-    return ranked, elapsed
-
-
-# ---------- pooled Gemini judge ----------
-
 def judge_pool(topic: str, items: list[dict]) -> dict[str, int]:
-    """Grade each unique item 0-3 for relevance to topic. Keyed by url|text."""
     if not items:
         return {}
     listing = "\n".join(
@@ -128,9 +98,8 @@ def judge_pool(topic: str, items: list[dict]) -> dict[str, int]:
         "1=tangential, 2=relevant, 3=highly relevant/on-topic. "
         'Output JSON: {"grades": {"0": 2, "1": 0, ...}} for every index.'
     )
-    user = f"Topic: {topic}\n\nResults:\n{listing}"
     try:
-        out = chat_json(system, user, max_tokens=600, stage="judge")
+        out = chat_json(system, f"Topic: {topic}\n\nResults:\n{listing}", max_tokens=600, stage="judge")
         raw = out.get("grades", {})
     except Exception as e:
         print(f"  [judge] error: {e}", flush=True)
@@ -149,18 +118,14 @@ def _key(it: dict) -> str:
     return it.get("url") or it.get("text", "")[:80]
 
 
-# ---------- metrics ----------
-
-def precision_at_k(ranked: list[dict], grades: dict[str, int], k: int = 5) -> float:
+def precision_at_k(ranked, grades, k=5) -> float:
     top = ranked[:k]
     if not top:
         return 0.0
-    hits = sum(1 for it in top if grades.get(_key(it), 0) >= RELEVANT)
-    return hits / len(top)
+    return sum(1 for it in top if grades.get(_key(it), 0) >= RELEVANT) / len(top)
 
 
-def ndcg_at_k(ranked: list[dict], grades: dict[str, int], pool_grades: list[int],
-              k: int = 5) -> float:
+def ndcg_at_k(ranked, grades, pool_grades, k=5) -> float:
     top = ranked[:k]
     if not top:
         return 0.0
@@ -171,13 +136,13 @@ def ndcg_at_k(ranked: list[dict], grades: dict[str, int], pool_grades: list[int]
     return dcg / idcg if idcg else 0.0
 
 
-def mean_grade(ranked: list[dict], grades: dict[str, int]) -> float:
+def mean_grade(ranked, grades) -> float:
     if not ranked:
         return 0.0
     return sum(grades.get(_key(it), 0) for it in ranked) / len(ranked)
 
 
-def n_sources(ranked: list[dict]) -> int:
+def n_sources(ranked) -> int:
     s: set[str] = set()
     for it in ranked:
         for part in it["source"].split(","):
@@ -186,48 +151,8 @@ def n_sources(ranked: list[dict]) -> int:
     return len(s)
 
 
-def jaccard_urls(a: list[dict], b: list[dict]) -> float:
-    ua = {it["url"] for it in a if it["url"]}
-    ub = {it["url"] for it in b if it["url"]}
-    if not (ua or ub):
-        return 0.0
-    return len(ua & ub) / len(ua | ub)
-
-
-# ---------- driver ----------
-
-def evaluate(topics: list[str]) -> dict:
-    per_topic = []
-    for topic in topics:
-        print(f"\n=== TOPIC: {topic} ===", flush=True)
-        print("  running pulsetrace...", flush=True)
-        pt_ranked, pt_time = run_pulsetrace(topic)
-        print(f"  pulsetrace: {len(pt_ranked)} items, {pt_time:.1f}s", flush=True)
-        print("  running last30days...", flush=True)
-        l3_ranked, l3_time = run_last30days(topic)
-        print(f"  last30days: {len(l3_ranked)} items, {l3_time:.1f}s", flush=True)
-
-        # pooled judge over union (dedupe by key)
-        pool: list[dict] = []
-        seen: set[str] = set()
-        for it in pt_ranked + l3_ranked:
-            kk = _key(it)
-            if kk and kk not in seen:
-                seen.add(kk)
-                pool.append(it)
-        print(f"  judging pool of {len(pool)}...", flush=True)
-        grades = judge_pool(topic, pool)
-        pool_grades = list(grades.values())
-
-        row = {
-            "topic": topic,
-            "pulsetrace": _metrics(pt_ranked, grades, pool_grades, pt_time),
-            "last30days": _metrics(l3_ranked, grades, pool_grades, l3_time),
-            "url_jaccard": round(jaccard_urls(pt_ranked, l3_ranked), 3),
-        }
-        per_topic.append(row)
-        _print_topic(row)
-    return {"per_topic": per_topic, "aggregate": _aggregate(per_topic)}
+METRIC_KEYS = ("n_results", "n_sources", "latency_s", "mean_grade",
+               "precision_at_5", "ndcg_at_5")
 
 
 def _metrics(ranked, grades, pool_grades, elapsed) -> dict:
@@ -241,23 +166,35 @@ def _metrics(ranked, grades, pool_grades, elapsed) -> dict:
     }
 
 
-def _aggregate(rows: list[dict]) -> dict:
-    out = {}
-    for sys_name in ("pulsetrace", "last30days"):
-        keys_ = ("n_results", "n_sources", "latency_s", "mean_grade",
-                 "precision_at_5", "ndcg_at_5")
-        agg = {k: round(sum(r[sys_name][k] for r in rows) / len(rows), 3)
-               for k in keys_} if rows else {}
-        out[sys_name] = agg
-    return out
+def evaluate(topics: list[str], baseline: dict) -> dict:
+    per_topic = []
+    for topic in topics:
+        print(f"\n=== TOPIC: {topic} ===", flush=True)
+        pt_ranked, pt_time = run_pulsetrace(topic)
+        print(f"  pulsetrace: {len(pt_ranked)} items, {pt_time:.1f}s", flush=True)
+        grades = judge_pool(topic, pt_ranked)
+        pool_grades = list(grades.values())
+        row = {
+            "topic": topic,
+            "pulsetrace": _metrics(pt_ranked, grades, pool_grades, pt_time),
+            "last30days_baseline": baseline.get("per_topic", {}).get(topic),
+        }
+        per_topic.append(row)
+        _print_topic(row)
+    agg_pt = {k: round(sum(r["pulsetrace"][k] for r in per_topic) / len(per_topic), 3)
+              for k in METRIC_KEYS} if per_topic else {}
+    return {
+        "per_topic": per_topic,
+        "aggregate": {"pulsetrace": agg_pt,
+                      "last30days_baseline": baseline.get("aggregate", {})},
+    }
 
 
 def _print_topic(row: dict) -> None:
-    print(f"  {'metric':<14}{'pulsetrace':>12}{'last30days':>12}")
-    for k in ("n_results", "n_sources", "latency_s", "mean_grade",
-              "precision_at_5", "ndcg_at_5"):
-        print(f"  {k:<14}{row['pulsetrace'][k]:>12}{row['last30days'][k]:>12}")
-    print(f"  url_jaccard: {row['url_jaccard']}")
+    base = row.get("last30days_baseline") or {}
+    print(f"  {'metric':<14}{'pulsetrace':>12}{'l30d(base)':>12}")
+    for k in METRIC_KEYS:
+        print(f"  {k:<14}{row['pulsetrace'][k]:>12}{base.get(k, '-'):>12}")
 
 
 def main() -> None:
@@ -266,15 +203,17 @@ def main() -> None:
     ap.add_argument("--out", default="/tmp/agent_compare.json")
     args = ap.parse_args()
 
-    results = evaluate(args.topics)
+    baseline = _load_baseline()
+    results = evaluate(args.topics, baseline)
     Path(args.out).write_text(json.dumps(results, indent=2))
-    print("\n=== AGGREGATE (mean over topics) ===")
     agg = results["aggregate"]
-    print(f"{'metric':<16}{'pulsetrace':>12}{'last30days':>12}")
-    for k in ("n_results", "n_sources", "latency_s", "mean_grade",
-              "precision_at_5", "ndcg_at_5"):
-        print(f"{k:<16}{agg['pulsetrace'][k]:>12}{agg['last30days'][k]:>12}")
-    print(f"\nRaw results -> {args.out}")
+    base = agg.get("last30days_baseline", {})
+    print("\n=== AGGREGATE (PulseTrace live vs frozen l30d baseline) ===")
+    print(f"{'metric':<16}{'pulsetrace':>12}{'l30d(base)':>12}")
+    for k in METRIC_KEYS:
+        print(f"{k:<16}{agg['pulsetrace'].get(k, '-'):>12}{base.get(k, '-'):>12}")
+    print(f"\nl30d column = frozen baseline ({BASELINE_FILE.name}); not re-run.")
+    print(f"Raw results -> {args.out}")
 
 
 if __name__ == "__main__":
