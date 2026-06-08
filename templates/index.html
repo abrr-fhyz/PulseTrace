@@ -254,6 +254,43 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 .cluster .bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--border); }
 .cluster .bar span { display: block; height: 100%; transition: width 0.5s ease; }
 .pos { background: var(--pos); } .neu { background: var(--neu); } .neg { background: var(--neg); }
+.cluster.clickable { cursor: pointer; }
+.cluster.clickable:hover { box-shadow: 0 8px 24px -6px rgba(0,0,0,0.12); }
+.cluster .hint { font-size: 11px; color: var(--accent2); font-weight: 500; opacity: 0; margin-top: 10px; transition: opacity 0.2s ease; }
+.cluster.clickable:hover .hint { opacity: 1; }
+.cluster .hd .pill { text-decoration: underline; text-underline-offset: 2px; }
+
+/* --- Cluster drawer --- */
+.drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.28); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 120; }
+.drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+.drawer { position: fixed; top: 0; right: 0; height: 100%; width: 420px; max-width: 100vw; background: var(--panel); border-left: 1px solid var(--border); box-shadow: -8px 0 40px rgba(0,0,0,0.18); transform: translateX(100%); transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 121; display: flex; flex-direction: column; }
+.drawer.open { transform: translateX(0); }
+.drawer-head { padding: 24px 24px 16px; border-bottom: 1px solid var(--border); position: relative; }
+.drawer-head .strip { position: absolute; top: 0; left: 0; right: 0; height: 5px; }
+.drawer-head h3 { margin: 8px 0 6px; font-size: 19px; font-weight: 700; color: var(--text); }
+.drawer-head .why { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 8px 0 12px; }
+.drawer-head .count { font-size: 12px; color: var(--muted); }
+.drawer-close { position: absolute; top: 16px; right: 16px; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); cursor: pointer; font-size: 16px; line-height: 1; padding: 0; }
+.drawer-moodbar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--border); margin: 12px 0 4px; }
+.drawer-moodbar span { display: block; height: 100%; }
+.drawer-mood-lbl { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.drawer-search { margin: 14px 24px 0; }
+.drawer-search input { width: 100%; box-sizing: border-box; }
+.drawer-body { flex: 1; overflow-y: auto; padding: 16px 24px 32px; display: flex; flex-direction: column; gap: 12px; }
+.post-card { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--panel2); transition: border-color 0.2s, box-shadow 0.2s; }
+.post-card:hover { border-color: var(--accent2); box-shadow: var(--card-shadow); }
+.post-card .meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.post-card .src { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+.post-card .txt { font-size: 13px; line-height: 1.55; color: var(--text); }
+.post-card .foot { display: flex; align-items: center; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.post-card .foot a { color: var(--accent2); font-weight: 600; text-decoration: none; }
+.post-card .foot a:hover { text-decoration: underline; }
+.post-card .stag { padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.post-card .stag.pos { background: rgba(16,185,129,0.15); color: var(--pos); }
+.post-card .stag.neu { background: rgba(148,163,184,0.18); color: var(--neu); }
+.post-card .stag.neg { background: rgba(248,113,113,0.15); color: var(--neg); }
+.drawer-empty { text-align: center; color: var(--muted); font-size: 14px; padding: 48px 16px; }
+@media (max-width: 560px) { .drawer { width: 100vw; } }
 
 
 /* --- QA & Evidence --- */
@@ -620,6 +657,21 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
     <div id="shots-body"></div>
   </div>
 </section>
+
+<div id="cluster-backdrop" class="drawer-backdrop"></div>
+<aside id="cluster-drawer" class="drawer" aria-hidden="true" aria-label="Cluster posts">
+  <div class="drawer-head">
+    <div class="strip" id="drawer-strip"></div>
+    <button class="drawer-close" id="drawer-close" aria-label="Close">×</button>
+    <h3 id="drawer-title">Topic</h3>
+    <div class="why" id="drawer-why"></div>
+    <div class="drawer-moodbar" id="drawer-mood"></div>
+    <div class="drawer-mood-lbl" id="drawer-mood-lbl"></div>
+    <div class="count" id="drawer-count"></div>
+  </div>
+  <div class="drawer-search"><input id="drawer-search" placeholder="Search these posts..." /></div>
+  <div class="drawer-body" id="drawer-body"></div>
+</aside>
 
 <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
   <span class="close" onclick="closeLightbox(event)">✕</span>
@@ -1288,7 +1340,9 @@ function renderClusters(cs) {
     const pos = Math.round(s.pos * 100);
     const neg = Math.round(s.neg * 100);
     const neu = Math.max(0, 100 - pos - neg);
-    const card = elem("div", { class: "cluster" },
+    const card = elem("div", { class: "cluster clickable", "data-cid": String(c.id),
+        role: "button", tabindex: "0",
+        "aria-label": "Explore posts in " + String(c.label || "this group") },
       elem("div", { class: "hd" },
         elem("b", null, String(c.label || "Unlabeled")),
         elem("span", { class: "pill" }, c.n + " posts"),
@@ -1298,10 +1352,132 @@ function renderClusters(cs) {
         elem("span", { class: "neu", style: "width:" + neu + "%" }),
         elem("span", { class: "neg", style: "width:" + neg + "%" }),
       ),
+      elem("div", { class: "hint" }, "Click to read the posts behind this →"),
     );
+    card.addEventListener("click", () => openClusterDrawer(c.id));
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openClusterDrawer(c.id); }
+    });
     el.appendChild(card);
   }
 }
+
+const SOURCE_META = {
+  reddit:     { icon: "🟠", label: "Reddit" },
+  hn:         { icon: "🟧", label: "Hacker News" },
+  hackernews: { icon: "🟧", label: "Hacker News" },
+  facebook:   { icon: "🔵", label: "Facebook" },
+  x:          { icon: "⚫", label: "X" },
+  twitter:    { icon: "⚫", label: "Twitter / X" },
+  instagram:  { icon: "🟣", label: "Instagram" },
+  youtube:    { icon: "🔴", label: "YouTube" },
+  polymarket: { icon: "🟦", label: "Polymarket" },
+  github:     { icon: "⬛", label: "GitHub" },
+  bluesky:    { icon: "🦋", label: "Bluesky" },
+};
+function sourceMeta(s) {
+  return SOURCE_META[String(s || "").toLowerCase()] || { icon: "💬", label: s || "Web" };
+}
+
+function moodLabel(sent) {
+  const s = sent || {};
+  const pos = Number(s.pos) || 0, neg = Number(s.neg) || 0;
+  if (pos > neg + 0.12) return "Most people feel good about this";
+  if (neg > pos + 0.12) return "More people are unhappy than happy";
+  return "People are pretty split on this";
+}
+
+function relTime(ts) {
+  if (!ts) return "";
+  const d = (Date.now() / 1000) - Number(ts);
+  if (d < 3600) return Math.max(1, Math.round(d / 60)) + "m ago";
+  if (d < 86400) return Math.round(d / 3600) + "h ago";
+  return Math.round(d / 86400) + "d ago";
+}
+
+let _drawerPosts = [];
+function openClusterDrawer(cid) {
+  const drawer = $("#cluster-drawer"), backdrop = $("#cluster-backdrop");
+  drawer.classList.add("open"); backdrop.classList.add("open");
+  drawer.setAttribute("aria-hidden", "false");
+  $("#drawer-title").textContent = "Loading…";
+  $("#drawer-why").textContent = "";
+  $("#drawer-count").textContent = "";
+  clearNode($("#drawer-body"));
+  $("#drawer-search").value = "";
+  if (!runId) return;
+  fetch("/run/" + encodeURIComponent(runId) + "/cluster/" + encodeURIComponent(cid))
+    .then(r => r.json())
+    .then(fillDrawer)
+    .catch(() => { $("#drawer-title").textContent = "Couldn't load this group"; });
+}
+
+function fillDrawer(d) {
+  if (!d || d.error) { $("#drawer-title").textContent = "Couldn't load this group"; return; }
+  const s = d.sentiment || { pos: 0, neu: 1, neg: 0 };
+  const pos = Math.round((s.pos || 0) * 100), neg = Math.round((s.neg || 0) * 100);
+  const neu = Math.max(0, 100 - pos - neg);
+  const color = pos > neg ? "var(--pos)" : neg > pos ? "var(--neg)" : "var(--neu)";
+  $("#drawer-strip").style.background = color;
+  $("#drawer-title").textContent = d.label || "Topic";
+  $("#drawer-why").textContent = d.desc
+    ? "Why these are grouped: " + d.desc
+    : "These posts were grouped together because they talk about the same thing in similar ways.";
+  const mood = $("#drawer-mood"); clearNode(mood);
+  mood.appendChild(elem("span", { class: "pos", style: "width:" + pos + "%" }));
+  mood.appendChild(elem("span", { class: "neu", style: "width:" + neu + "%" }));
+  mood.appendChild(elem("span", { class: "neg", style: "width:" + neg + "%" }));
+  $("#drawer-mood-lbl").textContent = moodLabel(s) + " · 😊 " + pos + "%  😐 " + neu + "%  😞 " + neg + "%";
+  $("#drawer-count").textContent = "Found in " + (d.n || 0) + " post" + (d.n === 1 ? "" : "s");
+  _drawerPosts = d.posts || [];
+  paintDrawerPosts("");
+}
+
+function paintDrawerPosts(filter) {
+  const body = $("#drawer-body"); clearNode(body);
+  const q = (filter || "").toLowerCase();
+  const list = q
+    ? _drawerPosts.filter(p => (p.text || "").toLowerCase().includes(q))
+    : _drawerPosts;
+  if (!list.length) {
+    body.appendChild(elem("div", { class: "drawer-empty" },
+      _drawerPosts.length ? "No posts match your search."
+                          : "We're still gathering posts for this group. Check back soon."));
+    return;
+  }
+  for (const p of list) {
+    const m = sourceMeta(p.source);
+    const meta = elem("div", { class: "meta" },
+      elem("span", { class: "src" }, m.icon + " " + m.label),
+      p.author ? elem("span", null, "· " + String(p.author)) : null,
+      p.ts ? elem("span", null, "· " + relTime(p.ts)) : null,
+    );
+    const foot = elem("div", { class: "foot" });
+    if (p.reactions) foot.appendChild(elem("span", null, "👍 " + p.reactions + " liked this"));
+    if (p.comments) foot.appendChild(elem("span", null, "💬 " + p.comments));
+    if (p.url) {
+      const a = elem("a", { href: p.url, target: "_blank", rel: "noopener" }, "See original →");
+      foot.appendChild(a);
+    }
+    body.appendChild(elem("div", { class: "post-card" },
+      meta,
+      elem("div", { class: "txt" }, String(p.text || "")),
+      foot,
+    ));
+  }
+}
+
+function closeClusterDrawer() {
+  $("#cluster-drawer").classList.remove("open");
+  $("#cluster-backdrop").classList.remove("open");
+  $("#cluster-drawer").setAttribute("aria-hidden", "true");
+}
+$("#drawer-close").addEventListener("click", closeClusterDrawer);
+$("#cluster-backdrop").addEventListener("click", closeClusterDrawer);
+$("#drawer-search").addEventListener("input", (e) => paintDrawerPosts(e.target.value));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("#cluster-drawer").classList.contains("open")) closeClusterDrawer();
+});
 
 function renderSentChart(cs) {
   const labels = cs.map(c => String(c.label || "?").slice(0, 18));

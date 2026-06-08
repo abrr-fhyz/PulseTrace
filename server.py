@@ -469,6 +469,43 @@ def graph():
     return jsonify({"nodes": nodes, "edges": edges})
 
 
+@app.route("/run/<run_id>/cluster/<cid>")
+def cluster_posts(run_id: str, cid: str):
+    clusters = read_json(run_id, "clusters.json") or []
+    posts = read_json(run_id, "posts.json") or []
+    by_id = {str(p.get("id")): p for p in posts}
+    match = next((c for c in clusters if str(c.get("id")) == str(cid)), None)
+    if match is None:
+        return jsonify({"error": "cluster not found"}), 404
+    top = {str(i) for i in match.get("top_posts", [])}
+    member_ids = [str(i) for i in match.get("members", [])]
+    resolved = []
+    for pid in member_ids:
+        p = by_id.get(pid)
+        if not p:
+            continue
+        resolved.append({
+            "id": p.get("id"),
+            "source": p.get("source", ""),
+            "text": p.get("text", ""),
+            "author": p.get("author"),
+            "url": p.get("url"),
+            "ts": p.get("ts", 0),
+            "reactions": p.get("reactions", 0),
+            "comments": p.get("comments", 0),
+            "top": pid in top,
+        })
+    resolved.sort(key=lambda x: (not x["top"], -(x["reactions"] or 0)))
+    return jsonify({
+        "id": match.get("id"),
+        "label": match.get("label", "Unlabeled"),
+        "desc": match.get("desc", ""),
+        "sentiment": match.get("sentiment", {}),
+        "n": len(resolved),
+        "posts": resolved,
+    })
+
+
 @app.route("/ask", methods=["POST"])
 def ask():
     data = request.get_json(force=True, silent=True) or {}
