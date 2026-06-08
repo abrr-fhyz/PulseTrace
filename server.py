@@ -506,6 +506,75 @@ def cluster_posts(run_id: str, cid: str):
     })
 
 
+@app.route("/run/<run_id>/voices")
+def voices(run_id: str):
+    clusters = read_json(run_id, "clusters.json") or []
+    posts = read_json(run_id, "posts.json") or []
+    by_id = {str(p.get("id")): p for p in posts}
+
+    agg = {"pos": 0.0, "neu": 0.0, "neg": 0.0}
+    total = 0
+    voices_pool = []
+    themes = []
+    for c in clusters:
+        members = [str(i) for i in c.get("members", [])]
+        n = len(members)
+        if not n:
+            continue
+        total += n
+        s = c.get("sentiment", {}) or {}
+        for k in agg:
+            agg[k] += float(s.get(k, 0)) * n
+        bucket = max(("pos", "neu", "neg"), key=lambda k: float(s.get(k, 0)))
+        label = c.get("label", "this topic")
+        themes.append((n, label))
+        top = [str(i) for i in c.get("top_posts", [])] or members
+        for pid in top[:3]:
+            p = by_id.get(pid)
+            if not p or not (p.get("text") or "").strip():
+                continue
+            voices_pool.append({
+                "text": p.get("text", ""),
+                "source": p.get("source", ""),
+                "url": p.get("url"),
+                "author": p.get("author"),
+                "reactions": p.get("reactions", 0) or 0,
+                "ts": p.get("ts", 0),
+                "bucket": bucket,
+                "cluster": label,
+            })
+    if total:
+        for k in agg:
+            agg[k] = round(agg[k] / total, 3)
+
+    voices_pool.sort(key=lambda v: -(v["reactions"] or 0))
+    seen, carousel = set(), []
+    for v in voices_pool:
+        key = v["text"][:80]
+        if key in seen:
+            continue
+        seen.add(key)
+        carousel.append(v)
+
+    notable, used_buckets = [], {}
+    for v in carousel:
+        b = v["bucket"]
+        if used_buckets.get(b, 0) >= 2:
+            continue
+        used_buckets[b] = used_buckets.get(b, 0) + 1
+        notable.append(v)
+        if len(notable) >= 5:
+            break
+
+    themes.sort(key=lambda t: -t[0])
+    return jsonify({
+        "sentiment": agg,
+        "voices": carousel[:12],
+        "notable": notable,
+        "themes": [t[1] for t in themes[:4]],
+    })
+
+
 @app.route("/ask", methods=["POST"])
 def ask():
     data = request.get_json(force=True, silent=True) or {}
