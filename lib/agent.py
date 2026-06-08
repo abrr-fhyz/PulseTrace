@@ -134,7 +134,7 @@ def _fetch_all(queries: list[tuple[str, str]], limit: int,
                 serial_calls.append((conn, q))
 
     if serial_calls:
-        with ThreadPoolExecutor(max_workers=4) as ex:
+        with ThreadPoolExecutor(max_workers=min(12, len(serial_calls))) as ex:
             futures = [ex.submit(c.fetch, q, limit) for c, q in serial_calls]
             for f in futures:
                 try:
@@ -161,6 +161,8 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
     BUS.publish(run_id, {"type": "seeded", "queries": seeds})
     pending = [(q, s) for q in seeds for s in sources]
     cluster_meta: list[dict] = []
+    final_posts: list[Post] = []
+    final_members: dict[int, list[Post]] = {}
     prev_cents: dict = {}
     fetched: set[tuple[str, str]] = set()
 
@@ -250,34 +252,18 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
             with ThreadPoolExecutor(max_workers=min(8, len(cids))) as ex:
                 metas = dict(zip(cids, ex.map(_label, cids)))
 
-        try:
-            sentiments = cluster_sentiments({
-                cid: (metas[cid].get("label", f"cluster {cid}"),
-                      [m.text for m in members_by_cid[cid]])
-                for cid in cids
-            })
-        except Exception as e:
-            sentiments = {cid: {"pos": 0.0, "neu": 1.0, "neg": 0.0, "error": str(e)}
-                          for cid in cids}
+        # Stance (an LLM call per cluster) is only needed for the final output,
+        # not for loop decisions, so it is deferred to the post-loop finalize
+        # pass alongside the rerank — keeping per-iteration cost down.
+        sentiments: dict[int, dict] = {}
 
-        shortlist = rank_posts(topic, posts, n=RERANK_SHORTLIST)
-        ranked_global = llm_rerank(topic, shortlist, n=len(shortlist))
-        rank_index = {p.id: i for i, p in enumerate(ranked_global)}
-        BUS.publish(run_id, {"type": "reranked", "n": len(ranked_global)})
-
-        def _cluster_tops(members: list[Post]) -> list[Post]:
-            in_short = sorted((m for m in members if m.id in rank_index),
-                              key=lambda m: rank_index[m.id])
-            if len(in_short) >= 5:
-                return in_short[:5]
-            rest = rank_posts(topic, [m for m in members if m.id not in rank_index], n=5)
-            return (in_short + rest)[:5]
-
+        # Cheap relevance ranking inside the loop keeps the live UI responsive;
+        # the expensive LLM rerank runs once after the loop (see _finalize_rerank).
         cluster_meta = []
         for cid in cids:
             members = members_by_cid[cid]
             meta = metas[cid]
-            tops = _cluster_tops(members)
+            tops = rank_posts(topic, members, n=5)
             cluster_meta.append({
                 "id": int(cid),
                 "label": meta.get("label", f"cluster {cid}"),
@@ -287,10 +273,11 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
                 "sentiment": sentiments.get(cid, {"pos": 0.0, "neu": 1.0, "neg": 0.0}),
                 "top_posts": [m.id for m in tops],
             })
+        final_posts = posts
+        final_members = members_by_cid
 
         write_json(run_id, "posts.json", [p.to_dict() for p in posts])
         write_json(run_id, "clusters.json", cluster_meta)
-        write_json(run_id, "ranked.json", [p.to_dict() for p in ranked_global[:15]])
         BUS.publish(run_id, {
             "type": "labeled",
             "clusters": [
@@ -325,6 +312,35 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
             stop_reason = "no_queries"
             break
         pending = [(q, s) for q in next_q for s in sources]
+
+    # Single LLM rerank pass on the final corpus — kept out of the loop so the
+    # per-iteration cost stays low. Refines top_posts and emits ranked.json.
+    if cluster_meta:
+        shortlist = rank_posts(topic, final_posts, n=RERANK_SHORTLIST)
+        ranked_global = llm_rerank(topic, shortlist, n=len(shortlist))
+        rank_index = {p.id: i for i, p in enumerate(ranked_global)}
+        try:
+            sentiments = cluster_sentiments({
+                c["id"]: (c["label"], [m.text for m in final_members.get(c["id"], [])])
+                for c in cluster_meta
+            })
+        except Exception as e:
+            sentiments = {c["id"]: {"pos": 0.0, "neu": 1.0, "neg": 0.0, "error": str(e)}
+                          for c in cluster_meta}
+        for c in cluster_meta:
+            members = final_members.get(c["id"], [])
+            in_short = sorted((m for m in members if m.id in rank_index),
+                              key=lambda m: rank_index[m.id])
+            if len(in_short) >= 5:
+                tops = in_short[:5]
+            else:
+                rest = rank_posts(topic, [m for m in members if m.id not in rank_index], n=5)
+                tops = (in_short + rest)[:5]
+            c["top_posts"] = [m.id for m in tops]
+            c["sentiment"] = sentiments.get(c["id"], c["sentiment"])
+        write_json(run_id, "clusters.json", cluster_meta)
+        write_json(run_id, "ranked.json", [p.to_dict() for p in ranked_global[:15]])
+        BUS.publish(run_id, {"type": "reranked", "n": len(ranked_global)})
 
     write_json(run_id, "run.json", {
         "id": run_id,
