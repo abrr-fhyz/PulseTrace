@@ -1,0 +1,24 @@
+{
+  "_comment": "Frozen last30days search-quality baseline. Captured 2026-06-08 from last30days v3.3.2 on gemini-3.1-flash-lite, sources reddit+hackernews, same pooled Gemini judge as PulseTrace. The upstream engine is NOT vendored; re-capture by cloning github.com/mvanhorn/last30days-skill and running the pre-refactor harness. See .claude/memory/last30days-benchmark.md.",
+  "model": "gemini-3.1-flash-lite",
+  "captured": "2026-06-08",
+  "source": "last30days v3.3.2",
+  "per_topic": {
+    "retrieval augmented generation": {
+      "n_results": 7, "n_sources": 2, "latency_s": 13.9,
+      "mean_grade": 3.0, "precision_at_5": 1.0, "ndcg_at_5": 1.0
+    },
+    "thoughts on OpenAI Codex pricing": {
+      "n_results": 8, "n_sources": 2, "latency_s": 17.2,
+      "mean_grade": 1.125, "precision_at_5": 0.4, "ndcg_at_5": 0.561
+    },
+    "best budget noise cancelling headphones 2026": {
+      "n_results": 0, "n_sources": 0, "latency_s": 34.9,
+      "mean_grade": 0.0, "precision_at_5": 0.0, "ndcg_at_5": 0.0
+    }
+  },
+  "aggregate": {
+    "n_results": 5.0, "n_sources": 1.333, "latency_s": 22.0,
+    "mean_grade": 1.375, "precision_at_5": 0.467, "ndcg_at_5": 0.52
+  }
+}
