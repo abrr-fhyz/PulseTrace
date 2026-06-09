@@ -10,14 +10,8 @@
   <script src="https://unpkg.com/cose-base/cose-base.js"></script>
   <script src="https://unpkg.com/cytoscape-fcose/cytoscape-fcose.js"></script>
   <script>
-    (function () {
-      try {
-        var t = localStorage.getItem("pulsetrace_theme");
-        document.documentElement.dataset.theme = (t === "light" || t === "dark") ? t : "dark";
-      } catch (e) {
-        document.documentElement.dataset.theme = "dark";
-      }
-    })();
+    // PulseTrace is a dark-only experience by design (premium, high-contrast).
+    document.documentElement.dataset.theme = "dark";
   </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -42,21 +36,22 @@
 }
 
 :root[data-theme="dark"] {
-  /* Sleek Modern Dark Theme */
-  --bg: #09090b;
-  --panel: #18181b;
-  --panel2: #27272a;
-  --border: #3f3f46;
+  /* Premium dark theme — dark surfaces dominate, purple/lavender/bronze are accents only */
+  --bg: #0a0a0f;
+  --panel: #18181f;
+  --panel2: #232330;
+  --border: #34343f;
   --text: #fafafa;
   --muted: #a1a1aa;
-  --accent: #34d399;
-  --accent2: #3b82f6;
-  --accent3: #a78bfa;
-  --neg: #f87171;
-  --pos: #34d399;
-  --neu: #71717a;
-  --header-bg: rgba(9, 9, 11, 0.85);
-  --card-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.15);
+  --accent: #34d399;    /* Emerald — operational/status: done, online, healthy, success */
+  --accent2: #a78bfa;   /* Lavender — primary brand accent (borders, focus, hover, links) */
+  --accent3: #c4b5fd;   /* Light lavender — brand glows/gradients */
+  --accent4: #c9974e;   /* Bronze — tertiary accent (dividers, badges) */
+  --neg: #f87171;       /* Red — failure / negative sentiment */
+  --pos: #34d399;       /* Emerald — positive sentiment */
+  --neu: #8b8b96;       /* Gray — neutral sentiment */
+  --header-bg: rgba(10, 10, 15, 0.85);
+  --card-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.25);
 }
 
 * { box-sizing: border-box; }
@@ -72,6 +67,9 @@ html, body {
 h1, h2, h3 { font-weight: 600; letter-spacing: -0.02em; margin: 0; }
 h1 { font-size: 24px; }
 h2 { font-size: 13px; margin: 0 0 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.panel > h2 { display: flex; align-items: center; gap: 9px; }
+.panel > h2::before { content: ""; width: 3px; height: 13px; border-radius: 2px;
+  background: linear-gradient(var(--accent2), var(--accent4)); flex: 0 0 auto; }
 
 button, input, select, textarea {
   background: var(--panel); color: var(--text); border: 1px solid var(--border);
@@ -80,7 +78,7 @@ button, input, select, textarea {
   box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 
-input:focus, select:focus, textarea:focus { border-color: var(--accent2); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+input:focus, select:focus, textarea:focus { border-color: var(--accent2); box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15); }
 
 button { background: var(--text); color: var(--bg); font-weight: 500; cursor: pointer; border: none; }
 button:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
@@ -100,7 +98,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 
 /* --- Landing Screen --- */
 .landing-wrap { position: relative; min-height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 64px 24px; }
-.landing-wrap::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at center top, rgba(59, 130, 246, 0.04) 0%, transparent 60%); pointer-events: none; }
+.landing-wrap::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at center top, rgba(167, 139, 250, 0.04) 0%, transparent 60%); pointer-events: none; }
 .grid-bg { position: absolute; inset: 0; background-image:
     linear-gradient(var(--border) 1px, transparent 1px),
     linear-gradient(90deg, var(--border) 1px, transparent 1px);
@@ -130,7 +128,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow
 @media (max-width: 768px) { .bento-grid { grid-template-columns: 1fr; } }
 .bento-card { padding: 32px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); position: relative; overflow: hidden; transition: border-color 0.3s ease, box-shadow 0.3s ease; box-shadow: var(--card-shadow); }
 .bento-card:hover { border-color: var(--accent2); box-shadow: 0 12px 32px rgba(0,0,0,0.05); }
-.bento-card .ic { font-size: 20px; margin-bottom: 24px; color: var(--accent2); background: rgba(59, 130, 246, 0.1); width: 48px; height: 48px; display: grid; place-items: center; border-radius: 8px; }
+.bento-card .ic { font-size: 20px; margin-bottom: 24px; color: var(--accent2); background: rgba(167, 139, 250, 0.1); width: 48px; height: 48px; display: grid; place-items: center; border-radius: 8px; }
 .bento-card h3 { font-size: 18px; margin-bottom: 12px; color: var(--text); font-weight: 500; letter-spacing: -0.02em; }
 .bento-card p { font-size: 14px; color: var(--muted); margin: 0; line-height: 1.6; }
 
@@ -164,6 +162,8 @@ header .nav-back { margin-left: auto; cursor: pointer; color: var(--muted); font
 header .nav-back:hover { color: var(--text); text-decoration: none; }
 
 main { display: grid; grid-template-columns: 400px 1fr; gap: 24px; padding: 24px 32px; max-width: 1700px; margin: 0 auto; min-height: calc(100vh - 65px); align-items: start; }
+.col { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.col > .grid2 { margin-bottom: 0; }
 .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 24px; box-shadow: var(--card-shadow); transition: box-shadow 0.3s ease; }
 .panel:hover { box-shadow: 0 8px 16px -4px rgba(0,0,0,0.05); }
 .row { display: flex; gap: 12px; align-items: center; }
@@ -178,7 +178,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 /* --- Pipeline (Modernized) --- */
 .pipeline { display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--panel2); border: 1px solid var(--border); border-radius: 16px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
 .pl-stage { display: grid; grid-template-columns: 36px 1fr auto; gap: 12px; align-items: center; padding: 14px; border-radius: 12px; border: 1px solid transparent; background: var(--panel); box-shadow: 0 1px 3px rgba(0,0,0,0.02); transition: all .4s cubic-bezier(0.16, 1, 0.3, 1); position: relative; overflow: hidden; }
-.pl-stage.active { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2), 0 4px 12px rgba(59, 130, 246, 0.1); }
+.pl-stage.active { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2), 0 4px 12px rgba(167, 139, 250, 0.1); }
 .pl-stage.done { border-color: var(--pos); }
 .pl-stage.err  { border-color: var(--neg); }
 
@@ -187,8 +187,8 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 .pl-stage.done .pl-ic   { background: var(--pos); color: #fff; border-color: var(--pos); }
 .pl-stage.err  .pl-ic   { background: var(--neg); color: #fff; border-color: var(--neg); }
 @keyframes pl-pulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-  50%     { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+  0%,100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.4); }
+  50%     { box-shadow: 0 0 0 8px rgba(167, 139, 250, 0); }
 }
 
 .pl-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; z-index: 2; }
@@ -343,7 +343,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
   border-radius: 10px; padding: 4px 6px; margin: 0 -6px; transition: background 0.2s; }
 .pl2-step:hover { background: color-mix(in srgb, var(--accent2) 8%, transparent); }
 .pl2-seg { height: 24px; width: 2px; margin-left: 14px; background: var(--border); transition: background 0.4s; }
-.pl2-seg.done { background: var(--accent2); }
+.pl2-seg.done { background: var(--accent); }
 .pl2-dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
   font-size: 13px; font-weight: 700; background: var(--border); color: var(--muted); opacity: 0.6;
   transition: all 0.4s ease; flex: 0 0 auto; }
@@ -351,7 +351,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
   border: 2px solid var(--accent2); opacity: 1;
   box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent2) 50%, transparent);
   animation: pl2-pulse 1.8s ease-out infinite; }
-.pl2-step.done .pl2-dot { background: var(--accent2); color: #fff; opacity: 1; }
+.pl2-step.done .pl2-dot { background: var(--accent); color: #06281d; opacity: 1; }
 @keyframes pl2-pulse {
   0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent2) 50%, transparent); }
   100% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--accent2) 0%, transparent); } }
@@ -444,6 +444,12 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 @keyframes pl2-fall { to { transform: translateY(60vh) rotate(360deg); opacity: 0; } }
 .pl2-err-actions { display: flex; gap: 12px; margin-top: 20px; }
 .pl2-err-actions button { font-size: 14px; }
+.pl2-recover-list { list-style: none; padding: 0; margin: 20px 0 4px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.pl2-recover-list li { color: var(--pos); font-weight: 500; }
+.pl2-recover-list li.muted { color: var(--muted); font-weight: 400; }
+.pl2-recover-btn { font-size: 16px; font-weight: 600; padding: 14px 28px; border-radius: 12px;
+  background: var(--accent); color: #06281d; box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent); }
+.pl2-recover-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
 @media (max-width: 760px) { #pl2.open { grid-template-columns: 1fr; }
   .pl2-rail { flex-direction: row; overflow-x: auto; padding: 16px; border-right: none;
     border-bottom: 1px solid var(--border); }
@@ -457,7 +463,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 /* --- QA & Evidence --- */
 .answer { font-size: 15px; line-height: 1.6; color: var(--text); }
 .cite { display: inline-flex; align-items: center; justify-content: center; background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 600; color: var(--accent2); margin: 0 4px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
-.cite:hover { border-color: var(--accent2); background: rgba(59, 130, 246, 0.05); transform: translateY(-1px); }
+.cite:hover { border-color: var(--accent2); background: rgba(167, 139, 250, 0.05); transform: translateY(-1px); }
 .cite.unresolved { color: var(--muted); cursor: default; }
 .cite.unresolved:hover { border-color: var(--border); background: var(--panel2); transform: none; }
 
@@ -642,10 +648,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
     <a id="briefing-link" class="pill" href="#" data-kind="pdf"
        onclick="downloadBriefing(event)"
        style="display:none; margin-left: 8px;">📄 Download PDF</a>
-    <button id="theme-toggle" class="pill secondary" type="button"
-            onclick="toggleTheme()" title="Toggle light/dark theme"
-            aria-label="Toggle theme" style="cursor:pointer;margin-left:auto">🌙</button>
-    <span class="nav-back" onclick="goto('landing')" style="margin-left: 12px;">← home</span>
+    <span class="nav-back" onclick="goto('landing')" style="margin-left: auto;">← home</span>
     <span class="nav-back" onclick="goto('byok')" style="margin-left:12px">⚙ BYOK</span>
     <span class="nav-back" onclick="window.open('/docs','_blank')" style="margin-left:12px">📖 Docs</span>
     <span id="nav-shots" class="nav-back" onclick="goto('shots')"
@@ -653,7 +656,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
   </header>
 
   <main>
-    <section>
+    <section class="col">
       <div class="panel">
         <h2>Run Agent</h2>
         <div style="display:flex;flex-direction:column;gap:16px">
@@ -742,7 +745,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
       </div>
     </section>
 
-    <section style="display:flex;flex-direction:column;gap:0;min-width:0">
+    <section class="col">
       <div class="panel">
         <h2>Topic graph</h2>
         <div class="graph-wrap">
@@ -762,17 +765,17 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
       </div>
 
       <div class="grid2">
-        <div class="panel" style="margin-bottom: 0;">
+        <div class="panel">
           <h2>Sentiment by cluster</h2>
           <canvas id="sentChart"></canvas>
         </div>
-        <div class="panel" style="margin-bottom: 0;">
+        <div class="panel">
           <h2>Clusters</h2>
           <div id="clusters" style="max-height:300px;overflow:auto; padding-right: 8px;"></div>
         </div>
       </div>
 
-      <div id="voices" class="panel" style="display:none; margin-top: 24px;">
+      <div id="voices" class="panel" style="display:none;">
         <h2>What People Are Saying</h2>
         <p class="ev-intro" id="voices-why"></p>
         <div class="mood-meter">
@@ -789,7 +792,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
         <div id="voices-notable"></div>
       </div>
 
-      <div id="evidence" class="panel" style="display:none; margin-top: 24px;">
+      <div id="evidence" class="panel" style="display:none;">
         <div class="ev-tabs" id="ev-tabs">
           <button class="ev-tab active" data-tab="summary">The Short Version</button>
           <button class="ev-tab" data-tab="overview">What's This Actually About?</button>
@@ -817,7 +820,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
         <div class="ev-panel" data-panel="assessment" hidden></div>
       </div>
 
-      <div class="panel" style="margin-top: 24px;">
+      <div class="panel">
         <h2>Ask about what people said</h2>
         <div class="row">
           <input id="q" placeholder="Ask anything about the posts we found..." style="flex:1" />
@@ -1338,6 +1341,15 @@ function handle(ev) {
       plActivate("label");
       plMeta("label", (ev.clusters || []).length + " clusters named");
       break;
+    case "reranked":
+      // Stance is computed after the loop, so the `labeled` event always
+      // carries neutral placeholders. Re-render the summary here, once the
+      // real per-cluster sentiment exists, so it matches the drill-down view.
+      if (ev.clusters && ev.clusters.length) {
+        renderClusters(ev.clusters);
+        renderSentChart(ev.clusters);
+      }
+      break;
     case "briefing_ready": {
       const link = $("#briefing-link");
       const href = ev.pdf || ev.html;
@@ -1358,8 +1370,8 @@ function handle(ev) {
       break;
     case "briefing_error":
       plMark("brief", "err");
-      plMeta("brief", "error");
-      plStatus("Briefing failed");
+      plMeta("brief", "PDF only");
+      plStatus("Insights ready · PDF export failed");
       break;
     case "embed_error":
       plMark("cluster", "err");
@@ -2057,7 +2069,7 @@ const PL2 = (function () {
       case "labeled": setMin(5); break;
       case "briefing_ready": case "evidence_ready": setMin(5); break;
       case "embed_error": fail("while sorting the posts into groups"); break;
-      case "briefing_error": fail("while writing up your report"); break;
+      case "briefing_error": briefingFailed(); break;
       case "error": fail("while gathering your results"); break;
       case "done": complete(); break;
     }
@@ -2109,6 +2121,33 @@ const PL2 = (function () {
     ex.appendChild(h("div", { class: "pl2-err-actions" }, retry, change));
   }
 
+  // PDF export is the very last step — by the time it can fail, every post,
+  // cluster, sentiment score and the graph are already collected and live on
+  // the dashboard. So this is NOT a workflow failure: reassure and route the
+  // user straight to their results instead of the generic error screen.
+  function briefingFailed() {
+    if (finished) return; finished = true; stopTimers();
+    cur = 6; paintRail();
+    document.querySelectorAll("#pl2-rail .pl2-step .pl2-dot").forEach(d => {
+      if (d.textContent === "" || d.textContent === "6") return;
+    });
+    el("pl2-h").textContent = "Your insights are ready";
+    el("pl2-sub").textContent =
+      "We collected everything and your dashboard is fully populated — only the " +
+      "downloadable PDF export didn't generate. Nothing else was affected.";
+    clearAnim(); const a = el("pl2-anim"); clearNode(a);
+    a.appendChild(h("div", { style: "font-size:72px" }, "📊"));
+    const ex = el("pl2-extra"); clearNode(ex);
+    ex.appendChild(h("ul", { class: "pl2-recover-list" },
+      h("li", null, "✓ Data collection succeeded"),
+      h("li", null, "✓ Clusters, sentiment and the topic graph are ready"),
+      h("li", null, "✓ The dashboard stays fully interactive"),
+      h("li", { class: "muted" }, "✕ Only the PDF export failed")));
+    const view = h("button", { class: "pl2-recover-btn" }, "View your dashboard →");
+    view.addEventListener("click", hide);
+    ex.appendChild(h("div", { class: "pl2-err-actions" }, view));
+  }
+
   function partial(platform) {
     el("pl2-extra").appendChild(h("div", { class: "pl2-banner" },
       "We couldn't reach " + platform + ", so those posts aren't included. Everything else is fine."));
@@ -2124,7 +2163,7 @@ const PL2 = (function () {
 
   function hide() { finished = true; stopTimers(); el("pl2").classList.remove("open"); clearNode(el("pl2-extra")); }
 
-  return { start, event, complete, fail, partial, hide };
+  return { start, event, complete, fail, briefingFailed, partial, hide };
 })();
 
 function renderSentChart(cs) {
@@ -2134,19 +2173,24 @@ function renderSentChart(cs) {
   const neg = cs.map(c => Math.round((c.sentiment && c.sentiment.neg || 0) * 100));
   const ctx = $("#sentChart");
   if (sentChart) sentChart.destroy();
+  // Sentiment is semantic, not branding: positive=green, neutral=gray, negative=red.
+  const text = cssVar("--text"), muted = cssVar("--muted"), grid = cssVar("--border");
   sentChart = new Chart(ctx, {
     type: "bar",
     data: { labels, datasets: [
-      { label: "pos", data: pos, backgroundColor: "#6ee7b7" },
-      { label: "neu", data: neu, backgroundColor: "#94a3b8" },
-      { label: "neg", data: neg, backgroundColor: "#f87171" },
+      { label: "Positive", data: pos, backgroundColor: cssVar("--pos") },
+      { label: "Neutral", data: neu, backgroundColor: cssVar("--neu") },
+      { label: "Negative", data: neg, backgroundColor: cssVar("--neg") },
     ]},
     options: {
       responsive: true,
-      plugins: { legend: { labels: { color: "#e6edf7" } } },
+      plugins: {
+        legend: { labels: { color: text } },
+        tooltip: { callbacks: { label: (i) => i.dataset.label + ": " + i.parsed.y + "%" } },
+      },
       scales: {
-        x: { stacked: true, ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" } },
-        y: { stacked: true, ticks: { color: "#8aa0bd" }, grid: { color: "#25324a" }, max: 100 },
+        x: { stacked: true, ticks: { color: muted }, grid: { color: grid } },
+        y: { stacked: true, ticks: { color: muted }, grid: { color: grid }, max: 100 },
       },
     },
   });
@@ -2174,15 +2218,62 @@ function sentimentColor(s) {
 
 function sizeOf(ele) { return 26 + Math.sqrt(ele.data("size") || 0) * 10; }
 
+function lightenRgb(rgb, amt) {
+  const m = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(rgb || "");
+  if (!m) return rgb;
+  const mix = [1, 2, 3].map((i) => Math.round(+m[i] + (255 - +m[i]) * amt));
+  return `rgb(${mix[0]},${mix[1]},${mix[2]})`;
+}
+
+let graphSpin = null;
+function stopGraphSpin() {
+  if (graphSpin) { cancelAnimationFrame(graphSpin.raf); graphSpin = null; }
+}
+// Subtle, continuous orbital rotation so the topic graph reads as "alive".
+// Operates on model positions (cheap for a handful of nodes), pauses during
+// interaction, and bails out under prefers-reduced-motion.
+function startGraphSpin() {
+  stopGraphSpin();
+  if (!cy || cy.nodes().length < 2) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const nodes = cy.nodes();
+  let cx = 0, cyc = 0;
+  nodes.forEach((n) => { const p = n.position(); cx += p.x; cyc += p.y; });
+  cx /= nodes.length; cyc /= nodes.length;
+  const base = nodes.map((n) => {
+    const p = n.position(), dx = p.x - cx, dy = p.y - cyc;
+    return { n, r: Math.hypot(dx, dy), theta: Math.atan2(dy, dx) };
+  });
+  const SPEED = 0.00005; // rad/ms -> ~one revolution per ~125s
+  const state = { paused: false, raf: 0, angle: 0, last: performance.now() };
+  graphSpin = state;
+  function frame(now) {
+    if (graphSpin !== state || !cy) return;
+    const dt = now - state.last; state.last = now;
+    if (!state.paused) {
+      state.angle += SPEED * dt;
+      const a = state.angle;
+      cy.batch(() => base.forEach((b) => {
+        const t = b.theta + a;
+        b.n.position({ x: cx + b.r * Math.cos(t), y: cyc + b.r * Math.sin(t) });
+      }));
+    }
+    state.raf = requestAnimationFrame(frame);
+  }
+  state.raf = requestAnimationFrame(frame);
+}
+
 async function drawGraph(rid) {
   const r = await fetch("/graph?run_id=" + encodeURIComponent(rid));
   const j = await r.json();
-  const nodes = (j.nodes || []).map((n) => ({
-    data: { ...n.data, _color: sentimentColor(n.data.sentiment) },
-  }));
+  const nodes = (j.nodes || []).map((n) => {
+    const color = sentimentColor(n.data.sentiment);
+    return { data: { ...n.data, _color: color, _hi: lightenRgb(color, 0.55) } };
+  });
   const edges = j.edges || [];
   const hint = $("#graphHint");
   if (hint) hint.classList.toggle("hidden", nodes.length > 0);
+  stopGraphSpin();
   if (cy) cy.destroy();
   if (!nodes.length) { cy = null; return; }
 
@@ -2198,6 +2289,9 @@ async function drawGraph(rid) {
           "label": "data(label)", "color": txt, "font-size": "12px",
           "font-weight": 600, "font-family": "Inter, sans-serif",
           "background-color": "data(_color)",
+          "background-fill": "radial-gradient",
+          "background-gradient-stop-colors": (ele) => ele.data("_hi") + " " + ele.data("_color"),
+          "background-gradient-stop-positions": "0% 100%",
           "border-width": 2, "border-color": panel, "border-opacity": 0.9,
           "width": sizeOf, "height": sizeOf,
           "text-valign": "bottom", "text-margin-y": 6,
@@ -2229,9 +2323,16 @@ async function drawGraph(rid) {
     const nb = e.target.closedNeighborhood();
     cy.elements().addClass("faded");
     nb.removeClass("faded").addClass("hl");
+    if (graphSpin) graphSpin.paused = true;
   });
-  cy.on("mouseout", "node", () => cy.elements().removeClass("faded hl"));
-  cy.on("layoutstop", () => cy.fit(undefined, 40));
+  cy.on("mouseout", "node", () => {
+    cy.elements().removeClass("faded hl");
+    if (graphSpin) { graphSpin.last = performance.now(); graphSpin.paused = false; }
+  });
+  cy.on("grab", "node", () => { if (graphSpin) graphSpin.paused = true; });
+  // Dragging reseats nodes, so rebuild the orbit from their new positions.
+  cy.on("free", "node", () => startGraphSpin());
+  cy.on("layoutstop", () => { cy.fit(undefined, 40); startGraphSpin(); });
 
   $("#gZoomIn").onclick = () => cy && cy.zoom({ level: cy.zoom() * 1.3, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
   $("#gZoomOut").onclick = () => cy && cy.zoom({ level: cy.zoom() / 1.3, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
