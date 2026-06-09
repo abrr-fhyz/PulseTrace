@@ -199,7 +199,7 @@ h1,h2,h3 { font-weight: 600; letter-spacing: -0.02em; margin: 0; }
 <body>
   <header class="top">
     <button class="icon-btn hamb" id="hamb" title="Threads">☰</button>
-    <a class="icon-btn" href="/" title="Back to dashboard">←</a>
+    <a class="icon-btn" href="/#/app" title="Back to dashboard">←</a>
     <span class="brand">Pulse<b>Trace</b> · Chat</span>
     <span class="spacer"></span>
     <select class="run-switch" id="runSwitch" title="Active corpus"></select>
@@ -240,6 +240,16 @@ h1,h2,h3 { font-weight: 600; letter-spacing: -0.02em; margin: 0; }
 <script>
 const $ = s => document.querySelector(s);
 const state = { run: null, runs: [], thread: null, streaming: false };
+function setActiveThread(id){
+  state.thread = id;
+  try {
+    if (id) localStorage.setItem("pulsetrace_chat_thread", id);
+    else localStorage.removeItem("pulsetrace_chat_thread");
+  } catch(e){}
+  const u = new URL(location.href);
+  if (id) u.searchParams.set("thread_id", id); else u.searchParams.delete("thread_id");
+  history.replaceState(null, "", u);
+}
 
 marked.setOptions({ breaks: true });
 // Single sanitized HTML sink. All markup assignment funnels through DOMPurify;
@@ -290,7 +300,11 @@ async function selectRun(runId){
   state.run = runId;
   try { localStorage.setItem("pulsetrace_chat_run", runId); } catch(e){}
   await loadSuggestions();
-  newChat();
+  await loadThreads();
+  let want = new URLSearchParams(location.search).get("thread_id");
+  if (!want) { try { want = localStorage.getItem("pulsetrace_chat_thread"); } catch(e){} }
+  if (want) { await openThread(want); }
+  else { newChat(); }
 }
 
 async function loadThreads(){
@@ -322,7 +336,7 @@ async function loadSuggestions(){
 /* ---- conversation ---- */
 function showEmpty(on){ $("#empty").style.display = on ? "block":"none"; $("#convo").style.display = on ? "none":"block"; }
 function newChat(){
-  state.thread = null;
+  setActiveThread(null);
   $("#convo").textContent = "";
   showEmpty(true);
   loadThreads();
@@ -332,8 +346,8 @@ $("#newChat").onclick = newChat;
 
 async function openThread(id){
   const t = await fetch(`/chat/thread/${id}?run_id=${encodeURIComponent(state.run)}`).then(r=>r.json()).catch(()=>null);
-  if (!t || t.error) return;
-  state.thread = id;
+  if (!t || t.error) { newChat(); return; }
+  setActiveThread(id);
   $("#convo").textContent = "";
   showEmpty(false);
   (t.messages||[]).forEach(m => {
@@ -488,7 +502,7 @@ async function sendMessage(){
         const line = chunk.split("\n").find(l => l.startsWith("data: "));
         if (!line) continue;
         const ev = JSON.parse(line.slice(6));
-        if (ev.type === "meta"){ state.thread = ev.thread_id; }
+        if (ev.type === "meta"){ setActiveThread(ev.thread_id); }
         else if (ev.stage){ setStage(ev.stage, ev.n != null ? ev.n : ev.confidence); }
         else if (ev.type === "answer"){ answer = ev; }
         else if (ev.type === "saved"){ loadThreads(); }
