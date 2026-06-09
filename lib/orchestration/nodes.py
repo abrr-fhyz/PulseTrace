@@ -15,9 +15,10 @@ import time
 
 import requests
 
-from ..agent import _fetch_all
+from ..agent import run_agent
+from ..connectors.base import Post
 from ..influence import influence
-from ..store import write_json
+from ..store import read_json, write_json
 from . import config
 from .state import AgentState
 
@@ -27,15 +28,26 @@ def _squash(raw: float) -> float:
     return 1.0 - math.exp(-raw / config.ENGAGEMENT_SQUASH_SCALE)
 
 
+def load_run_posts(run_id: str | None) -> list[Post]:
+    """Rebuild Post objects from the posts.json the full pipeline wrote."""
+    if not run_id:
+        return []
+    rows = read_json(run_id, "posts.json") or []
+    return [Post(**row) for row in rows]
+
+
 def crawl(state: AgentState) -> AgentState:
-    """Fetch items for the topic across configured sources via the agent loop."""
+    """Run the full analysis pipeline (fetch->cluster->label->brief), then load
+    its posts for engagement scoring. The graph adds alerting/retry/scheduling
+    on top of this; run_agent keeps the SSE stream open via close_bus=False."""
     topic = state.get("topic", "")
     sources = state.get("sources") or ["facebook"]
-    queries = [(topic, s) for s in sources]
+    run_id = state.get("run_id")
     try:
-        items = _fetch_all(queries, limit=50, run_id=state.get("run_id"))
-        return AgentState(items=items, error=None)
-    except Exception as exc:  # connector/agent failure must not crash the graph
+        run_agent(topic, sources, run_id=run_id,
+                  opinion=state.get("opinion"), close_bus=False)
+        return AgentState(items=load_run_posts(run_id), error=None)
+    except Exception as exc:  # pipeline failure must not crash the graph
         return AgentState(error=str(exc))
 
 
@@ -82,15 +94,21 @@ def recover(state: AgentState) -> AgentState:
 def done(state: AgentState) -> AgentState:
     """Terminal node: persist a run summary (if run_id) and emit it on state."""
     scores = state.get("scores") or {}
+    run_id = state.get("run_id")
+    run_meta = (read_json(run_id, "run.json") or {}) if run_id else {}
+    metrics = run_meta.get("metrics", {}) if isinstance(run_meta, dict) else {}
+    clusters = int(metrics.get("clusters", 0) or 0)
     summary: dict[str, object] = {
+        "run_id": run_id,
         "n_items": len(state.get("items") or []),
         "n_scored": len(scores),
         "max_score": max(scores.values(), default=0.0),
+        "clusters": clusters,
+        "has_briefing": clusters > 0,
         "retry_count": state.get("retry_count", 0),
         "alerted": state.get("should_alert", False),
         "error": state.get("error"),
     }
-    run_id = state.get("run_id")
     if run_id:
         try:
             write_json(run_id, "orchestration_summary.json", summary)

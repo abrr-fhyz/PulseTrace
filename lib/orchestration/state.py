@@ -22,6 +22,7 @@ class AgentState(TypedDict, total=False):
     topic: str
     sources: list[str]
     run_id: str | None
+    opinion: str | None
 
     items: list[CrawledItem]
     scores: dict[str, float]
@@ -33,13 +34,17 @@ class AgentState(TypedDict, total=False):
 
 
 def initial_state(
-    topic: str, sources: list[str], run_id: str | None = None
+    topic: str,
+    sources: list[str],
+    run_id: str | None = None,
+    opinion: str | None = None,
 ) -> AgentState:
     """Build a fresh state for a run with all loop fields zeroed."""
     return AgentState(
         topic=topic,
         sources=sources,
         run_id=run_id,
+        opinion=opinion,
         items=[],
         scores={},
         retry_count=0,

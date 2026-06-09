@@ -41,9 +41,11 @@ def test_route_after_recover(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_happy_path_reaches_done_and_alerts(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(config, "ENGAGEMENT_THRESHOLD", 0.5)
+    monkeypatch.setattr(nodes, "run_agent", lambda *a, **k: None)
+    monkeypatch.setattr(nodes, "read_json", lambda rid, name: None)
     monkeypatch.setattr(
-        nodes, "_fetch_all",
-        lambda *a, **k: [_post("v", reactions=5000, comments=500, shares=200)],
+        nodes, "load_run_posts",
+        lambda rid: [_post("v", reactions=5000, comments=500, shares=200)],
     )
     posted: list[dict] = []
     monkeypatch.setattr(
@@ -61,11 +63,12 @@ def test_error_path_retries_then_done(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(config, "RETRY_BACKOFF_SECS", 0)
     calls = {"n": 0}
 
-    def boom(*a: object, **k: object) -> list[Post]:
+    def boom(*a: object, **k: object) -> None:
         calls["n"] += 1
         raise RuntimeError("down")
 
-    monkeypatch.setattr(nodes, "_fetch_all", boom)
+    monkeypatch.setattr(nodes, "run_agent", boom)
+    monkeypatch.setattr(nodes, "read_json", lambda rid, name: None)
     graph = build_graph()
     final = graph.invoke(initial_state("t", ["reddit"]), _THREAD)
     assert final["retry_count"] == 2

@@ -24,21 +24,36 @@ def _post(pid: str, reactions: int = 0, comments: int = 0, shares: int = 0) -> P
     )
 
 
-def test_crawl_success_populates_items(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(nodes, "_fetch_all", lambda *a, **k: [_post("a"), _post("b")])
-    out = nodes.crawl(initial_state("t", ["reddit"]))
+def test_crawl_runs_pipeline_then_loads_posts(monkeypatch: pytest.MonkeyPatch) -> None:
+    called = {}
+    monkeypatch.setattr(nodes, "run_agent",
+                        lambda *a, **k: called.update(close_bus=k.get("close_bus")))
+    monkeypatch.setattr(nodes, "load_run_posts", lambda rid: [_post("a"), _post("b")])
+    out = nodes.crawl(initial_state("t", ["reddit"], run_id="r"))
     assert [p.id for p in out["items"]] == ["a", "b"]
     assert out["error"] is None
+    assert called["close_bus"] is False  # must keep the SSE stream open
 
 
 def test_crawl_error_captured_not_raised(monkeypatch: pytest.MonkeyPatch) -> None:
-    def boom(*a: object, **k: object) -> list[Post]:
-        raise RuntimeError("connector down")
+    def boom(*a: object, **k: object) -> None:
+        raise RuntimeError("pipeline down")
 
-    monkeypatch.setattr(nodes, "_fetch_all", boom)
-    out = nodes.crawl(initial_state("t", ["reddit"]))
-    assert "connector down" in out["error"]
+    monkeypatch.setattr(nodes, "run_agent", boom)
+    out = nodes.crawl(initial_state("t", ["reddit"], run_id="r"))
+    assert "pipeline down" in out["error"]
     assert "items" not in out
+
+
+def test_load_run_posts_empty_without_run_id() -> None:
+    assert nodes.load_run_posts(None) == []
+
+
+def test_load_run_posts_rebuilds_posts(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(nodes, "read_json",
+                        lambda rid, name: [_post("x", reactions=3).to_dict()])
+    posts = nodes.load_run_posts("r")
+    assert posts[0].id == "x" and posts[0].reactions == 3
 
 
 def test_score_gates_alert_above_threshold(monkeypatch: pytest.MonkeyPatch) -> None:

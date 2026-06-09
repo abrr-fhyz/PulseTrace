@@ -145,7 +145,7 @@ def _fetch_all(queries: list[tuple[str, str]], limit: int,
 
 
 def run_agent(topic: str, sources: list[str], run_id: str | None = None,
-              opinion: str | None = None) -> str:
+              opinion: str | None = None, close_bus: bool = True) -> str:
     run_id = run_id or new_run_id()
     sources = [s for s in sources if s in SOURCES] or ["facebook"]
     core = extract_core_subject(topic) or topic
@@ -371,5 +371,8 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
     BUS.publish(run_id, {
         "type": "done", "run_id": run_id, "stop_reason": stop_reason, "n_posts": len(seen),
     })
-    BUS.close(run_id)
+    # When wrapped by the orchestration graph the caller keeps the SSE stream
+    # open for its own score/alert/done events and closes it itself.
+    if close_bus:
+        BUS.close(run_id)
     return run_id
