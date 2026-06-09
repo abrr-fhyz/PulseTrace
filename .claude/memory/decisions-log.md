@@ -2,6 +2,12 @@
 
 Append-only. Newest at top. Format: date — decision — reason.
 
+## 2026-06-09
+- **Orchestration layer = LangGraph graph wrapping `run_agent` (Plan B).** The graph's `crawl` node runs the full pipeline (`run_agent(close_bus=False)`); the graph adds engagement alerting + retry/recovery + scheduling on top. Real outputs, not a weaker parallel path. Details: `.claude/memory/orchestration.md`.
+- **Single search box: dashboard "Run Agent" now POSTs `/api/agent/run`.** Orchestration wraps the agent, so the duplicate orchestration search box was removed; its card is now a live status panel off the same SSE stream. `/run` + `run_agent` preserved but UI-unused.
+- **n8n = committed JSON workflow exports only, no instance.** Honors no-Docker non-goal; backs the submission claim with artifacts.
+- **Engagement squash `1-exp(-raw/3.0)`** so unbounded `influence()` maps to 0–1 and the 0.75 alert threshold is meaningful.
+
 ## 2026-05-29
 - **Add Ollama backend + slow-marked live test suite.** User has no OpenAI key, has 16 GB RAM + Ollama locally. `lib/backend.py` selects via `PULSETRACE_BACKEND`. New tests: `test_ollama_backend.py`, `test_fb_integration.py`, `test_agent_e2e_fb_ollama.py`, all behind `slow` marker; deselected by default. Setup in `.claude/memory/testing-with-ollama.md`. pytest-timeout=900.
 - **Embed cache key salted with backend tag.** Prevents cross-backend cache poisoning (OpenAI 1536d vs Ollama 768d).

@@ -20,6 +20,7 @@ _load_api_keys()
 import re as _re
 
 from lib.agent import run_agent
+from lib.orchestration.runner import run_graph_streamed
 from lib.briefing import build as build_briefing
 from lib.events import BUS, sse_format
 from lib.store import read_json, new_run_id, run_dir
@@ -239,6 +240,46 @@ def start_run():
     return jsonify({"run_id": run_id, "byok": bool(byok)})
 
 
+@app.route("/api/agent/run", methods=["POST"])
+def start_orchestration_run():
+    """Run the LangGraph orchestration graph (wraps the full agent pipeline and
+    adds engagement alerting, retry/recovery, and scheduling). Progress streams
+    over /events; the same run_id drives the dashboard's pipeline/graph views."""
+    data = request.get_json(force=True, silent=True) or {}
+    topic = (data.get("topic") or "").strip()
+    sources = data.get("sources") or ["reddit"]
+    opinion = (data.get("opinion") or "").strip() or None
+    byok = data.get("byok") or None
+    if not topic:
+        return jsonify({"error": "topic required"}), 400
+
+    if byok:
+        pid = (byok.get("provider") or "").lower().strip()
+        spec = _BYOK_BY_ID.get(pid)
+        if not spec:
+            return jsonify({"error": f"unknown provider {pid!r}"}), 400
+        if not spec["enabled"]:
+            return jsonify({"error": f"{spec['label']} is not yet wired "
+                            "(Gemini-only beta)"}), 400
+        if not (byok.get("api_key") or "").strip():
+            return jsonify({"error": "api_key required when byok set"}), 400
+
+    run_id = new_run_id()
+
+    def go() -> None:
+        prior = _byok_apply(byok)
+        try:
+            run_graph_streamed(topic, sources, run_id, opinion=opinion)
+        except Exception as e:
+            BUS.publish(run_id, {"type": "orch_error", "err": str(e)})
+            BUS.close(run_id)
+        finally:
+            _byok_restore(prior)
+
+    threading.Thread(target=go, daemon=True).start()
+    return jsonify({"run_id": run_id, "byok": bool(byok)})
+
+
 @app.route("/providers")
 def list_providers():
     """Public registry of providers offered in the BYOK UI."""
@@ -334,7 +375,9 @@ def briefing_pdf(run_id):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
     if not p.exists():
-        return jsonify({"error": "PDF unavailable (weasyprint not installed)"}), 501
+        return jsonify({"error": "PDF unavailable: no working render engine "
+                                 "(install weasyprint GTK libs, or run "
+                                 "'playwright install chromium')"}), 501
     return Response(
         p.read_bytes(),
         mimetype="application/pdf",

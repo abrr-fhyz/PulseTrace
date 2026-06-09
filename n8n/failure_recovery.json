@@ -1,0 +1,59 @@
+{
+  "name": "[orchestration] Failure Recovery",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "recovery-webhook",
+      "name": "Webhook failure_recovery",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "failure_recovery",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "failure_recovery",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "dead-letter",
+      "name": "Append dead-letter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 220],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DEAD_LETTER_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"run_id\": $json.body.run_id, \"retry_count\": $json.body.retry_count, \"error\": $json.body.error, \"ts\": $now } }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "notify-oncall",
+      "name": "Slack on-call",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [520, 380],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channelId": "={{ $env.SLACK_ONCALL_CHANNEL }}",
+        "text": "=:x: Agent gave up after max retries\nrun: {{ $json.body.run_id }} retries: {{ $json.body.retry_count }}\nerror: {{ $json.body.error }}"
+      },
+      "credentials": {
+        "slackApi": { "id": "REPLACE_WITH_CREDENTIAL_ID", "name": "Slack account" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook failure_recovery": {
+      "main": [[
+        { "node": "Append dead-letter", "type": "main", "index": 0 },
+        { "node": "Slack on-call", "type": "main", "index": 0 }
+      ]]
+    }
+  }
+}
