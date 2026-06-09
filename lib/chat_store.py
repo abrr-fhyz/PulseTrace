@@ -10,12 +10,15 @@ from the DB so memory logic stays unchanged.
 from __future__ import annotations
 
 import json
+import logging
 import time
 import uuid
 from pathlib import Path
 from typing import Any
 
 from . import store
+
+log = logging.getLogger("pulsetrace.chat_store")
 
 
 def _pg():
@@ -24,7 +27,8 @@ def _pg():
     try:
         from db import get_supabase
         return get_supabase()
-    except Exception:
+    except Exception as exc:
+        log.warning("_pg() unavailable, falling back to file storage: %s", exc)
         return None
 
 
@@ -42,12 +46,6 @@ def _conv_row(thread: dict) -> dict:
         "summary": thread.get("summary", ""),
         "archived_count": int(thread.get("archived_count", 0)),
     }
-
-
-def _chats_dir(run_id: str) -> Path:
-    p = store.ROOT / run_id / "chats"
-    p.mkdir(parents=True, exist_ok=True)
-    return p
 
 
 def _thread_path(run_id: str, thread_id: str) -> Path:

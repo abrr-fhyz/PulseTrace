@@ -181,3 +181,19 @@ def test_delete_thread_db_only(tmp_path, monkeypatch):
     # no local file written
     assert chat_store.delete_thread("run1", "c9") is True
     assert fake.get_conversation("c9") is None
+
+
+def test_load_thread_full_file_fallback(tmp_path, monkeypatch):
+    from lib import chat_store, store
+    monkeypatch.setattr(store, "ROOT", tmp_path)
+    monkeypatch.setattr(store, "read_json", lambda rid, name: {"topic_id": "t"})
+    monkeypatch.setattr(chat_store, "_pg", lambda: None)
+
+    thread = chat_store.new_thread("run1", title="q")
+    chat_store.append_message(thread, "user", "q")
+    chat_store.append_message(thread, "assistant", "a", confidence=0.5)
+    chat_store.save_thread(thread)
+
+    full = chat_store.load_thread_full("run1", thread["id"])
+    assert full is not None
+    assert [m["content"] for m in full["messages"]] == ["q", "a"]
