@@ -689,7 +689,7 @@ def chat_thread(thread_id):
     if request.method == "DELETE":
         ok = chat_store.delete_thread(run_id, thread_id)
         return jsonify({"deleted": ok})
-    thread = chat_store.load_thread(run_id, thread_id)
+    thread = chat_store.load_thread_full(run_id, thread_id)
     if thread is None:
         return jsonify({"error": "not found"}), 404
     if request.args.get("debug") == "1":
