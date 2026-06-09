@@ -345,6 +345,113 @@ class SupabaseClient:
             log.error("get_artifact(%s/%s) failed: %s", run_id, name, exc)
             return None
 
+    # ----------------------------------------------------------- conversations
+    def upsert_conversation(self, conv: dict) -> bool:
+        if not self.enabled:
+            return False
+        try:
+            with self._conn() as conn, conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO conversations
+                        (id, topic_id, run_id, title, summary, archived_count, updated_at)
+                    VALUES (%s,%s,%s,%s,%s,%s, now())
+                    ON CONFLICT (id) DO UPDATE SET
+                        title=EXCLUDED.title, summary=EXCLUDED.summary,
+                        archived_count=EXCLUDED.archived_count, updated_at=now()
+                    """,
+                    (conv["id"], conv["topic_id"], conv["run_id"],
+                     conv.get("title", "New chat"), conv.get("summary", ""),
+                     int(conv.get("archived_count", 0))),
+                )
+            return True
+        except (psycopg2.Error, KeyError) as exc:
+            log.error("upsert_conversation(%s) failed: %s", conv.get("id"), exc)
+            return False
+
+    def insert_message(self, conversation_id: str, role: str, content: str,
+                       metadata: dict | None = None) -> bool:
+        if not self.enabled:
+            return False
+        try:
+            with self._conn() as conn, conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO messages (conversation_id, role, content, metadata) "
+                    "VALUES (%s,%s,%s,%s)",
+                    (conversation_id, role, content,
+                     psycopg2.extras.Json(metadata or {})),
+                )
+            return True
+        except psycopg2.Error as exc:
+            log.error("insert_message(%s) failed: %s", conversation_id, exc)
+            return False
+
+    def get_conversation(self, conv_id: str) -> dict | None:
+        if not self.enabled:
+            return None
+        try:
+            with self._conn() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT id, topic_id, run_id, title, summary, archived_count "
+                    "FROM conversations WHERE id=%s",
+                    (conv_id,),
+                )
+                row = cur.fetchone()
+                return dict(row) if row else None
+        except psycopg2.Error as exc:
+            log.error("get_conversation(%s) failed: %s", conv_id, exc)
+            return None
+
+    def get_messages(self, conv_id: str) -> list[dict]:
+        if not self.enabled:
+            return []
+        try:
+            with self._conn() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT role, content, metadata, "
+                    "extract(epoch from created_at)::bigint AS ts "
+                    "FROM messages WHERE conversation_id=%s ORDER BY created_at, id",
+                    (conv_id,),
+                )
+                return [dict(r) for r in cur.fetchall()]
+        except psycopg2.Error as exc:
+            log.error("get_messages(%s) failed: %s", conv_id, exc)
+            return []
+
+    def list_conversations(self, topic_id: str) -> list[dict]:
+        if not self.enabled:
+            return []
+        try:
+            with self._conn() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT c.id, c.title,
+                           extract(epoch from c.created_at)::bigint AS created,
+                           extract(epoch from c.updated_at)::bigint AS updated,
+                           (SELECT count(*) FROM messages m
+                              WHERE m.conversation_id = c.id) AS message_count
+                    FROM conversations c
+                    WHERE c.topic_id = %s
+                    ORDER BY c.updated_at DESC
+                    """,
+                    (topic_id,),
+                )
+                return [dict(r) for r in cur.fetchall()]
+        except psycopg2.Error as exc:
+            log.error("list_conversations(%s) failed: %s", topic_id, exc)
+            return []
+
+    def delete_conversation(self, conv_id: str) -> bool:
+        if not self.enabled:
+            return False
+        try:
+            with self._conn() as conn, conn.cursor() as cur:
+                cur.execute("DELETE FROM conversations WHERE id=%s", (conv_id,))
+                return cur.rowcount > 0
+        except psycopg2.Error as exc:
+            log.error("delete_conversation(%s) failed: %s", conv_id, exc)
+            return False
+
     def health(self) -> dict:
         if not self.enabled:
             return {"enabled": False, "backend": "file"}
