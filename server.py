@@ -242,24 +242,42 @@ def start_run():
 
 @app.route("/api/agent/run", methods=["POST"])
 def start_orchestration_run():
-    """Run the LangGraph orchestration graph; progress streams over /events."""
+    """Run the LangGraph orchestration graph (wraps the full agent pipeline and
+    adds engagement alerting, retry/recovery, and scheduling). Progress streams
+    over /events; the same run_id drives the dashboard's pipeline/graph views."""
     data = request.get_json(force=True, silent=True) or {}
     topic = (data.get("topic") or "").strip()
     sources = data.get("sources") or ["reddit"]
+    opinion = (data.get("opinion") or "").strip() or None
+    byok = data.get("byok") or None
     if not topic:
         return jsonify({"error": "topic required"}), 400
+
+    if byok:
+        pid = (byok.get("provider") or "").lower().strip()
+        spec = _BYOK_BY_ID.get(pid)
+        if not spec:
+            return jsonify({"error": f"unknown provider {pid!r}"}), 400
+        if not spec["enabled"]:
+            return jsonify({"error": f"{spec['label']} is not yet wired "
+                            "(Gemini-only beta)"}), 400
+        if not (byok.get("api_key") or "").strip():
+            return jsonify({"error": "api_key required when byok set"}), 400
 
     run_id = new_run_id()
 
     def go() -> None:
+        prior = _byok_apply(byok)
         try:
-            run_graph_streamed(topic, sources, run_id)
+            run_graph_streamed(topic, sources, run_id, opinion=opinion)
         except Exception as e:
             BUS.publish(run_id, {"type": "orch_error", "err": str(e)})
             BUS.close(run_id)
+        finally:
+            _byok_restore(prior)
 
     threading.Thread(target=go, daemon=True).start()
-    return jsonify({"run_id": run_id})
+    return jsonify({"run_id": run_id, "byok": bool(byok)})
 
 
 @app.route("/providers")

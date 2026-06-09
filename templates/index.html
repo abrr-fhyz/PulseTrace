@@ -756,21 +756,11 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
       <div class="panel">
         <h2>Orchestration <span class="muted" style="font-weight:500;font-size:0.7em">LangGraph</span></h2>
         <div class="muted" style="margin:-4px 0 14px;font-size:0.85em">
-          Explicit, resumable agent graph: crawl → score → alert/recover → done.
-        </div>
-        <div style="display:flex;flex-direction:column;gap:14px">
-          <input id="orch-topic" placeholder="Topic, e.g. 'electric cars'" />
-          <div class="row" style="flex-wrap:wrap">
-            <label class="toggle"><input type="checkbox" id="orch-src-reddit" checked> Reddit</label>
-            <label class="toggle"><input type="checkbox" id="orch-src-hn"> HN</label>
-            <label class="toggle"><input type="checkbox" id="orch-src-facebook"> Facebook</label>
-            <label class="toggle"><input type="checkbox" id="orch-src-youtube"> YouTube</label>
-            <label class="toggle"><input type="checkbox" id="orch-src-bluesky"> Bluesky</label>
-          </div>
-          <button id="orch-go" class="cta-primary">Run orchestration</button>
+          The run above flows through an explicit, resumable graph that adds
+          engagement alerting and failure-recovery on top of the analysis.
         </div>
 
-        <div id="orch-timeline" class="orch-timeline" style="margin-top:18px">
+        <div id="orch-timeline" class="orch-timeline">
           <div class="orch-node" data-node="crawl"><span class="orch-dot"></span><span class="orch-name">crawl</span><span class="orch-info" data-info></span></div>
           <div class="orch-node" data-node="score"><span class="orch-dot"></span><span class="orch-name">score</span><span class="orch-info" data-info></span></div>
           <div class="orch-node" data-node="alert"><span class="orch-dot"></span><span class="orch-name">alert</span><span class="orch-info" data-info></span></div>
@@ -1210,7 +1200,7 @@ async function start() {
   const body = { topic, sources, opinion };
   const byok = readByok();
   if (byok && byok.provider && byok.api_key) body.byok = byok;
-  const r = await fetch("/run", {
+  const r = await fetch("/api/agent/run", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -1228,6 +1218,7 @@ async function start() {
   pill.textContent = "run " + runId;
   $("#briefing-link").style.display = "none";
   $("#briefing-link").href = "#";
+  if (window.__orch) window.__orch.begin();
   plReset();
   plActivate("seed");
   plStatus("Run starting…");
@@ -1290,10 +1281,15 @@ function subscribe(rid) {
   es.onmessage = (e) => {
     let ev; try { ev = JSON.parse(e.data); } catch { return; }
     handle(ev);
-    if (ev.type === "_close" || ev.type === "done") {
+    if (window.__orch) window.__orch.handle(ev);
+    if (ev.type === "done") {
+      // run_agent finished the analysis pipeline; the orchestration graph then
+      // scores/alerts before _close, so keep the stream open until then.
+      drawGraph(rid);
+    }
+    if (ev.type === "_close") {
       es.close();
       $("#go").disabled = false;
-      drawGraph(rid);
     }
   };
   es.onerror = () => {
@@ -2571,88 +2567,54 @@ try {
   }
 } catch (e) {}
 
-/* ── Orchestration (LangGraph) panel ─────────────────────────────── */
+/* ── Orchestration (LangGraph) live timeline ─────────────────────────
+   Driven by the main run's SSE stream (window.__orch.handle), so there is a
+   single search box: the "Run Agent" form feeds /api/agent/run, which runs the
+   full pipeline inside the graph and adds engagement alerting + retry/recovery. */
 (function () {
   const $o = (id) => document.getElementById(id);
   const NODES = ["crawl", "score", "alert", "recover", "done"];
-  let orchES = null;
 
   const chip = (n) => document.querySelector('#orch-timeline .orch-node[data-node="' + n + '"]');
   const setInfo = (n, t) => { const c = chip(n); if (c) { const i = c.querySelector("[data-info]"); if (i && t != null) i.textContent = t; } };
   const activate = (n) => { const c = chip(n); if (c) c.classList.add("active"); };
   const settle = (n, cls) => { const c = chip(n); if (c) { c.classList.remove("active"); c.classList.add(cls); } };
 
-  function resetTimeline() {
+  function begin() {
     NODES.forEach((n) => { const c = chip(n); if (c) { c.className = "orch-node"; setInfo(n, ""); } });
     $o("orch-result").style.display = "none";
     $o("orch-alerted").style.display = "none";
-  }
-
-  function finish(btn) {
-    if (orchES) { try { orchES.close(); } catch (e) {} orchES = null; }
-    btn.disabled = false; btn.textContent = "Run orchestration";
-  }
-
-  async function runOrch() {
-    const topic = ($o("orch-topic").value || "").trim();
-    if (!topic) { $o("orch-topic").focus(); return; }
-    const sources = [];
-    ["reddit", "hn", "facebook", "youtube", "bluesky"].forEach((s) => {
-      const el = $o("orch-src-" + s); if (el && el.checked) sources.push(s);
-    });
-    if (!sources.length) sources.push("reddit");
-
-    const btn = $o("orch-go");
-    btn.disabled = true; btn.textContent = "Running…";
-    resetTimeline();
-    if (orchES) { try { orchES.close(); } catch (e) {} orchES = null; }
-
-    let rid;
-    try {
-      const r = await fetch("/api/agent/run", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ topic, sources }),
-      });
-      const j = await r.json();
-      if (j.error || !j.run_id) { finish(btn); return; }
-      rid = j.run_id;
-    } catch (e) { finish(btn); return; }
-
     activate("crawl");
-    orchES = new EventSource("/events?run_id=" + encodeURIComponent(rid));
-    orchES.onmessage = (ev) => {
-      let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
-      if (m.type === "orch_started") { resetTimeline(); activate("crawl"); return; }
-      if (m.type === "orch_step") {
-        const d = m.data || {};
-        if (m.node === "crawl") { settle("crawl", d.error ? "err" : "done"); setInfo("crawl", (d.items || 0) + " items"); if (!d.error) activate("score"); }
-        else if (m.node === "score") { settle("score", "done"); setInfo("score", "peak " + (d.peak != null ? Number(d.peak).toFixed(2) : "--")); activate(d.should_alert ? "alert" : "done"); }
-        else if (m.node === "alert") { settle("alert", "warn"); setInfo("alert", "fired"); activate("done"); }
-        else if (m.node === "recover") { settle("recover", "warn"); setInfo("recover", "retry " + (d.retry_count || 0)); activate("crawl"); }
-        else if (m.node === "done") { settle("done", "done"); }
-        return;
-      }
-      if (m.type === "orch_error") { settle("done", "err"); setInfo("done", "error"); return; }
-      if (m.type === "orch_done") {
-        const s = m.summary || {};
-        $o("orch-items").textContent = s.n_items != null ? s.n_items : 0;
-        $o("orch-peak").textContent = s.max_score != null ? Number(s.max_score).toFixed(2) : "--";
-        $o("orch-retries").textContent = s.retry_count != null ? s.retry_count : 0;
-        $o("orch-result").style.display = "grid";
-        const a = $o("orch-alerted");
-        if (s.error) { a.style.display = "block"; a.textContent = "Error: " + s.error; a.style.color = "var(--neg)"; }
-        else if (s.alerted) { a.style.display = "block"; a.textContent = "⚡ Engagement threshold tripped — alert fired."; a.style.color = "var(--accent3)"; }
-        settle("done", "done");
-        finish(btn);
-        return;
-      }
-      if (m.type === "_close") { finish(btn); }
-    };
-    orchES.onerror = () => { /* server ends the stream via _close; ignore transient errors */ };
   }
 
-  const goBtn = document.getElementById("orch-go");
-  if (goBtn) goBtn.addEventListener("click", runOrch);
+  function handle(m) {
+    if (!m || !m.type) return;
+    if (m.type === "orch_started") { begin(); return; }
+    if (m.type === "orch_step") {
+      const d = m.data || {};
+      if (m.node === "crawl") { settle("crawl", d.error ? "err" : "done"); setInfo("crawl", (d.items || 0) + " items"); if (!d.error) activate("score"); }
+      else if (m.node === "score") { settle("score", "done"); setInfo("score", "peak " + (d.peak != null ? Number(d.peak).toFixed(2) : "--")); activate(d.should_alert ? "alert" : "done"); }
+      else if (m.node === "alert") { settle("alert", "warn"); setInfo("alert", "fired"); activate("done"); }
+      else if (m.node === "recover") { settle("recover", "warn"); setInfo("recover", "retry " + (d.retry_count || 0)); activate("crawl"); }
+      else if (m.node === "done") { settle("done", "done"); }
+      return;
+    }
+    if (m.type === "orch_error") { settle("done", "err"); setInfo("done", "error"); return; }
+    if (m.type === "orch_done") {
+      const s = m.summary || {};
+      $o("orch-items").textContent = s.n_items != null ? s.n_items : 0;
+      $o("orch-peak").textContent = s.max_score != null ? Number(s.max_score).toFixed(2) : "--";
+      $o("orch-retries").textContent = s.retry_count != null ? s.retry_count : 0;
+      $o("orch-result").style.display = "grid";
+      const a = $o("orch-alerted");
+      if (s.error) { a.style.display = "block"; a.textContent = "Error: " + s.error; a.style.color = "var(--neg)"; }
+      else if (s.alerted) { a.style.display = "block"; a.textContent = "⚡ Engagement threshold tripped — alert fired."; a.style.color = "var(--accent3)"; }
+      else { a.style.display = "block"; a.textContent = (s.clusters || 0) + " clusters · no engagement alert"; a.style.color = "var(--muted)"; }
+      settle("done", "done");
+    }
+  }
+
+  window.__orch = { begin, handle };
 })();
 </script>
 </body>

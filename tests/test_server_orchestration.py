@@ -28,8 +28,8 @@ def test_orchestration_requires_topic():
 def test_orchestration_runs_graph_and_returns_run_id(monkeypatch):
     seen = {}
 
-    def fake_run(topic, sources, run_id):
-        seen.update(topic=topic, sources=sources, run_id=run_id)
+    def fake_run(topic, sources, run_id, opinion=None):
+        seen.update(topic=topic, sources=sources, run_id=run_id, opinion=opinion)
         return {"n_items": 0}
 
     monkeypatch.setattr(srv, "run_graph_streamed", fake_run)
