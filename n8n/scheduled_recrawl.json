@@ -1,0 +1,39 @@
+{
+  "name": "[orchestration] Scheduled Recrawl",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "cron-trigger",
+      "name": "Cron (every 6h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "={{ $env.N8N_RECRAWL_CRON || '0 */6 * * *' }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "trigger-agent",
+      "name": "POST /api/agent/run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AGENT_API_BASE_URL }}/api/agent/run",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"topic\": $env.RECRAWL_TOPIC, \"sources\": ($env.RECRAWL_SOURCES || 'reddit,hn').split(',') } }}",
+        "options": { "timeout": 600000 }
+      }
+    }
+  ],
+  "connections": {
+    "Cron (every 6h)": { "main": [[{ "node": "POST /api/agent/run", "type": "main", "index": 0 }]] }
+  }
+}

@@ -25,6 +25,9 @@ data/*
 .remember/
 init_plan.md
 
+# MCP config holds the Mongo connection-string secret — never commit
+.mcp.json
+
 # Test outputs
 test_artifacts/
 results/
