@@ -366,6 +366,7 @@ class SupabaseClient:
                 )
             return True
         except (psycopg2.Error, KeyError) as exc:
+            # KeyError: a malformed conv dict degrades to False, never crashes the chat write.
             log.error("upsert_conversation(%s) failed: %s", conv.get("id"), exc)
             return False
 
