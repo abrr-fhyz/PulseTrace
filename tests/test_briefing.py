@@ -324,3 +324,56 @@ def test_pdf_render_gated(tmp_path, monkeypatch):
     artifact.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(out["pdf"], artifact)
     assert artifact.exists()
+
+
+def test_weasyprint_oserror_does_not_raise(tmp_path):
+    # Windows without GTK: `import weasyprint` raises OSError, not ImportError.
+    html_path = tmp_path / "b.html"
+    html_path.write_text("<html><body>x</body></html>")
+    import builtins
+    real_import = builtins.__import__
+
+    def fake_import(name, *a, **k):
+        if name == "weasyprint":
+            raise OSError("cannot load library 'libgobject-2.0-0.dll'")
+        return real_import(name, *a, **k)
+
+    with patch("builtins.__import__", side_effect=fake_import):
+        assert briefing._render_pdf_weasyprint(html_path, tmp_path / "b.pdf") is False
+
+
+def test_render_pdf_falls_back_to_chromium(tmp_path):
+    html_path = tmp_path / "b.html"
+    pdf_path = tmp_path / "b.pdf"
+    html_path.write_text("<html><body>x</body></html>")
+
+    def fake_chromium(h, p):
+        Path(p).write_bytes(b"%PDF-fake")
+        return True
+
+    with patch("lib.briefing._render_pdf_weasyprint", return_value=False), \
+         patch("lib.briefing._render_pdf_chromium", side_effect=fake_chromium):
+        assert briefing._render_pdf(html_path, pdf_path) is True
+    assert pdf_path.read_bytes().startswith(b"%PDF-")
+
+
+def test_render_pdf_false_when_both_engines_fail(tmp_path):
+    html_path = tmp_path / "b.html"
+    html_path.write_text("<html><body>x</body></html>")
+    with patch("lib.briefing._render_pdf_weasyprint", return_value=False), \
+         patch("lib.briefing._render_pdf_chromium", return_value=False):
+        assert briefing._render_pdf(html_path, tmp_path / "b.pdf") is False
+
+
+def test_render_pdf_chromium_produces_valid_pdf(tmp_path):
+    pytest.importorskip("playwright")
+    html_path = tmp_path / "b.html"
+    pdf_path = tmp_path / "b.pdf"
+    html_path.write_text(
+        "<html><body><h1>hi</h1>"
+        "<div style='background:#0a0;width:80px;height:10px'></div>"
+        "</body></html>"
+    )
+    if not briefing._render_pdf_chromium(html_path, pdf_path):
+        pytest.skip("chromium browser not installed (run 'playwright install chromium')")
+    assert pdf_path.read_bytes().startswith(b"%PDF-")
