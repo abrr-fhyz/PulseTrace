@@ -22,11 +22,12 @@ import re as _re
 from lib.agent import run_agent
 from lib.briefing import build as build_briefing
 from lib.events import BUS, sse_format
-from lib.store import read_json, new_run_id, run_dir
+from lib.store import read_json, new_run_id, run_dir, ROOT
 from lib.replay import frame as replay_frame, max_iter as replay_max_iter
 from lib.rag import ask as rag_ask
 from lib import backend, fb_cookies, docs as docs_mod
 from lib import docs_content
+from lib import chat_store, chat_memory, chat_engine
 
 
 app = Flask(__name__)
@@ -583,6 +584,112 @@ def ask():
     if not run_id or not q:
         return jsonify({"error": "run_id and q required"}), 400
     return jsonify(rag_ask(run_id, q))
+
+
+# --- Chat workspace ---------------------------------------------------------
+
+@app.route("/chat")
+def chat_page():
+    return render_template("chat.html")
+
+
+@app.route("/chat/runs")
+def chat_runs():
+    out = []
+    if ROOT.exists():
+        for d in sorted(ROOT.iterdir(), key=lambda p: p.name, reverse=True):
+            if not d.is_dir():
+                continue
+            run = read_json(d.name, "run.json")
+            if not run:
+                continue
+            posts = read_json(d.name, "posts.json") or []
+            out.append({"run_id": d.name, "topic": run.get("topic", "Untitled run"),
+                        "n_posts": len(posts), "started_at": run.get("started_at")})
+    return jsonify(out)
+
+
+@app.route("/chat/suggestions")
+def chat_suggestions():
+    run_id = request.args.get("run_id", "")
+    run = read_json(run_id, "run.json") or {}
+    clusters = read_json(run_id, "clusters.json") or []
+    topic = run.get("topic", "this topic")
+    sugg = [f"What are people saying about {c['label']}?"
+            for c in clusters[:3] if c.get("label")]
+    for fallback in (f"Summarize the overall sentiment on {topic}.",
+                     f"What are the main points of disagreement about {topic}?",
+                     f"Who are the most influential voices on {topic}?"):
+        if len(sugg) >= 4:
+            break
+        sugg.append(fallback)
+    return jsonify({"topic": topic, "suggestions": sugg[:4]})
+
+
+@app.route("/chat/threads", methods=["GET", "POST"])
+def chat_threads():
+    if request.method == "POST":
+        data = request.get_json(force=True, silent=True) or {}
+        run_id = data.get("run_id")
+        if not run_id:
+            return jsonify({"error": "run_id required"}), 400
+        thread = chat_store.new_thread(run_id, title=(data.get("title") or "New chat"))
+        chat_store.save_thread(thread)
+        return jsonify(thread)
+    run_id = request.args.get("run_id", "")
+    return jsonify(chat_store.list_threads(run_id))
+
+
+@app.route("/chat/thread/<thread_id>", methods=["GET", "DELETE"])
+def chat_thread(thread_id):
+    run_id = request.args.get("run_id", "")
+    if request.method == "DELETE":
+        ok = chat_store.delete_thread(run_id, thread_id)
+        return jsonify({"deleted": ok})
+    thread = chat_store.load_thread(run_id, thread_id)
+    if thread is None:
+        return jsonify({"error": "not found"}), 404
+    if request.args.get("debug") == "1":
+        return jsonify(thread)
+    return jsonify({"id": thread["id"], "title": thread["title"],
+                    "messages": thread["messages"], "summary": thread.get("summary", ""),
+                    "archived_count": thread.get("archived_count", 0)})
+
+
+@app.route("/chat/ask", methods=["POST"])
+def chat_ask():
+    data = request.get_json(force=True, silent=True) or {}
+    run_id = data.get("run_id")
+    thread_id = data.get("thread_id")
+    q = (data.get("q") or "").strip()
+    if not run_id or not q:
+        return jsonify({"error": "run_id and q required"}), 400
+
+    thread = chat_store.load_thread(run_id, thread_id) if thread_id else None
+    if thread is None:
+        thread = chat_store.new_thread(run_id, title=q[:48])
+    if not thread["messages"]:
+        thread["title"] = q[:48]
+    preamble = chat_memory.build_preamble(thread)
+
+    @stream_with_context
+    def gen():
+        yield sse_format({"type": "meta", "thread_id": thread["id"], "title": thread["title"]})
+        final = None
+        for ev in chat_engine.answer_stream(run_id, q, preamble=preamble):
+            if ev.get("type") == "answer":
+                final = ev
+            yield sse_format(ev)
+        chat_store.append_message(thread, "user", q)
+        chat_store.append_message(
+            thread, "assistant", (final or {}).get("answer", ""),
+            citations_detail=(final or {}).get("citations_detail", []),
+            confidence=(final or {}).get("confidence", 0.0))
+        chat_memory.compact(thread)
+        chat_store.save_thread(thread)
+        yield sse_format({"type": "saved", "thread_id": thread["id"]})
+
+    return Response(gen(), mimetype="text/event-stream")
 
 
 @app.route("/run-info")

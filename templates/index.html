@@ -647,6 +647,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
             aria-label="Toggle theme" style="cursor:pointer;margin-left:auto">🌙</button>
     <span class="nav-back" onclick="goto('landing')" style="margin-left: 12px;">← home</span>
     <span class="nav-back" onclick="goto('byok')" style="margin-left:12px">⚙ BYOK</span>
+    <span class="nav-back" onclick="openChat()" style="margin-left:12px">💬 Chat</span>
     <span class="nav-back" onclick="window.open('/docs','_blank')" style="margin-left:12px">📖 Docs</span>
     <span id="nav-shots" class="nav-back" onclick="goto('shots')"
           style="margin-left:12px;display:none">📸 Captures</span>
@@ -822,6 +823,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
         <div class="row">
           <input id="q" placeholder="Ask anything about the posts we found..." style="flex:1" />
           <button id="ask-btn">Ask</button>
+          <button class="secondary" onclick="openChat()" title="Open a full conversational workspace for this run">Open in Chat →</button>
         </div>
         <div id="answer" class="answer" style="margin-top:16px"></div>
       </div>
@@ -1031,6 +1033,11 @@ document.addEventListener("change", e => {
 });
 
 let runId = null, sentChart = null, cy = null;
+
+function openChat() {
+  const rid = runId || (function(){ try { return localStorage.getItem("pt:lastRunId"); } catch(e){ return null; } })();
+  window.open(rid ? ("/chat?run_id=" + encodeURIComponent(rid)) : "/chat", "_blank");
+}
 let proConChart = null, confChart = null, _evidence = null;
 
 const PL_ORDER = ["seed", "fetch", "cluster", "label", "brief"];
