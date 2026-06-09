@@ -75,6 +75,7 @@ class _FakePg:
         self.convs[conv["id"]] = dict(conv); return True
 
     def insert_message(self, cid, role, content, metadata=None):
+        assert cid in self.convs, f"FK violation: no conversation {cid}"
         self.msgs.setdefault(cid, []).append(
             {"role": role, "content": content, "metadata": metadata or {}})
         return True
@@ -167,3 +168,16 @@ def test_fallback_to_file_when_pg_disabled(tmp_path, monkeypatch):
     loaded = chat_store.load_thread("run1", thread["id"])
     assert loaded is not None
     assert loaded["messages"][0]["content"] == "q"
+
+
+def test_delete_thread_db_only(tmp_path, monkeypatch):
+    from lib import chat_store, store
+    monkeypatch.setattr(store, "ROOT", tmp_path)
+    monkeypatch.setattr(store, "read_json", lambda rid, name: {"topic_id": "t"})
+    fake = _FakePg()
+    monkeypatch.setattr(chat_store, "_pg", lambda: fake)
+    fake.convs["c9"] = {"id": "c9", "topic_id": "t", "run_id": "run1",
+                        "title": "x", "summary": "", "archived_count": 0}
+    # no local file written
+    assert chat_store.delete_thread("run1", "c9") is True
+    assert fake.get_conversation("c9") is None

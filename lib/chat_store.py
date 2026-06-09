@@ -19,11 +19,12 @@ from . import store
 
 
 def _pg():
-    """Process-wide Supabase singleton, or None when the DB layer is absent."""
+    """Process-wide Supabase singleton, or None when the DB layer is absent
+    or misconfigured (chat must never crash on a DB setup problem)."""
     try:
         from db import get_supabase
         return get_supabase()
-    except ImportError:
+    except Exception:
         return None
 
 
@@ -85,8 +86,8 @@ def append_message(thread: dict, role: str, content: str, *,
             meta["citations_detail"] = citations_detail
         if confidence is not None:
             meta["confidence"] = confidence
-        pg.upsert_conversation(_conv_row(thread))  # idempotent; ensures FK
-        pg.insert_message(thread["id"], role, content, meta)
+        if pg.upsert_conversation(_conv_row(thread)):  # ensure FK row exists first
+            pg.insert_message(thread["id"], role, content, meta)
     return msg
 
 
@@ -105,6 +106,8 @@ def _msgs_from_db(rows: list[dict], *, with_meta: bool) -> list[dict]:
     out = []
     for m in rows:
         d: dict[str, Any] = {"role": m["role"], "content": m["content"]}
+        if m.get("ts") is not None:
+            d["ts"] = m["ts"]
         meta = m.get("metadata") or {}
         if with_meta:
             if "citations_detail" in meta:
@@ -143,7 +146,8 @@ def load_thread_full(run_id: str, thread_id: str) -> dict | None:
         if conv:
             rows = pg.get_messages(thread_id)
             return {
-                "id": conv["id"], "title": conv["title"],
+                "id": conv["id"], "run_id": conv["run_id"],
+                "topic_id": conv["topic_id"], "title": conv["title"],
                 "summary": conv.get("summary", ""),
                 "archived_count": int(conv.get("archived_count", 0)),
                 "messages": _msgs_from_db(rows, with_meta=True),
