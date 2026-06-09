@@ -25,7 +25,24 @@ def write_json(run_id: str, name: str, data: Any) -> None:
 
 
 def read_json(run_id: str, name: str) -> Any:
-    p = run_dir(run_id) / name
+    p = ROOT / run_id / name
     if not p.exists():
         return None
     return json.loads(p.read_text())
+
+
+_CANCEL_FLAG = "cancel.flag"
+
+
+def request_cancel(run_id: str) -> None:
+    (run_dir(run_id) / _CANCEL_FLAG).write_text(str(int(time.time())))
+
+
+def is_cancelled(run_id: str) -> bool:
+    return (ROOT / run_id / _CANCEL_FLAG).exists()
+
+
+def clear_cancel(run_id: str) -> None:
+    p = ROOT / run_id / _CANCEL_FLAG
+    if p.exists():
+        p.unlink()
