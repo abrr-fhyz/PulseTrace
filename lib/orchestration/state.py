@@ -13,7 +13,7 @@ from ..connectors.base import Post
 
 # A crawled item is just a connector Post; aliased so the graph layer has its
 # own vocabulary without duplicating the dataclass.
-type CrawledItem = Post
+CrawledItem = Post
 
 
 class AgentState(TypedDict, total=False):
