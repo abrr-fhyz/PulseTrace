@@ -1,0 +1,39 @@
+{
+  "name": "[orchestration] Engagement Alert",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "alert-webhook",
+      "name": "Webhook engagement_alert",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "engagement_alert",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "engagement_alert",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "notify-slack",
+      "name": "Slack notify",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [520, 300],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channelId": "={{ $env.SLACK_ALERT_CHANNEL }}",
+        "text": "=:rotating_light: Engagement threshold tripped\nitem: {{ $json.body.item_id }} score: {{ $json.body.score }} run: {{ $json.body.run_id }}"
+      },
+      "credentials": {
+        "slackApi": { "id": "REPLACE_WITH_CREDENTIAL_ID", "name": "Slack account" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook engagement_alert": { "main": [[{ "node": "Slack notify", "type": "main", "index": 0 }]] }
+  }
+}
