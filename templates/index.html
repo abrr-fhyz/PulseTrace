@@ -1226,7 +1226,6 @@ async function start() {
 
   $("#go").disabled = true;
   clearNode($("#clusters"));
-  clearNode($("#answer"));
   if (cy) { cy.destroy(); cy = null; }
   { const h = $("#graphHint"); if (h) h.classList.remove("hidden"); }
   if (sentChart) { sentChart.destroy(); sentChart = null; }
