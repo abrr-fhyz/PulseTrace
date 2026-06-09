@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "pulsetrace": {
+      "type": "stdio",
+      "command": "/home/shyan/Desktop/FBScraper/.venv/bin/python",
+      "args": [
+        "/home/shyan/Desktop/FBScraper/mcp_server.py"
+      ]
+    },
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp"
+    },
+    "mongodb": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mongodb-mcp-server@latest"
+      ],
+      "env": {
+        "MDB_MCP_CONNECTION_STRING": "${MDB_MCP_CONNECTION_STRING}"
+      }
+    }
+  }
+}

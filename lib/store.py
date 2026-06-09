@@ -1,13 +1,17 @@
 """Per-run JSON persistence under data/runs/<run_id>/."""
 from __future__ import annotations
 import json
+import os
 import time
 import uuid
 from pathlib import Path
 from typing import Any
 
 
-ROOT = Path("data/runs")
+# Anchored to the repo so the path holds regardless of launch cwd (e.g. when an
+# MCP client spawns mcp_server.py from elsewhere). Override with PULSETRACE_DATA_ROOT.
+_DEFAULT_ROOT = Path(__file__).resolve().parents[1] / "data" / "runs"
+ROOT = Path(os.environ["PULSETRACE_DATA_ROOT"]) if os.environ.get("PULSETRACE_DATA_ROOT") else _DEFAULT_ROOT
 
 
 def new_run_id() -> str:
