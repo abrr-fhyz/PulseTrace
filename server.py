@@ -335,7 +335,9 @@ def briefing_pdf(run_id):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
     if not p.exists():
-        return jsonify({"error": "PDF unavailable (weasyprint not installed)"}), 501
+        return jsonify({"error": "PDF unavailable: no working render engine "
+                                 "(install weasyprint GTK libs, or run "
+                                 "'playwright install chromium')"}), 501
     return Response(
         p.read_bytes(),
         mimetype="application/pdf",

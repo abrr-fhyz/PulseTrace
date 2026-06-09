@@ -11,6 +11,7 @@ import html
 import logging
 import math
 import shutil
+import threading
 import time
 from pathlib import Path
 
@@ -536,9 +537,23 @@ def _sentiment_chart_svg(clusters: list[dict]) -> str:
 
 
 def _render_pdf(html_path: Path, pdf_path: Path) -> bool:
+    """Render the briefing to PDF, trying engines in order of fidelity.
+
+    WeasyPrint is preferred but needs GTK/Pango/cairo native libraries that are
+    absent on stock Windows, where importing it raises OSError (not ImportError).
+    Chromium via Playwright ships those bindings internally and is already a
+    project dependency for the scraper, so it is a portable fallback.
+    """
+    if _render_pdf_weasyprint(html_path, pdf_path):
+        return True
+    return _render_pdf_chromium(html_path, pdf_path)
+
+
+def _render_pdf_weasyprint(html_path: Path, pdf_path: Path) -> bool:
     try:
         from weasyprint import HTML
-    except ImportError:
+    except Exception as e:  # OSError on Windows w/o GTK; ImportError if absent
+        _LOG.info("weasyprint unavailable, trying chromium fallback: %s", e)
         return False
     try:
         HTML(
@@ -546,9 +561,49 @@ def _render_pdf(html_path: Path, pdf_path: Path) -> bool:
             base_url=str(html_path.parent.resolve()),
         ).write_pdf(str(pdf_path))
     except Exception as e:
-        _LOG.warning("PDF briefing render failed: %s", e)
+        _LOG.warning("weasyprint PDF render failed, trying chromium: %s", e)
         return False
     return True
+
+
+def _render_pdf_chromium(html_path: Path, pdf_path: Path) -> bool:
+    """Render via headless Chromium in a dedicated thread.
+
+    The thread isolates sync_playwright from any running asyncio loop in the
+    caller, which would otherwise raise "sync API inside asyncio loop".
+    """
+    result = {"ok": False}
+
+    def _work() -> None:
+        try:
+            from playwright.sync_api import sync_playwright
+        except Exception as e:
+            _LOG.warning("playwright unavailable for PDF fallback: %s", e)
+            return
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch()
+                try:
+                    page = browser.new_page()
+                    page.goto(html_path.resolve().as_uri(),
+                              wait_until="networkidle")
+                    page.pdf(
+                        path=str(pdf_path),
+                        format="A4",
+                        print_background=True,
+                        margin={"top": "12mm", "bottom": "12mm",
+                                "left": "10mm", "right": "10mm"},
+                    )
+                finally:
+                    browser.close()
+            result["ok"] = True
+        except Exception as e:
+            _LOG.warning("chromium PDF render failed: %s", e)
+
+    t = threading.Thread(target=_work)
+    t.start()
+    t.join()
+    return result["ok"]
 
 
 def _render_cluster_group(group: dict) -> str:

@@ -340,7 +340,15 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
             c["sentiment"] = sentiments.get(c["id"], c["sentiment"])
         write_json(run_id, "clusters.json", cluster_meta)
         write_json(run_id, "ranked.json", [p.to_dict() for p in ranked_global[:15]])
-        BUS.publish(run_id, {"type": "reranked", "n": len(ranked_global)})
+        BUS.publish(run_id, {
+            "type": "reranked",
+            "n": len(ranked_global),
+            "clusters": [
+                {"id": c["id"], "label": c["label"],
+                 "n": len(c["members"]), "sentiment": c["sentiment"]}
+                for c in cluster_meta
+            ],
+        })
 
     write_json(run_id, "run.json", {
         "id": run_id,
