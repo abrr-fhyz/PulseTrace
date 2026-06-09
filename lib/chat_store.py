@@ -1,7 +1,11 @@
-"""Per-thread chat persistence under data/runs/<run_id>/chats/<thread_id>.json.
+"""Per-thread chat persistence: file (memory working-set + fallback) plus a
+Supabase dual-write that is the durable source of truth when enabled.
 
-Threads are scoped to a run (its post corpus is the RAG evidence). Reuses
-lib.store.ROOT so the path holds regardless of launch cwd.
+File path: data/runs/<run_id>/chats/<thread_id>.json (via lib.store.ROOT).
+DB: `conversations` (title/summary/archived_count) + append-only `messages`.
+Memory compaction (lib.chat_memory) only trims the file working-set; the DB
+keeps full history. The answering path reconstructs the compacted working-set
+from the DB so memory logic stays unchanged.
 """
 from __future__ import annotations
 
@@ -12,6 +16,31 @@ from pathlib import Path
 from typing import Any
 
 from . import store
+
+
+def _pg():
+    """Process-wide Supabase singleton, or None when the DB layer is absent."""
+    try:
+        from db import get_supabase
+        return get_supabase()
+    except ImportError:
+        return None
+
+
+def _topic_id(run_id: str) -> str:
+    run = store.read_json(run_id, "run.json") or {}
+    return run.get("topic_id") or store._slug(run.get("topic", "")) or run_id
+
+
+def _conv_row(thread: dict) -> dict:
+    return {
+        "id": thread["id"],
+        "topic_id": thread.get("topic_id") or _topic_id(thread["run_id"]),
+        "run_id": thread["run_id"],
+        "title": thread.get("title", "New chat"),
+        "summary": thread.get("summary", ""),
+        "archived_count": int(thread.get("archived_count", 0)),
+    }
 
 
 def _chats_dir(run_id: str) -> Path:
@@ -29,6 +58,7 @@ def new_thread(run_id: str, title: str = "New chat") -> dict[str, Any]:
     return {
         "id": uuid.uuid4().hex[:12],
         "run_id": run_id,
+        "topic_id": _topic_id(run_id),
         "title": title,
         "created": now,
         "updated": now,
@@ -47,6 +77,16 @@ def append_message(thread: dict, role: str, content: str, *,
     if confidence is not None:
         msg["confidence"] = confidence
     thread["messages"].append(msg)
+
+    pg = _pg()
+    if pg and pg.enabled:
+        meta: dict[str, Any] = {}
+        if citations_detail is not None:
+            meta["citations_detail"] = citations_detail
+        if confidence is not None:
+            meta["confidence"] = confidence
+        pg.upsert_conversation(_conv_row(thread))  # idempotent; ensures FK
+        pg.insert_message(thread["id"], role, content, meta)
     return msg
 
 
@@ -56,15 +96,65 @@ def save_thread(thread: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(thread, default=str, indent=2))
 
+    pg = _pg()
+    if pg and pg.enabled:
+        pg.upsert_conversation(_conv_row(thread))
+
+
+def _msgs_from_db(rows: list[dict], *, with_meta: bool) -> list[dict]:
+    out = []
+    for m in rows:
+        d: dict[str, Any] = {"role": m["role"], "content": m["content"]}
+        meta = m.get("metadata") or {}
+        if with_meta:
+            if "citations_detail" in meta:
+                d["citations_detail"] = meta["citations_detail"]
+            if "confidence" in meta:
+                d["confidence"] = meta["confidence"]
+        out.append(d)
+    return out
+
 
 def load_thread(run_id: str, thread_id: str) -> dict | None:
+    """Compacted working-set for the answering/memory path (DB-first)."""
+    pg = _pg()
+    if pg and pg.enabled:
+        conv = pg.get_conversation(thread_id)
+        if conv:
+            archived = int(conv.get("archived_count", 0))
+            rows = pg.get_messages(thread_id)[archived * 2:]
+            return {
+                "id": conv["id"], "run_id": conv["run_id"],
+                "topic_id": conv["topic_id"], "title": conv["title"],
+                "summary": conv.get("summary", ""), "archived_count": archived,
+                "messages": _msgs_from_db(rows, with_meta=False),
+            }
     path = _thread_path(run_id, thread_id)
     if not path.exists():
         return None
     return json.loads(path.read_text())
 
 
+def load_thread_full(run_id: str, thread_id: str) -> dict | None:
+    """Full history for display (DB-first); file fallback returns the working-set."""
+    pg = _pg()
+    if pg and pg.enabled:
+        conv = pg.get_conversation(thread_id)
+        if conv:
+            rows = pg.get_messages(thread_id)
+            return {
+                "id": conv["id"], "title": conv["title"],
+                "summary": conv.get("summary", ""),
+                "archived_count": int(conv.get("archived_count", 0)),
+                "messages": _msgs_from_db(rows, with_meta=True),
+            }
+    return load_thread(run_id, thread_id)
+
+
 def list_threads(run_id: str) -> list[dict]:
+    pg = _pg()
+    if pg and pg.enabled:
+        return pg.list_conversations(_topic_id(run_id))
     chats = store.ROOT / run_id / "chats"
     if not chats.exists():
         return []
@@ -86,8 +176,10 @@ def list_threads(run_id: str) -> list[dict]:
 
 
 def delete_thread(run_id: str, thread_id: str) -> bool:
+    pg = _pg()
+    db_deleted = bool(pg and pg.enabled and pg.delete_conversation(thread_id))
     path = _thread_path(run_id, thread_id)
-    if not path.exists():
-        return False
-    path.unlink()
-    return True
+    file_deleted = path.exists()
+    if file_deleted:
+        path.unlink()
+    return db_deleted or file_deleted
