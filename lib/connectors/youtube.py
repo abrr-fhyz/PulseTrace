@@ -60,10 +60,16 @@ class YouTubeConnector(Connector):
         cmd = [
             "yt-dlp", "--ignore-config", "--no-cookies-from-browser",
             f"ytsearch{limit}:{query}",
+            # --flat-playlist returns search entries (title/desc/channel/views)
+            # without a deep per-video extraction. Full --dump-json visited each
+            # of N videos (~2-3s each) — ~40s/query. Flat is ~10x faster; we lose
+            # exact upload_date/like/comment counts (→0), which don't drive
+            # clustering or sentiment.
+            "--flat-playlist",
             "--dump-json", "--no-warnings", "--no-download",
         ]
         try:
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         except (subprocess.SubprocessError, OSError):
             return []
         out: list[Post] = []
