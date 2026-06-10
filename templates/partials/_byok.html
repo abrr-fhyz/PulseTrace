@@ -1,0 +1,35 @@
+<section id="view-byok" class="view">
+  <div class="byok-wrap">
+    <div class="grid-bg"></div>
+    <div class="blob b1" style="opacity:.3"></div>
+    <div class="blob b2" style="opacity:.3"></div>
+    <div class="byok-card">
+      <h2 class="title">Bring your own key</h2>
+      <p class="sub">
+        Pick a provider, paste an API key, and we'll route this session's LLM calls through it.
+        Currently only Google Gemini is wired — others are placeholders for the upcoming release.
+        Keys stay in your browser (localStorage) and are sent only with run requests.
+      </p>
+
+      <div class="field">
+        <label for="byok-provider">Provider</label>
+        <select id="byok-provider"></select>
+      </div>
+
+      <div class="field">
+        <label for="byok-key">API key</label>
+        <input id="byok-key" type="password" autocomplete="off" spellcheck="false"
+               placeholder="paste key here" />
+        <div id="byok-hint" class="muted" style="margin-top:6px"></div>
+      </div>
+
+      <div id="byok-status" class="status-pill idle">No key validated yet</div>
+
+      <div class="actions">
+        <button id="byok-validate" class="cta-primary">Validate &amp; save</button>
+        <button id="byok-clear" class="secondary">Clear</button>
+      </div>
+      <a class="skip-link" onclick="goto('app')">Skip — use server's default key</a>
+    </div>
+  </div>
+</section>

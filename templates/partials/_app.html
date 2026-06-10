@@ -1,0 +1,22 @@
+<section id="view-app" class="view">
+  <header>
+    <button id="histToggle" class="hist-toggle" onclick="openHistory()"
+            title="Past searches" aria-label="Past searches">☰</button>
+    <div class="dot"></div>
+    <h1 id="brandHome" onclick="newRun()" title="Start a new search">PulseTrace</h1>
+    <span id="byok-badge" class="byok-badge pill" style="display:none; color: var(--pos); border-color: var(--pos); background: rgba(16,185,129,0.1);"></span>
+    <a id="briefing-link" class="pill" href="#" data-kind="pdf"
+       onclick="downloadBriefing(event)"
+       style="display:none; margin-left: 8px;">📄 Download PDF</a>
+    <span class="nav-back" onclick="goto('byok')" style="margin-left:auto">⚙ BYOK</span>
+    <button class="nav-chat-cta" onclick="openChat()" title="Open conversational RAG workspace">💬 Chat (RAG)</button>
+    <span class="nav-back" onclick="window.open('/docs','_blank')" style="margin-left:12px">📖 Docs</span>
+    <span id="nav-shots" class="nav-back" onclick="goto('shots')"
+          style="margin-left:12px;display:none">📸 Captures</span>
+  </header>
+
+  <main>
+{% include "partials/_app_left.html" %}
+{% include "partials/_app_right.html" %}
+  </main>
+</section>

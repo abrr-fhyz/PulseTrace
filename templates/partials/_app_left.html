@@ -1,0 +1,118 @@
+    <section class="col">
+      <div class="panel">
+        <h2 class="orch-head">
+          Run Agent
+          <span class="pill orch-pill">
+            <span class="orch-pill-dot"></span>Powered by LangGraph
+          </span>
+        </h2>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <input id="topic" placeholder="Topic, e.g. 'OpenAI Codex'" />
+          <textarea id="opinion" rows="2" placeholder="My Opinion (optional) — e.g. I want to play Elden Ring because I heard good things"></textarea>
+          <div class="row" style="flex-wrap:wrap">
+            <label class="toggle"><input type="checkbox" id="src-reddit"> Reddit</label>
+            <label class="toggle"><input type="checkbox" id="src-hn"> HN</label>
+            <label class="toggle"><input type="checkbox" id="src-facebook" checked> Facebook</label>
+            <label class="toggle"><input type="checkbox" id="src-x"> X</label>
+            <label class="toggle"><input type="checkbox" id="src-instagram"> Instagram</label>
+            <label class="toggle"><input type="checkbox" id="src-youtube"> YouTube</label>
+            <label class="toggle"><input type="checkbox" id="src-polymarket"> Polymarket</label>
+            <label class="toggle"><input type="checkbox" id="src-github"> GitHub</label>
+            <label class="toggle"><input type="checkbox" id="src-bluesky"> Bluesky</label>
+          </div>
+          <button id="go" class="cta-primary">Start agent</button>
+        </div>
+
+        <details class="orch-explainer" style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px">
+          <summary>How this works · LangGraph state machine</summary>
+          <p>
+            Each run executes as an explicit, resumable LangGraph state machine.
+            The nodes below fire in order — adding engagement alerting and
+            automatic failure-recovery on top of the core analysis pipeline.
+          </p>
+        </details>
+
+        <div id="orch-timeline" class="orch-timeline">
+          <div class="orch-node" data-node="crawl"><span class="orch-dot"></span><span class="orch-name">crawl</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="score"><span class="orch-dot"></span><span class="orch-name">score</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="alert"><span class="orch-dot"></span><span class="orch-name">alert</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="recover"><span class="orch-dot"></span><span class="orch-name">recover</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="done"><span class="orch-dot"></span><span class="orch-name">done</span><span class="orch-info" data-info></span></div>
+        </div>
+
+        <div id="orch-result" class="grid3" style="display:none;margin-top:18px">
+          <div class="kpi"><span>Items</span><b id="orch-items">0</b></div>
+          <div class="kpi"><span>Peak score</span><b id="orch-peak">--</b></div>
+          <div class="kpi"><span>Retries</span><b id="orch-retries">0</b></div>
+        </div>
+        <div id="orch-alerted" class="muted" style="display:none;margin-top:10px"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Pipeline</h2>
+        <div id="pipeline" class="pipeline">
+          <div class="pl-stage" data-stage="seed">
+            <div class="pl-ic">1</div>
+            <div class="pl-body">
+              <div class="pl-title">Seed queries</div>
+              <div class="pl-sub">Working out what to search for</div>
+            </div>
+            <div class="pl-meta" data-meta>idle</div>
+            <div class="pl-bar"></div>
+          </div>
+          <div class="pl-stage" data-stage="fetch">
+            <div class="pl-ic">2</div>
+            <div class="pl-body">
+              <div class="pl-title">Fetch &amp; OCR</div>
+              <div class="pl-sub">Collecting posts from social media</div>
+            </div>
+            <div class="pl-meta" data-meta>idle</div>
+            <div class="pl-bar"></div>
+          </div>
+          <div class="pl-stage" data-stage="cluster">
+            <div class="pl-ic">3</div>
+            <div class="pl-body">
+              <div class="pl-title">Embed &amp; cluster</div>
+              <div class="pl-sub">Grouping similar posts together</div>
+            </div>
+            <div class="pl-meta" data-meta>idle</div>
+            <div class="pl-bar"></div>
+          </div>
+          <div class="pl-stage" data-stage="label">
+            <div class="pl-ic">4</div>
+            <div class="pl-body">
+              <div class="pl-title">Label &amp; sentiment</div>
+              <div class="pl-sub">Naming each group and reading the mood</div>
+            </div>
+            <div class="pl-meta" data-meta>idle</div>
+            <div class="pl-bar"></div>
+          </div>
+          <div class="pl-stage" data-stage="brief">
+            <div class="pl-ic">5</div>
+            <div class="pl-body">
+              <div class="pl-title">Executive briefing</div>
+              <div class="pl-sub">Writing up the report to download</div>
+            </div>
+            <div class="pl-meta" data-meta>idle</div>
+            <div class="pl-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Metrics</h2>
+        <div class="grid3">
+          <div class="kpi"><span>Posts</span><b id="m-posts">0</b></div>
+          <div class="kpi"><span>Topics</span><b id="m-clusters">0</b></div>
+          <div class="kpi"><span title="How spread out the conversation is across different talking points.">Topic spread</span><b id="m-entropy">--</b></div>
+        </div>
+
+        <div id="replay-wrap" style="display:none;margin-top:24px">
+          <h2 style="margin-bottom:12px">Replay Timeline</h2>
+          <input id="replay-slider" type="range" min="1" max="1" value="1" step="1"
+                 style="width:100%;margin:0;padding:0; accent-color: var(--accent2);" />
+          <div class="muted" id="replay-caption" style="margin-top:8px">iteration 1 of 1</div>
+        </div>
+      </div>
+
+    </section>

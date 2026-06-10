@@ -1,0 +1,27 @@
+<div id="hist-backdrop" class="drawer-backdrop" onclick="closeHistory()"></div>
+<aside id="hist-drawer" class="hist-drawer" aria-hidden="true" aria-label="Past searches">
+  <div class="hist-drawer-head">
+    <span>Past searches</span>
+    <div class="hist-head-actions">
+      <button class="hist-mini" title="New search" onclick="newRun()">＋</button>
+      <button class="hist-mini" title="Refresh" onclick="loadHistory()">⟳</button>
+      <button class="hist-mini" title="Close" onclick="closeHistory()">×</button>
+    </div>
+  </div>
+  <div id="history-list" class="history-list"></div>
+</aside>
+
+<div id="cluster-backdrop" class="drawer-backdrop"></div>
+<aside id="cluster-drawer" class="drawer" aria-hidden="true" aria-label="Cluster posts">
+  <div class="drawer-head">
+    <div class="strip" id="drawer-strip"></div>
+    <button class="drawer-close" id="drawer-close" aria-label="Close">×</button>
+    <h3 id="drawer-title">Topic</h3>
+    <div class="why" id="drawer-why"></div>
+    <div class="drawer-moodbar" id="drawer-mood"></div>
+    <div class="drawer-mood-lbl" id="drawer-mood-lbl"></div>
+    <div class="count" id="drawer-count"></div>
+  </div>
+  <div class="drawer-search"><input id="drawer-search" placeholder="Search these posts..." /></div>
+  <div class="drawer-body" id="drawer-body"></div>
+</aside>

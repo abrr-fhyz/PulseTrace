@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Sleek Modern Light Theme */
+  --bg: #FAFAFA;
+  --panel: #FFFFFF;
+  --panel2: #F4F4F5;
+  --border: #E4E4E7;
+  --text: #09090B;
+  --muted: #71717A;
+  --accent: #10B981;    /* Emerald */
+  --accent2: #2563EB;   /* Blue */
+  --accent3: #8B5CF6;   /* Violet */
+  --neg: #EF4444;       /* Red */
+  --pos: #10B981;       /* Emerald */
+  --neu: #A1A1AA;       /* Zinc */
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+:root[data-theme="dark"] {
+  /* Premium dark theme — dark surfaces dominate, purple/lavender/bronze are accents only */
+  --bg: #0a0a0f;
+  --panel: #18181f;
+  --panel2: #232330;
+  --border: #34343f;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --accent: #34d399;    /* Emerald — operational/status: done, online, healthy, success */
+  --accent2: #a78bfa;   /* Lavender — primary brand accent (borders, focus, hover, links) */
+  --accent3: #c4b5fd;   /* Light lavender — brand glows/gradients */
+  --accent4: #c9974e;   /* Bronze — tertiary accent (dividers, badges) */
+  --neg: #f87171;       /* Red — failure / negative sentiment */
+  --pos: #34d399;       /* Emerald — positive sentiment */
+  --neu: #8b8b96;       /* Gray — neutral sentiment */
+  --header-bg: rgba(10, 10, 15, 0.85);
+  --card-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.25);
+}

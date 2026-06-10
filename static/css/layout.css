@@ -1,0 +1,64 @@
+/* --- App Shell & Layout --- */
+header { padding: 16px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); background: var(--header-bg); position: sticky; top: 0; z-index: 10; height: 65px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+header h1 { font-size: 18px; margin-right: 8px; }
+header .nav-back { margin-left: auto; cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 500; transition: color 0.2s ease; display: inline-flex; align-items: center; }
+header .nav-back:hover { color: var(--text); text-decoration: none; }
+header .nav-chat-cta {
+  margin-left: 12px; display: inline-flex; align-items: center; gap: 6px;
+  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  color: #fff; background: var(--accent2); border: 1px solid var(--accent2);
+  border-radius: 9px; padding: 7px 13px; transition: filter .15s ease, transform .15s ease;
+}
+header .nav-chat-cta:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+main { display: grid; grid-template-columns: 400px 1fr; gap: 24px; padding: 24px 32px; max-width: 1700px; margin: 0 auto; min-height: calc(100vh - 65px); align-items: start; }
+.col { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.col > .grid2 { margin-bottom: 0; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 24px; box-shadow: var(--card-shadow); transition: box-shadow 0.3s ease; }
+.panel:hover { box-shadow: 0 8px 16px -4px rgba(0,0,0,0.05); }
+.row { display: flex; gap: 12px; align-items: center; }
+label.toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer; }
+label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: var(--accent2); }
+
+.log { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; height: 200px; overflow-y: auto; white-space: pre-wrap; line-height: 1.5; }
+.log .ev { color: var(--text); }
+.log .err { color: var(--neg); }
+
+
+/* --- Grids & KPIs --- */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+@media (max-width: 1024px) {
+  main { grid-template-columns: 1fr; }
+  .grid2 { grid-template-columns: 1fr; }
+}
+
+.kpi { background: var(--panel2); border: 1px solid var(--border); border-radius: 16px; padding: 16px 20px; text-align: left; position: relative; overflow: hidden; }
+.kpi b { font-size: 28px; font-weight: 700; color: var(--text); display: block; margin-top: 8px; font-family: 'JetBrains Mono', monospace; letter-spacing: -0.05em; }
+.kpi span { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+
+.graph-wrap { position: relative; height: 480px; border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--accent2) 7%, transparent), transparent 50%),
+    radial-gradient(120% 120% at 100% 100%, color-mix(in srgb, var(--accent3) 7%, transparent), transparent 50%),
+    var(--panel2);
+}
+#graph { width: 100%; height: 100%; }
+#graph canvas { max-height: none; }
+.graph-legend { position: absolute; top: 12px; left: 12px; z-index: 3; display: flex; gap: 14px;
+  padding: 8px 12px; border-radius: 10px; backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--panel) 70%, transparent); border: 1px solid var(--border);
+  font-size: 11px; color: var(--muted); font-weight: 600; }
+.graph-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.graph-zoom { position: absolute; bottom: 12px; right: 12px; z-index: 3; display: flex; flex-direction: column; gap: 6px; }
+.graph-zoom button { width: 34px; height: 34px; padding: 0; border-radius: 9px; font-size: 16px; font-weight: 700;
+  display: grid; place-items: center; background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border: 1px solid var(--border); color: var(--text); cursor: pointer; backdrop-filter: blur(8px);
+  transition: transform .15s, border-color .15s; }
+.graph-zoom button:hover { transform: translateY(-1px); border-color: var(--accent2); }
+.graph-hint { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center;
+  color: var(--muted); font-size: 13px; pointer-events: none; opacity: 1; transition: opacity .4s; }
+.graph-hint.hidden { opacity: 0; }
+#sentChart, #proConChart, #confChart { max-height: 280px; }

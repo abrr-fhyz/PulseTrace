@@ -1,0 +1,76 @@
+    <section class="col">
+      <div class="panel">
+        <h2>Topic graph</h2>
+        <div class="graph-wrap">
+          <div class="graph-legend">
+            <span><i style="background:var(--pos)"></i>Positive</span>
+            <span><i style="background:var(--neu)"></i>Neutral</span>
+            <span><i style="background:var(--neg)"></i>Negative</span>
+          </div>
+          <div id="graph"></div>
+          <div class="graph-zoom">
+            <button type="button" id="gZoomIn" title="Zoom in">+</button>
+            <button type="button" id="gZoomOut" title="Zoom out">−</button>
+            <button type="button" id="gFit" title="Fit to view">⤢</button>
+          </div>
+          <div class="graph-hint" id="graphHint">Run a topic to render the sentiment graph</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="panel">
+          <h2>How people feel, by topic</h2>
+          <canvas id="sentChart"></canvas>
+        </div>
+        <div class="panel">
+          <h2>Main talking points</h2>
+          <div id="clusters" style="max-height:300px;overflow:auto; padding-right: 8px;"></div>
+        </div>
+      </div>
+
+      <div id="voices" class="panel" style="display:none;">
+        <h2>What People Are Saying</h2>
+        <p class="ev-intro" id="voices-why"></p>
+        <div class="mood-meter">
+          <div class="mood-bar" id="voices-mood"></div>
+          <div class="mood-lbl" id="voices-mood-lbl"></div>
+        </div>
+        <div class="carousel" id="voices-carousel">
+          <button class="car-nav" id="car-prev" aria-label="Previous quote">‹</button>
+          <div class="car-stage" id="car-stage"></div>
+          <button class="car-nav" id="car-next" aria-label="Next quote">›</button>
+        </div>
+        <div class="car-dots" id="car-dots"></div>
+        <h3 style="margin-top:24px">Notable reactions</h3>
+        <div id="voices-notable"></div>
+      </div>
+
+      <div id="evidence" class="panel" style="display:none;">
+        <div class="ev-tabs" id="ev-tabs">
+          <button class="ev-tab active" data-tab="summary">The Short Version</button>
+          <button class="ev-tab" data-tab="overview">What's This Actually About?</button>
+          <button class="ev-tab" data-tab="consensus">Do Most People Agree?</button>
+          <button class="ev-tab" data-tab="viz">Proof — The Posts Behind This</button>
+          <button class="ev-tab op-only" data-tab="screenA">Reasons People Think This Is True</button>
+          <button class="ev-tab op-only" data-tab="screenB">Reasons People Think This Isn't True</button>
+          <button class="ev-tab" data-tab="uncertainty">How Sure Are We?</button>
+          <button class="ev-tab" data-tab="assessment">Our Take</button>
+        </div>
+        <div class="ev-panel" data-panel="summary"></div>
+        <div class="ev-panel" data-panel="overview" hidden></div>
+        <div class="ev-panel" data-panel="consensus" hidden></div>
+        <div class="ev-panel" data-panel="viz" hidden>
+          <p class="ev-intro">A quick visual of what we found. The numbers come from the posts we read — nothing made up.</p>
+          <div class="grid2">
+            <div><h3 title="Counts how many posts argued for vs against the topic.">For vs. against — how the posts split</h3><canvas id="proConChart"></canvas></div>
+            <div><h3 title="How well the posts back up each point. Longer bar = more posts saying it.">How well-backed each point is</h3><canvas id="confChart"></canvas></div>
+          </div>
+          <p class="ev-note">Where this comes from: the posts we collected for this topic over the last 30 days.</p>
+        </div>
+        <div class="ev-panel" data-panel="screenA" hidden></div>
+        <div class="ev-panel" data-panel="screenB" hidden></div>
+        <div class="ev-panel" data-panel="uncertainty" hidden></div>
+        <div class="ev-panel" data-panel="assessment" hidden></div>
+      </div>
+
+    </section>

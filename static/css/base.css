@@ -1,0 +1,41 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; background: var(--bg); color: var(--text);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3 { font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+h1 { font-size: 24px; }
+h2 { font-size: 13px; margin: 0 0 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.panel > h2 { display: flex; align-items: center; gap: 9px; }
+.panel > h2::before { content: ""; width: 3px; height: 13px; border-radius: 2px;
+  background: linear-gradient(var(--accent2), var(--accent4)); flex: 0 0 auto; }
+
+button, input, select, textarea {
+  background: var(--panel); color: var(--text); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 16px; font-size: 14px; outline: none;
+  font-family: inherit; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+input:focus, select:focus, textarea:focus { border-color: var(--accent2); box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15); }
+
+button { background: var(--text); color: var(--bg); font-weight: 500; cursor: pointer; border: none; }
+button:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+button:active { transform: translateY(0); }
+button.secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+button.secondary:hover { background: var(--border); }
+button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; filter: none; }
+
+.muted { color: var(--muted); font-size: 13px; }
+.pill { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 999px;
+        background: var(--panel2); border: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--text); transition: all 0.2s ease; }
+#briefing-link { color: var(--accent2); text-decoration: none; font-weight: 500; }
+#briefing-link:hover { opacity: 0.8; }
+
+.view { display: none; opacity: 0; transition: opacity .4s cubic-bezier(0.4,0,0.2,1); min-height: 100vh; }
+.view.active { display: block; opacity: 1; }
