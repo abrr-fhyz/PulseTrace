@@ -135,6 +135,7 @@ h1,h2,h3 { font-weight: 600; letter-spacing: -0.02em; margin: 0; }
   background: var(--panel); padding: 13px; font-size: 13px; line-height: 1.55; display: none;
 }
 .cite-detail.open { display: block; }
+.cite-detail .cite-title { font-weight: 600; font-size: 13.5px; color: var(--text); margin-bottom: 6px; }
 .cite-detail .meta { color: var(--muted); font-size: 11.5px; margin-bottom: 6px; }
 .cite-detail img { max-width: 100%; border-radius: 8px; margin-top: 9px; border: 1px solid var(--border); }
 .cite-detail a { color: var(--accent2); text-decoration: none; }
@@ -400,11 +401,15 @@ function addAssistantShell(){
 function renderCites(container, cites){
   container.textContent = "";
   if (!cites || !cites.length) return;
-  cites.forEach(c => {
+  cites.forEach((c, i) => {
+    const title = c.title || c.label || "Source";
     const chip = elem("span", "chip");
-    chip.textContent = "[" + (c.label || c.raw || "?") + "]";
+    chip.textContent = "[" + (i + 1) + "]";
+    chip.title = title;
     const detail = elem("div", "cite-detail");
     if (c.resolved){
+      const head = elem("div", "cite-title"); head.textContent = title;
+      detail.appendChild(head);
       const meta = elem("div", "meta");
       meta.textContent = (c.source || "") + (c.author ? " · " + c.author : "");
       const txt = elem("div"); txt.textContent = c.text_preview || "";

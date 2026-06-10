@@ -40,3 +40,6 @@ data/event_logs/
 /info
 # Upstream skill used only to capture the eval baseline; not a dependency.
 last30days-skill/
+.coverage
+
+.playwright-mcp/

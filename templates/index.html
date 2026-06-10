@@ -902,7 +902,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
         <h2>Metrics</h2>
         <div class="grid3">
           <div class="kpi"><span>Posts</span><b id="m-posts">0</b></div>
-          <div class="kpi"><span>Clusters</span><b id="m-clusters">0</b></div>
+          <div class="kpi"><span>Topics</span><b id="m-clusters">0</b></div>
           <div class="kpi"><span title="How spread out the conversation is across different talking points.">Topic spread</span><b id="m-entropy">--</b></div>
         </div>
 
@@ -937,11 +937,11 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
 
       <div class="grid2">
         <div class="panel">
-          <h2>Sentiment by cluster</h2>
+          <h2>How people feel, by topic</h2>
           <canvas id="sentChart"></canvas>
         </div>
         <div class="panel">
-          <h2>Clusters</h2>
+          <h2>Main talking points</h2>
           <div id="clusters" style="max-height:300px;overflow:auto; padding-right: 8px;"></div>
         </div>
       </div>
@@ -1914,7 +1914,7 @@ function renderClusters(cs) {
         role: "button", tabindex: "0",
         "aria-label": "Explore posts in " + String(c.label || "this group") },
       elem("div", { class: "hd" },
-        elem("b", null, String(c.label || "Unlabeled")),
+        elem("b", null, String(c.label || "General discussion")),
         elem("span", { class: "pill" }, c.n + " posts"),
       ),
       elem("div", { class: "bar" },
@@ -2169,7 +2169,14 @@ const PL2 = (function () {
     { label: "Putting your report together", sub: "Almost done — writing up what we found so it's easy to read." },
     { label: "Your results are ready!",      sub: "Here's everything we found. Take your time exploring." },
   ];
-  const APPROX = [1, 12, 14, 8, 8, 14];
+  const APPROX = [1, 14, 10, 7, 8, 20];
+  const FINAL_MICRO = [
+    "Pulling out the key themes…",
+    "Weighing the strongest points on each side…",
+    "Checking which views are best supported…",
+    "Writing your plain-language summary…",
+    "Polishing the wording so it's easy to read…",
+  ];
   const REASSURE = [
     "We anonymise usernames — we only show what people said, not who.",
     "The more posts we find, the more reliable the results.",
@@ -2177,9 +2184,9 @@ const PL2 = (function () {
     "We check Reddit, Hacker News, Facebook and more — all in one go.",
   ];
   const rm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let cur = -1, count = 0, plats = {}, finished = false;
+  let cur = -1, count = 0, plats = {}, finished = false, themeCount = 0;
   let simTimer = null, chainTimer = null, chainTimer2 = null, reassureTimer = null,
-      etaTimer = null, animTimer = null, reassureIdx = 0;
+      etaTimer = null, animTimer = null, finalTimer = null, reassureIdx = 0, finalIdx = 0;
 
   const el = (id) => document.getElementById(id);
 
@@ -2224,7 +2231,10 @@ const PL2 = (function () {
     renderAnim(i);
   }
   function setMin(i) { if (i > cur) setStage(i); }
-  function clearAnim() { if (animTimer) { clearInterval(animTimer); clearTimeout(animTimer); animTimer = null; } }
+  function clearAnim() {
+    if (animTimer) { clearInterval(animTimer); clearTimeout(animTimer); animTimer = null; }
+    if (finalTimer) { clearInterval(finalTimer); finalTimer = null; }
+  }
 
   function renderAnim(i) {
     clearAnim();
@@ -2270,9 +2280,30 @@ const PL2 = (function () {
     } else if (i === 4) {
       animGalaxy(a);
     } else if (i === 5) {
-      a.appendChild(h("div", { class: "pl2-doc", id: "pl2-doc" }));
+      a.appendChild(h("div", { style: "display:flex;flex-direction:column;align-items:center;width:100%" },
+        h("div", { class: "pl2-doc", id: "pl2-doc" }),
+        h("div", { class: "muted", id: "pl2-final-status",
+          style: "font-size:13px;margin-top:14px;min-height:18px;transition:opacity .3s;text-align:center" })));
       typeDoc();
+      startFinalStatus();
     }
+  }
+
+  function startFinalStatus() {
+    finalIdx = 0;
+    const tick = () => {
+      const s = el("pl2-final-status"); if (!s) return;
+      s.style.opacity = "0";
+      setTimeout(() => {
+        if (!el("pl2-final-status")) return;
+        const lead = (finalIdx === 0 && themeCount)
+          ? "Found " + themeCount + " main talking points — writing them up…"
+          : FINAL_MICRO[finalIdx % FINAL_MICRO.length];
+        s.textContent = lead; finalIdx++; s.style.opacity = "1";
+      }, 250);
+    };
+    tick();
+    if (!rm) finalTimer = setInterval(tick, 2600);
   }
 
   function animGalaxy(a) {
@@ -2306,7 +2337,11 @@ const PL2 = (function () {
     const heads = ["The Short Version", "What's This Actually About?", "Do Most People Agree?", "Our Take"];
     let n = 0;
     function next() {
-      if (finished || n >= heads.length || !document.body.contains(doc)) return;
+      if (finished || !document.body.contains(doc)) return;
+      if (n >= heads.length) {  // loop so the final stage never looks frozen
+        if (!rm) animTimer = setTimeout(() => { clearNode(doc); n = 0; next(); }, 1600);
+        return;
+      }
       doc.appendChild(h("h5", null, heads[n]));
       for (let k = 0; k < 2; k++) {
         const ln = h("div", { class: "ln" }); doc.appendChild(ln);
@@ -2341,7 +2376,7 @@ const PL2 = (function () {
   }
 
   function start() {
-    finished = false; cur = -1; count = 0; plats = {};
+    finished = false; cur = -1; count = 0; plats = {}; themeCount = 0; finalIdx = 0;
     buildRail();
     el("pl2").classList.add("open");
     clearNode(el("pl2-particles"));
@@ -2371,7 +2406,9 @@ const PL2 = (function () {
         chainTimer = setTimeout(() => setMin(3), 1400);
         chainTimer2 = setTimeout(() => setMin(4), 2800);
         break;
-      case "labeled": setMin(5); break;
+      case "labeled":
+        if (ev.clusters && ev.clusters.length) themeCount = ev.clusters.length;
+        setMin(5); break;
       case "briefing_ready": case "evidence_ready": setMin(5); break;
       case "embed_error": fail("while sorting the posts into groups"); break;
       case "briefing_error": briefingFailed(); break;
@@ -2381,9 +2418,9 @@ const PL2 = (function () {
   }
 
   function stopTimers() {
-    [simTimer, chainTimer, chainTimer2, reassureTimer, etaTimer, animTimer].forEach(t => {
+    [simTimer, chainTimer, chainTimer2, reassureTimer, etaTimer, animTimer, finalTimer].forEach(t => {
       if (t) { clearInterval(t); clearTimeout(t); } });
-    simTimer = chainTimer = chainTimer2 = reassureTimer = etaTimer = animTimer = null;
+    simTimer = chainTimer = chainTimer2 = reassureTimer = etaTimer = animTimer = finalTimer = null;
   }
 
   function complete() {

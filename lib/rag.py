@@ -9,6 +9,31 @@ from .retrieve import hybrid_search
 from .store import run_dir
 
 
+import re
+
+_TITLE_STRIP = re.compile(r"\s*\.{2,}\s*see more\s*$", re.I)
+_WS = re.compile(r"\s+")
+
+
+def _readable_title(text: str) -> str:
+    """Human-friendly headline from a post's text — no slugs, no ids."""
+    t = _TITLE_STRIP.sub("", str(text or "")).strip()
+    t = _WS.sub(" ", t)
+    if not t:
+        return "Untitled post"
+    for stop in (". ", "! ", "? ", " — ", " | "):
+        i = t.find(stop)
+        if 12 <= i <= 60:
+            t = t[:i]
+            break
+    words = t.split(" ")
+    if len(words) > 9:
+        t = " ".join(words[:9]) + "…"
+    elif len(t) > 60:
+        t = t[:57].rstrip() + "…"
+    return t[0].upper() + t[1:] if t else "Untitled post"
+
+
 def _normalize_cite(raw: str, posts: dict) -> str | None:
     """LLM often strips the 'facebook:' prefix. Try several keys."""
     if not raw:
@@ -40,17 +65,18 @@ def _citation_detail(run_id: str, cite_raw: str, posts: dict) -> dict:
     pid = _normalize_cite(cite_raw, posts)
     if pid is None:
         return {"raw": str(cite_raw), "resolved": False,
-                "label": str(cite_raw)}
+                "title": "Source", "label": "Source"}
     post = posts[pid]
     raw = post.get("raw") or {}
     shot_name = raw.get("shot") if isinstance(raw, dict) else None
     shot_url = _resolve_shot_url(run_id, shot_name) if shot_name else None
-    short = pid.split(":", 1)[-1]
+    title = _readable_title(post.get("text", ""))
     return {
         "raw": str(cite_raw),
         "resolved": True,
         "id": pid,
-        "label": short[-9:] if len(short) > 12 else short,
+        "title": title,
+        "label": title,
         "source": post.get("source"),
         "author": post.get("author"),
         "url": post.get("url"),

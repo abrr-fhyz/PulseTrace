@@ -16,8 +16,8 @@ def label_cluster(samples: list[str]) -> dict:
     try:
         out = chat_json(SYS, f"Posts in this cluster:\n{body}", stage="label")
     except Exception:
-        return {"label": "Unlabeled", "desc": ""}
+        return {"label": "General discussion", "desc": ""}
     return {
-        "label": str(out.get("label", "Unlabeled"))[:80],
+        "label": str(out.get("label", "General discussion"))[:80],
         "desc": str(out.get("desc", ""))[:300],
     }

@@ -2,6 +2,7 @@
 from __future__ import annotations
 import copy
 import logging
+import re
 import time
 from .connectors.base import Post
 from .llm import chat_json
@@ -28,6 +29,46 @@ _BEHAVIOR = (
     "balance when evidence overwhelmingly favors one side; prefer evidence over "
     "popularity."
 )
+_VOICE = (
+    "Write for an ordinary reader, not an engineer. NEVER expose internal "
+    "machinery: do not write 'cluster', 'Cluster 0', 'Unlabeled', 'n=34', "
+    "'sentiment score', or numeric scores like '(0.735)'. The clusters below are "
+    "just groups of similar posts — refer to them in plain words like 'many "
+    "people', 'a recurring theme', 'one group of posts'. Say what people actually "
+    "feel or discuss and why it matters, in warm, conversational, everyday "
+    "language."
+)
+
+_JARGON = [
+    (re.compile(r"\bClusters?\s*\d+(?:\s*(?:,|and|&)\s*\d+)*\s*,?\s*", re.I), ""),
+    (re.compile(r"['\"]?\bUnlabeled\b\s*,?\s*['\"]?\s*", re.I), "this group "),
+    (re.compile(r"\bn\s*=\s*\d+\b", re.I), ""),
+    (re.compile(r"\bsentiment scores?\b", re.I), "overall mood"),
+    (re.compile(r"\(\s*[-+]?[01]?\.\d+\s*\)"), ""),
+    (re.compile(r"\bhas a (high|low|strong) (negative|positive) sentiment\b", re.I),
+     r"reads as strongly \2"),
+]
+_FIXUP = [
+    (re.compile(r"\s{2,}"), " "),
+    (re.compile(r"\s+([,.;:!?])"), r"\1"),
+    (re.compile(r"\(\s*\)"), ""),
+]
+
+
+def _scrub(v):
+    """Strip leaked ML jargon from any user-facing text the LLM produced."""
+    if isinstance(v, str):
+        for pat, repl in _JARGON:
+            v = pat.sub(repl, v)
+        for pat, repl in _FIXUP:
+            v = pat.sub(repl, v)
+        v = v.strip()
+        return v[0].upper() + v[1:] if v else v
+    if isinstance(v, list):
+        return [_scrub(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _scrub(x) for k, x in v.items()}
+    return v
 _SCHEMA = (
     'Output JSON: {"exec_summary":{"plain_topic":str,"key_findings":[str],'
     '"agreements":[str],"disagreements":[str],"conclusion":str},'
@@ -59,14 +100,14 @@ def build(run_id: str, opinion: str | None) -> dict:
 
     out = {
         "opinion": opinion,
-        "exec_summary": llm.get("exec_summary", _NEUTRAL["exec_summary"]),
-        "topic_overview": llm.get("topic_overview", ""),
-        "community_consensus": llm.get("community_consensus", _NEUTRAL["community_consensus"]),
+        "exec_summary": _scrub(llm.get("exec_summary", _NEUTRAL["exec_summary"])),
+        "topic_overview": _scrub(llm.get("topic_overview", "")),
+        "community_consensus": _scrub(llm.get("community_consensus", _NEUTRAL["community_consensus"])),
         "claims": claims,
         "screen_a": [c for c in claims if c["side"] == "pro"] if opinion else [],
         "screen_b": [c for c in claims if c["side"] == "con"] if opinion else [],
-        "uncertainty": llm.get("uncertainty", []),
-        "final_assessment": llm.get("final_assessment", ""),
+        "uncertainty": _scrub(llm.get("uncertainty", [])),
+        "final_assessment": _scrub(llm.get("final_assessment", "")),
     }
     write_json(run_id, "evidence.json", out)
     return out
@@ -83,11 +124,11 @@ def _enrich_claim(claim: dict, members_by_cid: dict[int, list[Post]],
     llm_conf = _clamp(claim.get("llm_confidence", 0.0))
     cats = sorted({es.category_for(p.source) for p in posts}) or ["unknown"]
     return {
-        "text": str(claim.get("text", "")),
+        "text": _scrub(str(claim.get("text", ""))),
         "side": claim.get("side", "neutral"),
         "confidence": es.blend(computed, llm_conf),
         "evidence_strength": es.strength_bucket(ranking),
-        "reasoning": str(claim.get("reasoning", "")),
+        "reasoning": _scrub(str(claim.get("reasoning", ""))),
         "source_categories": cats,
         "cluster_ids": cids,
         "ranking": ranking,
@@ -109,7 +150,7 @@ def _llm_analyze(topic: str, opinion: str | None, clusters: list[dict]) -> dict:
     )
     system = (
         "You are an evidence analyst building a balanced, Community-Notes-style "
-        "report from clustered social-media discussion. " + _BEHAVIOR + " " + _SCHEMA
+        "report from social-media discussion. " + _BEHAVIOR + " " + _VOICE + " " + _SCHEMA
     )
     user = f"Topic: {topic}\n{stance}\n\nCluster findings:\n{labels}"
     try:
