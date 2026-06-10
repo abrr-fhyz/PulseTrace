@@ -20,7 +20,7 @@ from .stance import cluster_sentiments
 from .relevance import token_overlap_relevance, extract_core_subject
 from .rerank import rank_posts, llm_rerank
 from .events import BUS
-from .store import write_json, new_run_id
+from .store import write_json, new_run_id, is_cancelled, clear_cancel
 from .llm import chat_json
 from .evidence import build as build_evidence
 
@@ -150,6 +150,7 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
     sources = [s for s in sources if s in SOURCES] or ["facebook"]
     core = extract_core_subject(topic) or topic
     started_at = int(time.time())
+    clear_cancel(run_id)
     BUS.publish(run_id, {"type": "started", "run_id": run_id, "topic": topic, "sources": sources})
 
     seen: dict[str, Post] = {}
@@ -167,6 +168,9 @@ def run_agent(topic: str, sources: list[str], run_id: str | None = None,
     fetched: set[tuple[str, str]] = set()
 
     for it in range(MAX_ITERS):
+        if is_cancelled(run_id):
+            stop_reason = "cancelled"
+            break
         pending = [qs for qs in pending if qs not in fetched]
         if not pending:
             stop_reason = "exhausted"

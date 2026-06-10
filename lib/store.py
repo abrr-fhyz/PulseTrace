@@ -8,6 +8,7 @@ file path and never raises into the pipeline.
 from __future__ import annotations
 import json
 import logging
+import os
 import re
 import time
 import uuid
@@ -15,7 +16,10 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path("data/runs")
+# Anchored to the repo so the path holds regardless of launch cwd (e.g. when an
+# MCP client spawns mcp_server.py from elsewhere). Override with PULSETRACE_DATA_ROOT.
+_DEFAULT_ROOT = Path(__file__).resolve().parents[1] / "data" / "runs"
+ROOT = Path(os.environ["PULSETRACE_DATA_ROOT"]) if os.environ.get("PULSETRACE_DATA_ROOT") else _DEFAULT_ROOT
 log = logging.getLogger("pulsetrace.store")
 
 
@@ -96,7 +100,24 @@ def _mirror_to_db(run_id: str, name: str, data: Any) -> None:
 
 
 def read_json(run_id: str, name: str) -> Any:
-    p = run_dir(run_id) / name
+    p = ROOT / run_id / name
     if not p.exists():
         return None
     return json.loads(p.read_text())
+
+
+_CANCEL_FLAG = "cancel.flag"
+
+
+def request_cancel(run_id: str) -> None:
+    (run_dir(run_id) / _CANCEL_FLAG).write_text(str(int(time.time())))
+
+
+def is_cancelled(run_id: str) -> bool:
+    return (ROOT / run_id / _CANCEL_FLAG).exists()
+
+
+def clear_cancel(run_id: str) -> None:
+    p = ROOT / run_id / _CANCEL_FLAG
+    if p.exists():
+        p.unlink()
