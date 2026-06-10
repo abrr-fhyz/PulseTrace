@@ -167,19 +167,31 @@ async def _capture_many(queries: list[str], scrolls: int, shots_per: int,
                 _log(f"q{qi} goto fail: {e}")
                 continue
             await asyncio.sleep(4)
+            authed = True
+            wall_reason = ""
             try:
                 final_url = page.url
                 title = await page.title()
                 _log(f"q{qi} landed url={final_url!r} title={title!r}")
+                low = (title or "").strip().lower()
+                # FB serves the /search URL itself (no redirect) when logged out,
+                # but the body is a login wall — the tell is an empty/login title.
                 if "/login" in final_url or "checkpoint" in final_url:
-                    _log(f"q{qi} LOGIN REDIRECT — marking cookies stale")
-                    try:
-                        from .. import fb_cookies as _fbc
-                        _fbc.mark_stale(f"login redirect on q{qi}: {final_url}")
-                    except Exception:
-                        pass
+                    authed, wall_reason = False, f"login redirect: {final_url}"
+                elif not low or "log in" in low or "log into" in low:
+                    authed, wall_reason = False, f"login wall (title={title!r})"
             except Exception:
                 pass
+            if not authed:
+                # Session is dead for the whole run — bail now instead of paying
+                # the full scroll budget on 11 more queries that all return 0.
+                _log(f"q{qi} NOT AUTHENTICATED ({wall_reason}) — aborting FB capture")
+                try:
+                    from .. import fb_cookies as _fbc
+                    _fbc.mark_stale(f"q{qi}: {wall_reason}")
+                except Exception:
+                    pass
+                break
             shots_taken = 0
             for n in range(scrolls):
                 shot = out_dir / f"q{qi}_s{n}_{ts}.png"
