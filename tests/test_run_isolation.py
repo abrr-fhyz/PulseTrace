@@ -48,3 +48,20 @@ def test_list_runs_no_owner_no_filter():
     c, captured = _client_with_capture()
     c.list_runs(owner_email=None, limit=10)
     assert "owner_email = %s" not in captured["sql"]
+
+
+def test_user_owns_run_disk(tmp_path, monkeypatch):
+    monkeypatch.setenv("PULSETRACE_DATA_ROOT", str(tmp_path))
+    import importlib
+    import lib.store as store
+    importlib.reload(store)
+    import server
+    importlib.reload(server)
+    store.set_run_owner("rA", "a@x.com")
+    store.set_run_owner("rB", "b@x.com")
+    with server.app.test_request_context():
+        from flask import session
+        monkeypatch.setattr(server.auth_lib, "auth_active", lambda: True)
+        session["user_email"] = "a@x.com"
+        assert server._user_owns_run("rA") is True
+        assert server._user_owns_run("rB") is False
