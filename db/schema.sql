@@ -159,3 +159,35 @@ CREATE TABLE IF NOT EXISTS run_artifacts (
 CREATE INDEX IF NOT EXISTS ix_artifacts_topic ON run_artifacts (topic_id);
 CREATE INDEX IF NOT EXISTS ix_artifacts_data_gin ON run_artifacts USING gin (data jsonb_path_ops);
 ALTER TABLE run_artifacts ENABLE ROW LEVEL SECURITY;
+
+-- ---------------------------------------------------------------- conversations
+-- Persistent chat history. `topic_id` is the owner/group key (project has no
+-- auth); `run_id` is the corpus a conversation's RAG retrieves against.
+CREATE TABLE IF NOT EXISTS conversations (
+    id             text PRIMARY KEY,
+    topic_id       text NOT NULL,
+    run_id         text NOT NULL,
+    title          text NOT NULL DEFAULT 'New chat',
+    summary        text NOT NULL DEFAULT '',
+    archived_count integer NOT NULL DEFAULT 0,
+    created_at     timestamptz NOT NULL DEFAULT now(),
+    updated_at     timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_conversations_topic
+    ON conversations (topic_id, updated_at DESC);
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+
+-- ---------------------------------------------------------------- messages
+-- Append-only full history (never deleted by memory compaction). The file
+-- working-set holds only the compacted recent turns; the DB keeps everything.
+CREATE TABLE IF NOT EXISTS messages (
+    id              bigserial PRIMARY KEY,
+    conversation_id text NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    role            text NOT NULL,
+    content         text NOT NULL DEFAULT '',
+    metadata        jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_messages_convo
+    ON messages (conversation_id, created_at);
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;

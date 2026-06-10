@@ -110,7 +110,12 @@ def _load_posts_dict(run_id: str) -> dict:
     return {p["id"]: p for p in json.loads((run_dir(run_id) / "posts.json").read_text())}
 
 
-def ask(run_id: str, question: str, k: int = 8) -> dict:
+def _ask_user_msg(question: str, context: str, preamble: str) -> str:
+    head = f"{preamble}\n\n" if preamble else ""
+    return f"{head}Question: {question}\n\nPosts:\n{context}"
+
+
+def ask(run_id: str, question: str, k: int = 8, *, preamble: str = "") -> dict:
     if not _ensure_index(run_id):
         return {"answer": "No data for this run.", "citations": [],
                 "citations_detail": [], "retrieved": [], "confidence": 0.0,
@@ -129,7 +134,7 @@ def ask(run_id: str, question: str, k: int = 8) -> dict:
             f"[{pid}] {posts[pid]['text'][:600]}" for pid in hits if pid in posts
         )
         try:
-            out = chat_json(ASK_SYS, f"Question: {question}\n\nPosts:\n{context}",
+            out = chat_json(ASK_SYS, _ask_user_msg(question, context, preamble),
                             stage="rag")
         except Exception as e:
             return {"answer": f"LLM error: {e}", "citations": [],

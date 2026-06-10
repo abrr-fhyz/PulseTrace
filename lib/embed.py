@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -32,18 +33,33 @@ def _key(text: str) -> str:
     return hashlib.sha1(f"{_backend_tag()}::{text}".encode("utf-8")).hexdigest()
 
 
-def _load_cache() -> dict[str, list[float]]:
-    if not CACHE_PATH.exists():
+_KEY_RE = re.compile(r'"k"\s*:\s*"([0-9a-f]{40})"')
+
+
+def _peek_key(line: str) -> str | None:
+    # The writer emits {"k": "<sha1>", "v": [...]} with the key first, so the
+    # sha1 lives in the first ~60 chars. Matching it without json-parsing the
+    # whole line lets us skip the ~60KB float vector on rows we don't need.
+    m = _KEY_RE.search(line, 0, 64)
+    return m.group(1) if m else None
+
+
+def _load_cached(wanted: set[str]) -> dict[str, list[float]]:
+    if not wanted or not CACHE_PATH.exists():
         return {}
-    cache: dict[str, list[float]] = {}
+    found: dict[str, list[float]] = {}
     with CACHE_PATH.open() as f:
         for line in f:
+            k = _peek_key(line)
+            if k is None or k not in wanted or k in found:
+                continue
             try:
-                row = json.loads(line)
-                cache[row["k"]] = row["v"]
+                found[k] = json.loads(line)["v"]
             except Exception:
                 continue
-    return cache
+            if len(found) == len(wanted):
+                break
+    return found
 
 
 def _append_cache(rows: list[tuple[str, list[float]]]) -> None:
@@ -91,20 +107,27 @@ def embed_texts(texts: list[str], batch: int = 100) -> np.ndarray:
         dim = _probe_dim_or_zero() or DEFAULT_EMBED_DIM
         return np.zeros((0, max(dim, 1)), dtype=np.float32)
 
-    cache = _load_cache()
     keys = [_key(t) for t in texts]
-    missing_idx = [i for i, k in enumerate(keys) if k not in cache]
+    cache = _load_cached(set(keys))
 
-    if missing_idx:
-        chunk_texts = [texts[i] for i in missing_idx]
+    # Collapse duplicate texts to a single embedding call: identical strings
+    # share a key, so embedding them more than once just burns tokens and
+    # appends duplicate cache rows.
+    missing: dict[str, str] = {}
+    for i, k in enumerate(keys):
+        if k not in cache and k not in missing:
+            missing[k] = texts[i]
+
+    if missing:
+        miss_keys = list(missing)
+        chunk_texts = [missing[k] for k in miss_keys]
         if backend.is_ollama():
             vectors = _embed_ollama_native(chunk_texts)
         else:
             vectors = _embed_openai_compat(backend.embed_provider(), chunk_texts, batch)
-        new_rows: list[tuple[str, list[float]]] = []
-        for i, v in zip(missing_idx, vectors):
-            cache[keys[i]] = v
-            new_rows.append((keys[i], v))
+        new_rows = list(zip(miss_keys, vectors))
+        for k, v in new_rows:
+            cache[k] = v
         _append_cache(new_rows)
 
     arr = np.array([cache[k] for k in keys], dtype=np.float32)
