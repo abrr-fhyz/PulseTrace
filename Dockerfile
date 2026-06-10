@@ -27,8 +27,11 @@ COPY . .
 RUN mkdir -p /app/data /app/info /app/data/runs /app/data/event_logs
 
 EXPOSE 5000
+# MCP server (streamable-http) — started once by gunicorn's when_ready hook.
+EXPOSE 8000
 
 ENTRYPOINT ["/usr/bin/tini","--"]
 # 2 sync workers, 1 thread each — Playwright + SSE need long-lived connections.
 # Threaded class lets SSE generators stream concurrently without blocking the worker.
-CMD ["gunicorn","-k","gthread","-w","2","--threads","8","--timeout","600","-b","0.0.0.0:5000","server:app"]
+# -c gunicorn.conf.py: when_ready hook spawns the MCP server once in the master.
+CMD ["gunicorn","-c","gunicorn.conf.py","-k","gthread","-w","2","--threads","8","--timeout","600","-b","0.0.0.0:5000","server:app"]

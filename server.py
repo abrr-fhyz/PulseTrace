@@ -882,6 +882,11 @@ if __name__ == "__main__":
     reload_on = _os.environ.get("PT_RELOAD", "0") == "1"
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     app.jinja_env.auto_reload = True
+    # The reloader forks a child; only spawn the MCP server in the process that
+    # actually serves (avoids a duplicate spawn from the reloader parent).
+    if not reload_on or _os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        from lib.mcp_autostart import ensure_mcp_server
+        ensure_mcp_server()
     print(f"PulseTrace v2 -> http://localhost:5000 "
           f"(debug=on, reload={int(reload_on)}; templates auto-reload)")
     app.run(debug=True, host="0.0.0.0", port=5000, threaded=True,
