@@ -708,7 +708,6 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
     <div class="dot"></div>
     <h1>PulseTrace</h1>
     <span id="byok-badge" class="byok-badge pill" style="display:none; color: var(--pos); border-color: var(--pos); background: rgba(16,185,129,0.1);"></span>
-    <span id="run-pill" class="pill" style="display:none"></span>
     <a id="briefing-link" class="pill" href="#" data-kind="pdf"
        onclick="downloadBriefing(event)"
        style="display:none; margin-left: 8px;">📄 Download PDF</a>
@@ -723,7 +722,12 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
   <main>
     <section class="col">
       <div class="panel">
-        <h2>Run Agent</h2>
+        <h2 class="orch-head">
+          Run Agent
+          <span class="pill orch-pill">
+            <span class="orch-pill-dot"></span>Powered by LangGraph
+          </span>
+        </h2>
         <div style="display:flex;flex-direction:column;gap:16px">
           <input id="topic" placeholder="Topic, e.g. 'OpenAI Codex'" />
           <textarea id="opinion" rows="2" placeholder="My Opinion (optional) — e.g. I want to play Elden Ring because I heard good things"></textarea>
@@ -740,6 +744,30 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
           </div>
           <button id="go" class="cta-primary">Start agent</button>
         </div>
+
+        <details class="orch-explainer" style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px">
+          <summary>How this works · LangGraph state machine</summary>
+          <p>
+            Each run executes as an explicit, resumable LangGraph state machine.
+            The nodes below fire in order — adding engagement alerting and
+            automatic failure-recovery on top of the core analysis pipeline.
+          </p>
+        </details>
+
+        <div id="orch-timeline" class="orch-timeline">
+          <div class="orch-node" data-node="crawl"><span class="orch-dot"></span><span class="orch-name">crawl</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="score"><span class="orch-dot"></span><span class="orch-name">score</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="alert"><span class="orch-dot"></span><span class="orch-name">alert</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="recover"><span class="orch-dot"></span><span class="orch-name">recover</span><span class="orch-info" data-info></span></div>
+          <div class="orch-node" data-node="done"><span class="orch-dot"></span><span class="orch-name">done</span><span class="orch-info" data-info></span></div>
+        </div>
+
+        <div id="orch-result" class="grid3" style="display:none;margin-top:18px">
+          <div class="kpi"><span>Items</span><b id="orch-items">0</b></div>
+          <div class="kpi"><span>Peak score</span><b id="orch-peak">--</b></div>
+          <div class="kpi"><span>Retries</span><b id="orch-retries">0</b></div>
+        </div>
+        <div id="orch-alerted" class="muted" style="display:none;margin-top:10px"></div>
       </div>
 
       <div class="panel">
@@ -809,37 +837,6 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
         </div>
       </div>
 
-      <div class="panel">
-        <h2 class="orch-head">
-          Orchestration
-          <span class="pill orch-pill">
-            <span class="orch-pill-dot"></span>Powered by LangGraph
-          </span>
-        </h2>
-        <details class="orch-explainer">
-          <summary>How this works</summary>
-          <p>
-            Each run executes as an explicit, resumable LangGraph state machine.
-            The nodes below fire in order — adding engagement alerting and
-            automatic failure-recovery on top of the core analysis pipeline.
-          </p>
-        </details>
-
-        <div id="orch-timeline" class="orch-timeline">
-          <div class="orch-node" data-node="crawl"><span class="orch-dot"></span><span class="orch-name">crawl</span><span class="orch-info" data-info></span></div>
-          <div class="orch-node" data-node="score"><span class="orch-dot"></span><span class="orch-name">score</span><span class="orch-info" data-info></span></div>
-          <div class="orch-node" data-node="alert"><span class="orch-dot"></span><span class="orch-name">alert</span><span class="orch-info" data-info></span></div>
-          <div class="orch-node" data-node="recover"><span class="orch-dot"></span><span class="orch-name">recover</span><span class="orch-info" data-info></span></div>
-          <div class="orch-node" data-node="done"><span class="orch-dot"></span><span class="orch-name">done</span><span class="orch-info" data-info></span></div>
-        </div>
-
-        <div id="orch-result" class="grid3" style="display:none;margin-top:18px">
-          <div class="kpi"><span>Items</span><b id="orch-items">0</b></div>
-          <div class="kpi"><span>Peak score</span><b id="orch-peak">--</b></div>
-          <div class="kpi"><span>Retries</span><b id="orch-retries">0</b></div>
-        </div>
-        <div id="orch-alerted" class="muted" style="display:none;margin-top:10px"></div>
-      </div>
     </section>
 
     <section class="col">
@@ -1274,9 +1271,6 @@ async function start() {
   }
   runId = j.run_id;
   try { localStorage.setItem("pt:lastRunId", runId); } catch (e) {}
-  const pill = $("#run-pill");
-  pill.style.display = "inline-flex";
-  pill.textContent = "run " + runId;
   $("#briefing-link").style.display = "none";
   $("#briefing-link").href = "#";
   if (window.__orch) window.__orch.begin();
@@ -2607,9 +2601,6 @@ try {
   const cached = localStorage.getItem("pt:lastRunId");
   if (cached) {
     runId = cached;
-    const pill = $("#run-pill");
-    pill.style.display = "inline-flex";
-    pill.textContent = "run " + cached;
     revealBriefingIfReady(cached);
   }
 } catch (e) {}
