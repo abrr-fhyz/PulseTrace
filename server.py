@@ -8,7 +8,7 @@ import os
 import threading
 import time
 import subprocess
-from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context, redirect
 from flask_cors import CORS
 import numpy as np
 from dotenv import load_dotenv
@@ -29,10 +29,33 @@ from lib.rag import ask as rag_ask
 from lib import backend, fb_cookies, docs as docs_mod
 from lib import docs_content
 from lib import chat_store, chat_memory, chat_engine
+from lib import auth as auth_lib
+from db import auth_users
 
 
 app = Flask(__name__)
 CORS(app)
+
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32)
+
+_AUTH_OPEN_PREFIXES = ("/login", "/auth/", "/static/", "/favicon")
+_AUTH_OPEN_EXACT = {"/status"}
+
+
+@app.before_request
+def _auth_gate():
+    if not auth_lib.auth_active():
+        return None
+    path = request.path
+    if path in _AUTH_OPEN_EXACT or path.startswith(_AUTH_OPEN_PREFIXES):
+        return None
+    if auth_lib.current_user():
+        return None
+    if path.startswith("/api") or path.startswith("/chat") or path.startswith("/run") \
+            or path in ("/runs", "/graph", "/events") \
+            or "application/json" in (request.headers.get("Accept") or ""):
+        return jsonify({"ok": False, "error": "Authentication required."}), 401
+    return redirect("/login")
 
 
 BYOK_PROVIDER_REGISTRY = [
@@ -87,20 +110,47 @@ def _byok_restore(prior: dict[str, str]) -> None:
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", user_email=auth_lib.current_user() or "")
 
 
 @app.route("/login")
 def login_page():
+    if auth_lib.current_user():
+        return redirect("/")
     return render_template("auth.html")
 
 
 @app.route("/auth/login", methods=["POST"])
+def auth_login():
+    data = request.get_json(force=True, silent=True) or {}
+    res = auth_users.sign_in((data.get("email") or "").strip(), data.get("password") or "")
+    if res.ok:
+        auth_lib.login_user(res.email, res.access_token)
+        return jsonify({"ok": True, "email": res.email})
+    return jsonify({"ok": False, "error": res.error}), 401
+
+
 @app.route("/auth/signup", methods=["POST"])
+def auth_signup():
+    data = request.get_json(force=True, silent=True) or {}
+    res = auth_users.sign_up((data.get("email") or "").strip(), data.get("password") or "")
+    if res.ok:
+        return jsonify({"ok": True, "email": res.email, "message": res.message})
+    return jsonify({"ok": False, "error": res.error}), 400
+
+
 @app.route("/auth/recover", methods=["POST"])
-def auth_placeholder():
-    # Replaced with real Supabase auth in Step 2.
-    return jsonify({"ok": False, "error": "Authentication is not configured yet."}), 501
+def auth_recover():
+    data = request.get_json(force=True, silent=True) or {}
+    res = auth_users.reset_password((data.get("email") or "").strip())
+    return (jsonify({"ok": True, "message": res.message}) if res.ok
+            else (jsonify({"ok": False, "error": res.error}), 400))
+
+
+@app.route("/auth/logout", methods=["POST"])
+def auth_logout():
+    auth_lib.logout_user()
+    return jsonify({"ok": True})
 
 
 def _docs_context():
