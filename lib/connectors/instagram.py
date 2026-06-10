@@ -32,6 +32,10 @@ def _make_loader():
         download_pictures=False, download_videos=False,
         download_video_thumbnails=False, download_geotags=False,
         download_comments=False, save_metadata=False, post_metadata_txt_pattern="",
+        # Fail fast. From a datacenter IP every request is 403 login_required;
+        # the default 3 attempts + exponential backoff turns each dead query
+        # into tens of seconds of sleep, blowing run time for zero posts.
+        max_connection_attempts=1, request_timeout=15.0,
     )
     user = os.environ.get("IG_USERNAME")
     pw = os.environ.get("IG_PASSWORD")
