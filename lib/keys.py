@@ -22,7 +22,7 @@ FILE_TO_ENV = {
 
 def load(path: str | Path = ".env.api_keys") -> None:
     p = Path(path)
-    if not p.exists():
+    if not p.is_file():
         return
     parsed: dict[str, str] = {}
     for raw in p.read_text().splitlines():
