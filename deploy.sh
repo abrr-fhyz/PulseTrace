@@ -4,7 +4,7 @@
 set -euo pipefail
 
 HOST="${HOST:-root@168.144.124.121}"
-REMOTE="${REMOTE:-/opt/pulsetrace}"
+REMOTE="${REMOTE:-/root/pulsetrace}"
 
 echo "==> rsync $PWD -> $HOST:$REMOTE"
 rsync -avzP --delete \
@@ -19,6 +19,7 @@ rsync -avzP --delete \
   --exclude 'data/fb_debug/*' \
   --exclude 'data/event_logs/*' \
   --exclude 'data/embed_cache.jsonl' \
+  --exclude '.env.api_keys' \
   --exclude 'test_artifacts' \
   --exclude 'results' \
   --exclude '.claude' \

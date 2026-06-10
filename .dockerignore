@@ -15,9 +15,11 @@ __pycache__
 .env.api_keys
 data/runs/*
 data/event_logs/*
+data/embed_cache.jsonl
 data/docs_config.json
 info/cookies.json
 info/*.json
+client_secret_*.json
 test_artifacts
 results
 *.log

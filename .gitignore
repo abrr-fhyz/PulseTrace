@@ -43,3 +43,5 @@ last30days-skill/
 .coverage
 
 .playwright-mcp/
+# Google OAuth client secret (live credential — never commit)
+client_secret_*.json
