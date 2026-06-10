@@ -160,6 +160,13 @@ header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--a
 header h1 { font-size: 18px; margin-right: 8px; }
 header .nav-back { margin-left: auto; cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 500; transition: color 0.2s ease; display: inline-flex; align-items: center; }
 header .nav-back:hover { color: var(--text); text-decoration: none; }
+header .nav-chat-cta {
+  margin-left: 12px; display: inline-flex; align-items: center; gap: 6px;
+  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  color: #fff; background: var(--accent2); border: 1px solid var(--accent2);
+  border-radius: 9px; padding: 7px 13px; transition: filter .15s ease, transform .15s ease;
+}
+header .nav-chat-cta:hover { filter: brightness(1.08); transform: translateY(-1px); }
 
 main { display: grid; grid-template-columns: 400px 1fr; gap: 24px; padding: 24px 32px; max-width: 1700px; margin: 0 auto; min-height: calc(100vh - 65px); align-items: start; }
 .col { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
@@ -675,6 +682,7 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
        style="display:none; margin-left: 8px;">📄 Download PDF</a>
     <span class="nav-back" onclick="goto('landing')" style="margin-left: auto;">← home</span>
     <span class="nav-back" onclick="goto('byok')" style="margin-left:12px">⚙ BYOK</span>
+    <button class="nav-chat-cta" onclick="openChat()" title="Open conversational RAG workspace">💬 Chat (RAG)</button>
     <span class="nav-back" onclick="window.open('/docs','_blank')" style="margin-left:12px">📖 Docs</span>
     <span id="nav-shots" class="nav-back" onclick="goto('shots')"
           style="margin-left:12px;display:none">📸 Captures</span>
@@ -877,13 +885,10 @@ label.toggle input { cursor: pointer; width: 16px; height: 16px; accent-color: v
         <div class="ev-panel" data-panel="assessment" hidden></div>
       </div>
 
-      <div class="panel">
+      <div class="panel chat-cta-panel">
         <h2>Ask about what people said</h2>
-        <div class="row">
-          <input id="q" placeholder="Ask anything about the posts we found..." style="flex:1" />
-          <button id="ask-btn">Ask</button>
-        </div>
-        <div id="answer" class="answer" style="margin-top:16px"></div>
+        <p class="muted" style="margin:0 0 14px">Open the conversational workspace to ask follow-up questions across this run's posts — every answer cites its evidence.</p>
+        <button class="cta-primary" onclick="openChat()" title="Open conversational RAG workspace">💬 Open Chat (RAG) →</button>
       </div>
     </section>
   </main>
@@ -1091,6 +1096,11 @@ document.addEventListener("change", e => {
 });
 
 let runId = null, sentChart = null, cy = null;
+
+function openChat() {
+  const rid = runId || (function(){ try { return localStorage.getItem("pt:lastRunId"); } catch(e){ return null; } })();
+  location.href = rid ? ("/chat?run_id=" + encodeURIComponent(rid)) : "/chat";
+}
 let proConChart = null, confChart = null, _evidence = null;
 
 const PL_ORDER = ["seed", "fetch", "cluster", "label", "brief"];
@@ -1216,7 +1226,6 @@ async function start() {
 
   $("#go").disabled = true;
   clearNode($("#clusters"));
-  clearNode($("#answer"));
   if (cy) { cy.destroy(); cy = null; }
   { const h = $("#graphHint"); if (h) h.classList.remove("hidden"); }
   if (sentChart) { sentChart.destroy(); sentChart = null; }
@@ -2407,101 +2416,6 @@ async function drawGraph(rid) {
   }
 }
 
-async function ask() {
-  if (!runId) {
-    const a = $("#answer"); clearNode(a); a.appendChild(document.createTextNode("Start a run first."));
-    return;
-  }
-  const q = $("#q").value.trim(); if (!q) return;
-  const a = $("#answer"); clearNode(a);
-  a.appendChild(elem("span", { class: "muted" }, "Thinking..."));
-  const r = await fetch("/ask", {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ run_id: runId, q }),
-  });
-  const j = await r.json();
-  clearNode(a);
-  if (j.error) { a.appendChild(document.createTextNode(j.error)); return; }
-
-  const details = j.citations_detail || [];
-  const byRaw = {}; for (const d of details) byRaw[d.raw] = d;
-  const rawList = j.citations || details.map(d => d.raw);
-
-  const inline = renderAnswerWithCites(String(j.answer || ""), rawList, byRaw);
-  a.appendChild(inline);
-
-  if (details.length) {
-    a.appendChild(elem("h2", { style: "margin-top:14px;font-size:11px" }, "References"));
-    const grid = elem("div", { class: "cite-cards" });
-    for (const d of details) grid.appendChild(renderCiteCard(d));
-    a.appendChild(grid);
-  }
-}
-
-function renderAnswerWithCites(text, rawList, byRaw) {
-  const wrap = elem("div", { class: "answer" });
-  const seen = new Set();
-  let lastIdx = 0;
-  const all = [...text.matchAll(/\[([^\[\]]+)\]/g)];
-  for (const m of all) {
-    const start = m.index;
-    if (start > lastIdx) wrap.appendChild(document.createTextNode(text.slice(lastIdx, start)));
-    const inside = m[1];
-    const parts = inside.split(/[,\s]+/).filter(Boolean);
-    wrap.appendChild(document.createTextNode("["));
-    parts.forEach((p, i) => {
-      if (i > 0) wrap.appendChild(document.createTextNode(", "));
-      const d = byRaw[p];
-      const chip = elem("span",
-                        { class: "cite" + (d && d.resolved ? "" : " unresolved"),
-                          role: "button", tabindex: "0",
-                          title: d && d.text_preview ? d.text_preview : "" },
-                        d ? d.label : p);
-      if (d) {
-        chip.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          openCite(d);
-        });
-        seen.add(p);
-      }
-      wrap.appendChild(chip);
-    });
-    wrap.appendChild(document.createTextNode("]"));
-    lastIdx = start + m[0].length;
-  }
-  if (lastIdx < text.length) wrap.appendChild(document.createTextNode(text.slice(lastIdx)));
-  return wrap;
-}
-
-function openCite(d) {
-  if (d.shot_url) { openLightbox(d.shot_url); return; }
-  if (d.url) { window.open(d.url, "_blank", "noopener"); return; }
-}
-
-function renderCiteCard(d) {
-  const card = elem("div", { class: "cite-card", title: d.text_preview || "" });
-  if (d.shot_url) {
-    const img = elem("img", { src: d.shot_url, alt: d.label, loading: "lazy" });
-    card.appendChild(img);
-  }
-  const body = elem("div", { class: "cc-body" });
-  body.appendChild(elem("div", { class: "cc-id" }, "#" + d.label));
-  if (d.text_preview) body.appendChild(elem("div", { class: "cc-text" }, d.text_preview));
-  const meta = elem("div", { class: "cc-meta" });
-  meta.appendChild(elem("span", null, d.source || "?"));
-  meta.appendChild(elem("span", null,
-                       d.shot_url ? "open shot ↗" : (d.url ? "open ↗" : "no link")));
-  body.appendChild(meta);
-  card.appendChild(body);
-  card.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openCite(d);
-  });
-  return card;
-}
-
 const fbModal = $("#fb-cookie-modal");
 const fbPill = $("#fb-stale-pill");
 const fbSub = $("#fb-modal-sub");
@@ -2672,8 +2586,6 @@ async function doCancel() {
 $("#byok-validate").addEventListener("click", validateByok);
 $("#byok-clear").addEventListener("click", clearByok);
 $("#go").addEventListener("click", start);
-$("#ask-btn").addEventListener("click", ask);
-$("#q").addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
 $("#topic").addEventListener("keydown", e => { if (e.key === "Enter") start(); });
 
 routeFromHash();

@@ -177,7 +177,7 @@ DATA_LAYER = {
 AI_LAYER = {
     "chat":         "gemini-2.5-flash-lite (default), cascades through 8 providers on failure.",
     "vision":       "gemini-2.5-flash for screenshot → post extraction on hostile DOMs (Facebook).",
-    "embeddings":   "gemini-embedding-001, cached per run.",
+    "embeddings":   "gemini-embedding-001, cached across runs (sha1-keyed JSONL).",
     "clustering":   "HDBSCAN primary, KMeans fallback with entropy-based k selection.",
     "rag":          "FAISS in-memory index, cosine similarity, top-k citations with screenshot pointers.",
     "explainable":  "Every cluster has LLM-generated label + stance + cited post IDs. Every RAG answer cites post IDs + screenshots.",
@@ -185,7 +185,7 @@ AI_LAYER = {
 
 PERFORMANCE = {
     "Run cap":          "MAX_POSTS=500 per run.",
-    "Embedding cache":  "Per-run; identical text skipped.",
+    "Embedding cache":  "Cross-run sha1 JSONL; identical text de-duplicated per batch.",
     "PDF":              "Pillow downscale ≤720px JPEG q40 → 28MB ➜ 1.9MB.",
     "Cluster fallback": "HDBSCAN failure falls back to KMeans automatically.",
     "Provider failover":"8-provider cascade with retryable error detection.",
