@@ -19,3 +19,17 @@ def test_chat_json_retries_then_succeeds():
             _mock_response('{"ok": true}'),
         ]
         assert chat_json("s", "u") == {"ok": True}
+
+
+def test_chat_json_salvages_json_wrapped_in_prose():
+    with patch("lib.llm.OpenAI") as O:
+        O.return_value.chat.completions.create.return_value = _mock_response(
+            'Sure, here is the analysis you asked for:\n{"verdict": "mixed"}\nHope that helps!'
+        )
+        assert chat_json("s", "u") == {"verdict": "mixed"}
+
+
+def test_chat_json_empty_content_yields_empty_dict():
+    with patch("lib.llm.OpenAI") as O:
+        O.return_value.chat.completions.create.return_value = _mock_response("")
+        assert chat_json("s", "u") == {}

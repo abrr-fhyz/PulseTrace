@@ -50,7 +50,7 @@ def _chat_openai_compat(p: backend.Provider, system: str, user: str, max_tokens:
                     kw["response_format"] = fmt
                 resp = client.chat.completions.create(**kw)
                 raw = resp.choices[0].message.content or "{}"
-                return _coerce_dict(json.loads(_strip_fence(raw)))
+                return _coerce_dict(_loads_lenient(raw))
             except json.JSONDecodeError as e:
                 last_err = e
                 continue
@@ -82,6 +82,24 @@ def _strip_fence(s: str) -> str:
     return s.strip() or "{}"
 
 
+def _loads_lenient(raw: str) -> Any:
+    """Parse model output that may be wrapped in prose. Models (esp. Gemini on
+    sensitive topics) sometimes prepend an explanation or drop the fence, which
+    makes a whole-string json.loads fail at char 0. Salvage the outermost JSON
+    object/array if a clean parse fails."""
+    s = _strip_fence(raw)
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        starts = [i for i in (s.find("{"), s.find("[")) if i != -1]
+        if starts:
+            start = min(starts)
+            end = max(s.rfind("}"), s.rfind("]"))
+            if end > start:
+                return json.loads(s[start:end + 1])
+        raise
+
+
 def _chat_ollama_native(system: str, user: str, max_tokens: int) -> Any:
     url = f"{backend.OLLAMA_HOST}/api/chat"
     payload = {
@@ -109,7 +127,7 @@ def _chat_ollama_native(system: str, user: str, max_tokens: int) -> Any:
             continue
         raw = (r.json().get("message") or {}).get("content") or "{}"
         try:
-            return _coerce_dict(json.loads(raw))
+            return _coerce_dict(_loads_lenient(raw))
         except json.JSONDecodeError as e:
             last_err = e
             continue
