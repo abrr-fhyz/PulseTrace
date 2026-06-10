@@ -638,18 +638,20 @@ def chat_page():
 
 @app.route("/chat/runs")
 def chat_runs():
-    out = []
-    if ROOT.exists():
-        for d in sorted(ROOT.iterdir(), key=lambda p: p.name, reverse=True):
-            if not d.is_dir():
-                continue
-            run = read_json(d.name, "run.json")
-            if not run:
-                continue
-            posts = read_json(d.name, "posts.json") or []
-            out.append({"run_id": d.name, "topic": run.get("topic", "Untitled run"),
-                        "n_posts": len(posts), "started_at": run.get("started_at")})
-    return jsonify(out)
+    try:
+        from db import get_supabase
+        pg = get_supabase()
+        if pg.enabled:
+            rows = pg.list_runs(limit=200)
+            if rows is not None:  # DB reachable: source of truth (even if empty)
+                return jsonify([
+                    {"run_id": r["run_id"], "topic": r.get("topic") or "Untitled run",
+                     "n_posts": r.get("n_posts") or 0, "started_at": r.get("started_at")}
+                    for r in rows
+                ])
+    except (ImportError, KeyError):
+        pass
+    return jsonify(_disk_runs(200))  # DB unconfigured or unreachable only
 
 
 @app.route("/chat/suggestions")
@@ -744,6 +746,71 @@ def run_info():
     posts_by_id = {p["id"]: p for p in (posts or [])}
     return jsonify({"run": run, "clusters": clusters, "posts": posts_by_id,
                     "max_iter": replay_max_iter(run)})
+
+
+def _disk_runs(limit: int) -> list[dict]:
+    out: list[dict] = []
+    if not ROOT.exists():
+        return out
+    for d in sorted(ROOT.iterdir(), key=lambda p: p.name, reverse=True):
+        if not d.is_dir():
+            continue
+        run = read_json(d.name, "run.json")
+        if not run:
+            continue
+        n_posts = (run.get("metrics") or {}).get("posts")
+        if n_posts is None:
+            n_posts = len(read_json(d.name, "posts.json") or [])
+        out.append({"run_id": d.name, "topic": run.get("topic") or "Untitled run",
+                    "started_at": run.get("started_at"),
+                    "finished_at": run.get("finished_at"), "n_posts": n_posts})
+        if len(out) >= limit:
+            break
+    return out
+
+
+@app.route("/runs")
+def list_runs():
+    try:
+        limit = int(request.args.get("limit", "50"))
+    except (TypeError, ValueError):
+        limit = 50
+    limit = max(1, min(limit, 200))
+    try:
+        from db import get_supabase
+        pg = get_supabase()
+        if pg.enabled:
+            rows = pg.list_runs(limit=limit)
+            if rows is not None:  # DB reachable: return its contents (even if empty)
+                return jsonify([
+                    {"run_id": r["run_id"], "topic": r.get("topic") or "Untitled run",
+                     "started_at": r.get("started_at"), "finished_at": r.get("finished_at"),
+                     "n_posts": r.get("n_posts") or 0}
+                    for r in rows
+                ])
+    except (ImportError, KeyError):
+        pass
+    return jsonify(_disk_runs(limit))  # DB unconfigured or unreachable only
+
+
+@app.route("/runs/<run_id>", methods=["DELETE"])
+def delete_run_route(run_id: str):
+    import shutil
+    if not _re.fullmatch(r"[A-Za-z0-9_-]+", run_id or ""):
+        return jsonify({"error": "bad run_id"}), 400
+    removed = False
+    p = ROOT / run_id
+    if p.is_dir():
+        shutil.rmtree(p, ignore_errors=True)
+        removed = True
+    try:
+        from db import get_supabase
+        pg = get_supabase()
+        if pg.enabled:
+            pg.delete_run(run_id)
+    except ImportError:
+        pass
+    return jsonify({"ok": True, "removed": removed})
 
 
 @app.route("/replay")

@@ -199,7 +199,7 @@ h1,h2,h3 { font-weight: 600; letter-spacing: -0.02em; margin: 0; }
 <body>
   <header class="top">
     <button class="icon-btn hamb" id="hamb" title="Threads">☰</button>
-    <a class="icon-btn" href="/#/app" title="Back to dashboard">←</a>
+    <a id="backBtn" class="icon-btn" href="/#/app" title="Back to this run">←</a>
     <span class="brand">Pulse<b>Trace</b> · Chat</span>
     <span class="spacer"></span>
     <select class="run-switch" id="runSwitch" title="Active corpus"></select>
@@ -303,6 +303,7 @@ $("#runSwitch").onchange = e => {
 async function selectRun(runId){
   state.run = runId;
   try { localStorage.setItem("pulsetrace_chat_run", runId); } catch(e){}
+  { const bb = $("#backBtn"); if (bb) bb.href = "/#/app?run=" + encodeURIComponent(runId); }
   await loadSuggestions();
   await loadThreads();
   let want = new URLSearchParams(location.search).get("thread_id");

@@ -309,6 +309,35 @@ class SupabaseClient:
             log.error("get_clusters(%s) failed: %s", run_id, exc)
             return []
 
+    def list_runs(self, *, limit: int = 50) -> list[dict] | None:
+        """Returns rows on success (possibly empty), or None if the DB is
+        unreachable so the caller can fall back to disk *only* on failure."""
+        if not self.enabled:
+            return None
+        try:
+            with self._conn() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT run_id, topic, started_at, finished_at, n_posts, status "
+                    "FROM runs ORDER BY started_at DESC NULLS LAST LIMIT %s",
+                    (limit,),
+                )
+                return [dict(r) for r in cur.fetchall()]
+        except psycopg2.Error as exc:
+            log.error("list_runs failed: %s", exc)
+            return None
+
+    def delete_run(self, run_id: str) -> bool:
+        if not self.enabled:
+            return False
+        try:
+            with self._conn() as conn, conn.cursor() as cur:
+                for table in ("run_artifacts", "clusters", "posts", "runs"):
+                    cur.execute(f"DELETE FROM {table} WHERE run_id=%s", (run_id,))
+            return True
+        except psycopg2.Error as exc:
+            log.error("delete_run(%s) failed: %s", run_id, exc)
+            return False
+
     # ------------------------------------------------------------ artifacts
     def upsert_artifact(self, run_id: str, name: str, data: object, *, topic_id: str = "") -> bool:
         """Persist any per-run artifact (evidence/ranked/orchestration_summary) as jsonb."""

@@ -67,7 +67,8 @@ def _mirror_to_db(run_id: str, name: str, data: Any) -> None:
                 sources=run.get("sources", []) or [],
                 status="completed" if run.get("finished_at") else "running",
                 started_at=run.get("started_at"), finished_at=run.get("finished_at"),
-                n_posts=int(run.get("n_posts", 0) or 0), meta=run.get("meta", {}) or {},
+                n_posts=int(run.get("n_posts") or (run.get("metrics") or {}).get("posts") or 0),
+                meta=run.get("meta", {}) or {},
             )
             if pg.enabled:
                 pg.upsert_run(rec)
