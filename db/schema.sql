@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS runs (
 );
 CREATE INDEX IF NOT EXISTS ix_runs_topic ON runs (topic_id);
 CREATE INDEX IF NOT EXISTS ix_runs_started ON runs (started_at DESC);
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS owner_email text;
+CREATE INDEX IF NOT EXISTS ix_runs_owner ON runs (owner_email);
 
 -- ---------------------------------------------------------------- posts
 -- Composite partitioning (Requirement 3): RANGE(crawl_date) parent,
@@ -175,6 +177,8 @@ CREATE TABLE IF NOT EXISTS conversations (
 );
 CREATE INDEX IF NOT EXISTS ix_conversations_topic
     ON conversations (topic_id, updated_at DESC);
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS owner_email text;
+CREATE INDEX IF NOT EXISTS ix_conversations_owner ON conversations (owner_email);
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 
 -- ---------------------------------------------------------------- messages

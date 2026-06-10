@@ -136,17 +136,19 @@ class SupabaseClient:
                 cur.execute(
                     """
                     INSERT INTO runs (run_id, topic, topic_id, sources, status,
-                                      started_at, finished_at, n_posts, meta)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                      started_at, finished_at, n_posts, meta, owner_email)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT (run_id) DO UPDATE SET
                         status      = EXCLUDED.status,
                         finished_at = EXCLUDED.finished_at,
                         n_posts     = EXCLUDED.n_posts,
-                        meta        = EXCLUDED.meta
+                        meta        = EXCLUDED.meta,
+                        owner_email = COALESCE(runs.owner_email, EXCLUDED.owner_email)
                     """,
                     (run.run_id, run.topic, run.topic_id, run.sources, run.status,
                      run.started_at, run.finished_at, run.n_posts,
-                     psycopg2.extras.Json(run.meta) if _HAVE_PG else run.meta),
+                     psycopg2.extras.Json(run.meta) if _HAVE_PG else run.meta,
+                     run.owner_email),
                 )
             return True
         except psycopg2.Error as exc:
@@ -309,28 +311,38 @@ class SupabaseClient:
             log.error("get_clusters(%s) failed: %s", run_id, exc)
             return []
 
-    def list_runs(self, *, limit: int = 50) -> list[dict] | None:
+    def list_runs(self, *, owner_email: str | None = None, limit: int = 50) -> list[dict] | None:
         """Returns rows on success (possibly empty), or None if the DB is
-        unreachable so the caller can fall back to disk *only* on failure."""
+        unreachable so the caller can fall back to disk *only* on failure.
+
+        `owner_email=None` lists every run (single-user/local mode); a string
+        scopes to that owner, hiding other users' and legacy NULL-owner runs."""
         if not self.enabled:
             return None
         try:
+            where = "WHERE owner_email = %s" if owner_email else ""
+            params: tuple = (owner_email, limit) if owner_email else (limit,)
             with self._conn() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     "SELECT run_id, topic, started_at, finished_at, n_posts, status "
-                    "FROM runs ORDER BY started_at DESC NULLS LAST LIMIT %s",
-                    (limit,),
+                    f"FROM runs {where} ORDER BY started_at DESC NULLS LAST LIMIT %s",
+                    params,
                 )
                 return [dict(r) for r in cur.fetchall()]
         except psycopg2.Error as exc:
             log.error("list_runs failed: %s", exc)
             return None
 
-    def delete_run(self, run_id: str) -> bool:
+    def delete_run(self, run_id: str, *, owner_email: str | None = None) -> bool:
         if not self.enabled:
             return False
         try:
             with self._conn() as conn, conn.cursor() as cur:
+                if owner_email:
+                    cur.execute("SELECT owner_email FROM runs WHERE run_id=%s", (run_id,))
+                    row = cur.fetchone()
+                    if row and row[0] not in (None, owner_email):
+                        return False
                 for table in ("run_artifacts", "clusters", "posts", "runs"):
                     cur.execute(f"DELETE FROM {table} WHERE run_id=%s", (run_id,))
             return True
@@ -383,15 +395,17 @@ class SupabaseClient:
                 cur.execute(
                     """
                     INSERT INTO conversations
-                        (id, topic_id, run_id, title, summary, archived_count, updated_at)
-                    VALUES (%s,%s,%s,%s,%s,%s, now())
+                        (id, topic_id, run_id, title, summary, archived_count, owner_email, updated_at)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s, now())
                     ON CONFLICT (id) DO UPDATE SET
                         title=EXCLUDED.title, summary=EXCLUDED.summary,
-                        archived_count=EXCLUDED.archived_count, updated_at=now()
+                        archived_count=EXCLUDED.archived_count,
+                        owner_email=COALESCE(conversations.owner_email, EXCLUDED.owner_email),
+                        updated_at=now()
                     """,
                     (conv["id"], conv["topic_id"], conv["run_id"],
                      conv.get("title", "New chat"), conv.get("summary", ""),
-                     int(conv.get("archived_count", 0))),
+                     int(conv.get("archived_count", 0)), conv.get("owner_email")),
                 )
             return True
         except (psycopg2.Error, KeyError) as exc:
@@ -448,23 +462,25 @@ class SupabaseClient:
             log.error("get_messages(%s) failed: %s", conv_id, exc)
             return []
 
-    def list_conversations(self, topic_id: str) -> list[dict]:
+    def list_conversations(self, topic_id: str, *, owner_email: str | None = None) -> list[dict]:
         if not self.enabled:
             return []
         try:
+            owner_clause = "AND c.owner_email = %s" if owner_email else ""
+            params: tuple = (topic_id, owner_email) if owner_email else (topic_id,)
             with self._conn() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
-                    """
+                    f"""
                     SELECT c.id, c.title,
                            extract(epoch from c.created_at)::bigint AS created,
                            extract(epoch from c.updated_at)::bigint AS updated,
                            (SELECT count(*) FROM messages m
                               WHERE m.conversation_id = c.id) AS message_count
                     FROM conversations c
-                    WHERE c.topic_id = %s
+                    WHERE c.topic_id = %s {owner_clause}
                     ORDER BY c.updated_at DESC
                     """,
-                    (topic_id,),
+                    params,
                 )
                 return [dict(r) for r in cur.fetchall()]
         except psycopg2.Error as exc:

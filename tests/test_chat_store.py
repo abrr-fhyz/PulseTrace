@@ -86,10 +86,11 @@ class _FakePg:
     def get_messages(self, cid):
         return list(self.msgs.get(cid, []))
 
-    def list_conversations(self, topic_id):
+    def list_conversations(self, topic_id, *, owner_email=None):
         return [{"id": c["id"], "title": c["title"], "created": 0, "updated": 0,
                  "message_count": len(self.msgs.get(c["id"], []))}
-                for c in self.convs.values() if c["topic_id"] == topic_id]
+                for c in self.convs.values() if c["topic_id"] == topic_id
+                and (owner_email is None or c.get("owner_email") == owner_email)]
 
     def delete_conversation(self, cid):
         self.convs.pop(cid, None); self.msgs.pop(cid, None); return True

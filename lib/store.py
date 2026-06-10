@@ -32,6 +32,25 @@ def new_run_id() -> str:
     return f"{int(time.time())}-{uuid.uuid4().hex[:6]}"
 
 
+_OWNER_FILE = "owner.json"
+
+
+def set_run_owner(run_id: str, owner_email: str | None) -> None:
+    if not owner_email:
+        return
+    (run_dir(run_id) / _OWNER_FILE).write_text(json.dumps({"owner_email": owner_email}))
+
+
+def get_run_owner(run_id: str) -> str | None:
+    p = ROOT / run_id / _OWNER_FILE
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text()).get("owner_email")
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
 def run_dir(run_id: str) -> Path:
     p = ROOT / run_id
     p.mkdir(parents=True, exist_ok=True)
@@ -73,6 +92,7 @@ def _mirror_to_db(run_id: str, name: str, data: Any) -> None:
                 started_at=run.get("started_at"), finished_at=run.get("finished_at"),
                 n_posts=int(run.get("n_posts") or (run.get("metrics") or {}).get("posts") or 0),
                 meta=run.get("meta", {}) or {},
+                owner_email=get_run_owner(run_id),
             )
             if pg.enabled:
                 pg.upsert_run(rec)

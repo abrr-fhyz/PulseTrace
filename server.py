@@ -8,7 +8,7 @@ import os
 import threading
 import time
 import subprocess
-from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context, redirect
 from flask_cors import CORS
 import numpy as np
 from dotenv import load_dotenv
@@ -29,10 +29,57 @@ from lib.rag import ask as rag_ask
 from lib import backend, fb_cookies, docs as docs_mod
 from lib import docs_content
 from lib import chat_store, chat_memory, chat_engine
+from lib import auth as auth_lib
+from db import auth_users
 
 
 app = Flask(__name__)
 CORS(app)
+
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32)
+
+_AUTH_OPEN_PREFIXES = ("/login", "/auth/", "/static/", "/favicon")
+_AUTH_OPEN_EXACT = {"/status"}
+
+
+@app.before_request
+def _auth_gate():
+    if not auth_lib.auth_active():
+        return None
+    path = request.path
+    if path in _AUTH_OPEN_EXACT or path.startswith(_AUTH_OPEN_PREFIXES):
+        return None
+    if auth_lib.current_user():
+        return None
+    if path.startswith("/api") or path.startswith("/chat") or path.startswith("/run") \
+            or path in ("/runs", "/graph", "/events") \
+            or "application/json" in (request.headers.get("Accept") or ""):
+        return jsonify({"ok": False, "error": "Authentication required."}), 401
+    return redirect("/login")
+
+
+def _owner() -> str | None:
+    """The owner to stamp/filter by — None in single-user local mode."""
+    return auth_lib.current_user() if auth_lib.auth_active() else None
+
+
+def _user_owns_run(run_id: str) -> bool:
+    owner = _owner()
+    if owner is None:
+        return True  # local mode: no ownership concept
+    from lib.store import get_run_owner
+    disk_owner = get_run_owner(run_id)
+    if disk_owner is not None:
+        return disk_owner == owner
+    try:
+        from db import get_supabase
+        pg = get_supabase()
+        if pg.enabled:
+            rows = pg.list_runs(owner_email=owner, limit=200) or []
+            return any(r["run_id"] == run_id for r in rows)
+    except (ImportError, KeyError):
+        pass
+    return False  # unknown owner under active auth → legacy/hidden
 
 
 BYOK_PROVIDER_REGISTRY = [
@@ -87,7 +134,47 @@ def _byok_restore(prior: dict[str, str]) -> None:
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", user_email=auth_lib.current_user() or "")
+
+
+@app.route("/login")
+def login_page():
+    if auth_lib.current_user():
+        return redirect("/")
+    return render_template("auth.html")
+
+
+@app.route("/auth/login", methods=["POST"])
+def auth_login():
+    data = request.get_json(force=True, silent=True) or {}
+    res = auth_users.sign_in((data.get("email") or "").strip(), data.get("password") or "")
+    if res.ok:
+        auth_lib.login_user(res.email, res.access_token)
+        return jsonify({"ok": True, "email": res.email})
+    return jsonify({"ok": False, "error": res.error}), 401
+
+
+@app.route("/auth/signup", methods=["POST"])
+def auth_signup():
+    data = request.get_json(force=True, silent=True) or {}
+    res = auth_users.sign_up((data.get("email") or "").strip(), data.get("password") or "")
+    if res.ok:
+        return jsonify({"ok": True, "email": res.email, "message": res.message})
+    return jsonify({"ok": False, "error": res.error}), 400
+
+
+@app.route("/auth/recover", methods=["POST"])
+def auth_recover():
+    data = request.get_json(force=True, silent=True) or {}
+    res = auth_users.reset_password((data.get("email") or "").strip())
+    return (jsonify({"ok": True, "message": res.message}) if res.ok
+            else (jsonify({"ok": False, "error": res.error}), 400))
+
+
+@app.route("/auth/logout", methods=["POST"])
+def auth_logout():
+    auth_lib.logout_user()
+    return jsonify({"ok": True})
 
 
 def _docs_context():
@@ -227,6 +314,8 @@ def start_run():
 
     opinion = (data.get("opinion") or "").strip() or None
     run_id = new_run_id()
+    from lib.store import set_run_owner
+    set_run_owner(run_id, _owner())
 
     def go():
         prior = _byok_apply(byok)
@@ -266,6 +355,8 @@ def start_orchestration_run():
             return jsonify({"error": "api_key required when byok set"}), 400
 
     run_id = new_run_id()
+    from lib.store import set_run_owner
+    set_run_owner(run_id, _owner())
 
     def go() -> None:
         prior = _byok_apply(byok)
@@ -642,7 +733,7 @@ def chat_runs():
         from db import get_supabase
         pg = get_supabase()
         if pg.enabled:
-            rows = pg.list_runs(limit=200)
+            rows = pg.list_runs(owner_email=_owner(), limit=200)
             if rows is not None:  # DB reachable: source of truth (even if empty)
                 return jsonify([
                     {"run_id": r["run_id"], "topic": r.get("topic") or "Untitled run",
@@ -678,16 +769,23 @@ def chat_threads():
         run_id = data.get("run_id")
         if not run_id:
             return jsonify({"error": "run_id required"}), 400
-        thread = chat_store.new_thread(run_id, title=(data.get("title") or "New chat"))
+        if not _user_owns_run(run_id):
+            return jsonify({"error": "not found"}), 404
+        thread = chat_store.new_thread(run_id, title=(data.get("title") or "New chat"),
+                                       owner_email=_owner())
         chat_store.save_thread(thread)
         return jsonify(thread)
     run_id = request.args.get("run_id", "")
-    return jsonify(chat_store.list_threads(run_id))
+    if run_id and not _user_owns_run(run_id):
+        return jsonify({"error": "not found"}), 404
+    return jsonify(chat_store.list_threads(run_id, owner_email=_owner()))
 
 
 @app.route("/chat/thread/<thread_id>", methods=["GET", "DELETE"])
 def chat_thread(thread_id):
     run_id = request.args.get("run_id", "")
+    if run_id and not _user_owns_run(run_id):
+        return jsonify({"error": "not found"}), 404
     if request.method == "DELETE":
         ok = chat_store.delete_thread(run_id, thread_id)
         return jsonify({"deleted": ok})
@@ -709,10 +807,12 @@ def chat_ask():
     q = (data.get("q") or "").strip()
     if not run_id or not q:
         return jsonify({"error": "run_id and q required"}), 400
+    if not _user_owns_run(run_id):
+        return jsonify({"error": "not found"}), 404
 
     thread = chat_store.load_thread(run_id, thread_id) if thread_id else None
     if thread is None:
-        thread = chat_store.new_thread(run_id, title=q[:48])
+        thread = chat_store.new_thread(run_id, title=q[:48], owner_email=_owner())
     if not thread["messages"]:
         thread["title"] = q[:48]
     preamble = chat_memory.build_preamble(thread)
@@ -749,6 +849,8 @@ def run_info():
 
 
 def _disk_runs(limit: int) -> list[dict]:
+    from lib.store import get_run_owner
+    owner = _owner()
     out: list[dict] = []
     if not ROOT.exists():
         return out
@@ -757,6 +859,8 @@ def _disk_runs(limit: int) -> list[dict]:
             continue
         run = read_json(d.name, "run.json")
         if not run:
+            continue
+        if owner is not None and get_run_owner(d.name) != owner:
             continue
         n_posts = (run.get("metrics") or {}).get("posts")
         if n_posts is None:
@@ -780,7 +884,7 @@ def list_runs():
         from db import get_supabase
         pg = get_supabase()
         if pg.enabled:
-            rows = pg.list_runs(limit=limit)
+            rows = pg.list_runs(owner_email=_owner(), limit=limit)
             if rows is not None:  # DB reachable: return its contents (even if empty)
                 return jsonify([
                     {"run_id": r["run_id"], "topic": r.get("topic") or "Untitled run",
@@ -798,6 +902,8 @@ def delete_run_route(run_id: str):
     import shutil
     if not _re.fullmatch(r"[A-Za-z0-9_-]+", run_id or ""):
         return jsonify({"error": "bad run_id"}), 400
+    if not _user_owns_run(run_id):
+        return jsonify({"error": "not found"}), 404
     removed = False
     p = ROOT / run_id
     if p.is_dir():
@@ -807,7 +913,7 @@ def delete_run_route(run_id: str):
         from db import get_supabase
         pg = get_supabase()
         if pg.enabled:
-            pg.delete_run(run_id)
+            pg.delete_run(run_id, owner_email=_owner())
     except ImportError:
         pass
     return jsonify({"ok": True, "removed": removed})

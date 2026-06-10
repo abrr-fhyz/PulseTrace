@@ -42,6 +42,7 @@ def _conv_row(thread: dict) -> dict:
         "id": thread["id"],
         "topic_id": thread.get("topic_id") or _topic_id(thread["run_id"]),
         "run_id": thread["run_id"],
+        "owner_email": thread.get("owner_email"),
         "title": thread.get("title", "New chat"),
         "summary": thread.get("summary", ""),
         "archived_count": int(thread.get("archived_count", 0)),
@@ -52,12 +53,13 @@ def _thread_path(run_id: str, thread_id: str) -> Path:
     return store.ROOT / run_id / "chats" / f"{thread_id}.json"
 
 
-def new_thread(run_id: str, title: str = "New chat") -> dict[str, Any]:
+def new_thread(run_id: str, title: str = "New chat", *, owner_email: str | None = None) -> dict[str, Any]:
     now = int(time.time())
     return {
         "id": uuid.uuid4().hex[:12],
         "run_id": run_id,
         "topic_id": _topic_id(run_id),
+        "owner_email": owner_email,
         "title": title,
         "created": now,
         "updated": now,
@@ -153,10 +155,10 @@ def load_thread_full(run_id: str, thread_id: str) -> dict | None:
     return load_thread(run_id, thread_id)
 
 
-def list_threads(run_id: str) -> list[dict]:
+def list_threads(run_id: str, *, owner_email: str | None = None) -> list[dict]:
     pg = _pg()
     if pg and pg.enabled:
-        return pg.list_conversations(_topic_id(run_id))
+        return pg.list_conversations(_topic_id(run_id), owner_email=owner_email)
     chats = store.ROOT / run_id / "chats"
     if not chats.exists():
         return []

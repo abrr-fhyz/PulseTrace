@@ -27,6 +27,7 @@ class RunRecord(BaseModel):
     finished_at: datetime | None = None
     n_posts: int = 0
     meta: dict = Field(default_factory=dict)
+    owner_email: str | None = None
 
 
 class PostRecord(BaseModel):
