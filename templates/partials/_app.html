@@ -13,7 +13,25 @@
     <span class="nav-back" onclick="window.open('/docs','_blank')" style="margin-left:12px">📖 Docs</span>
     <span id="nav-shots" class="nav-back" onclick="goto('shots')"
           style="margin-left:12px;display:none">📸 Captures</span>
+    <div id="user-chip" class="user-chip" style="display:none;align-items:center;gap:.5rem;margin-left:12px;">
+      <span id="user-email" style="font-size:.8125rem;color:var(--muted);"></span>
+      <button id="logout-btn" class="ghost-btn" title="Sign out"
+              style="background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:.5rem;padding:.35rem .6rem;cursor:pointer;font-size:.8125rem;">
+        Sign out
+      </button>
+    </div>
   </header>
+  <script>
+    (function () {
+      const email = (window.__USER__ || "").trim();
+      const chip = document.getElementById('user-chip');
+      if (email) { document.getElementById('user-email').textContent = email; chip.style.display = 'flex'; }
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        try { await fetch('/auth/logout', { method: 'POST' }); } catch (e) {}
+        window.location.href = '/login';
+      });
+    })();
+  </script>
 
   <main>
 {% include "partials/_app_left.html" %}

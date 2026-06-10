@@ -90,6 +90,19 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/login")
+def login_page():
+    return render_template("auth.html")
+
+
+@app.route("/auth/login", methods=["POST"])
+@app.route("/auth/signup", methods=["POST"])
+@app.route("/auth/recover", methods=["POST"])
+def auth_placeholder():
+    # Replaced with real Supabase auth in Step 2.
+    return jsonify({"ok": False, "error": "Authentication is not configured yet."}), 501
+
+
 def _docs_context():
     return dict(
         pitch=docs_content.PITCH,
