@@ -2,6 +2,11 @@
 const VIEWS = ["landing", "byok", "app", "shots"];
 function goto(name) {
   if (!VIEWS.includes(name)) name = "landing";
+  // Protected views require a signed-in user when auth is active.
+  if (window.__AUTH__ && !(window.__USER__ || "").trim()
+      && (name === "app" || name === "byok" || name === "shots")) {
+    location.href = "/login"; return;
+  }
   if (location.hash !== "#/" + name) location.hash = "#/" + name;
   for (const v of VIEWS) $("#view-" + v).classList.toggle("active", v === name);
   window.scrollTo({ top: 0, behavior: "instant" });
@@ -16,6 +21,14 @@ function routeFromHash() {
   goto(cur || "landing");
 }
 window.addEventListener("hashchange", routeFromHash);
+
+// Landing "Launch Platform": gate through auth → BYOK when auth is active.
+// In single-user local mode (auth off) jump straight to BYOK as before.
+function launchPlatform() {
+  const user = (window.__USER__ || "").trim();
+  if (window.__AUTH__ && !user) { location.href = "/login"; return; }
+  goto("byok");
+}
 
 // A run reference (#/app?run=<id>) survives only the first paint: we capture it
 // at load, restore that run, then strip it so a later refresh starts fresh.

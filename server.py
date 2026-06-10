@@ -39,7 +39,7 @@ CORS(app)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32)
 
 _AUTH_OPEN_PREFIXES = ("/login", "/auth/", "/static/", "/favicon")
-_AUTH_OPEN_EXACT = {"/status"}
+_AUTH_OPEN_EXACT = {"/status", "/"}
 
 
 @app.before_request
@@ -134,7 +134,8 @@ def _byok_restore(prior: dict[str, str]) -> None:
 
 @app.route("/")
 def index():
-    return render_template("index.html", user_email=auth_lib.current_user() or "")
+    return render_template("index.html", user_email=auth_lib.current_user() or "",
+                           auth_active=auth_lib.auth_active())
 
 
 @app.route("/login")

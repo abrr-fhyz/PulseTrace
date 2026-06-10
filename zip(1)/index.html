@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PulseTrace — Sign in</title>
-  <script>document.documentElement.dataset.theme = "dark";</script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+  <title>Modular Authentication UI</title>
+  <!-- Pure Vanilla CSS Stylesheet -->
+  <link rel="stylesheet" href="/src/index.css">
 </head>
 <body>
   <div class="auth-wrapper">
@@ -15,7 +15,7 @@
     <div class="auth-brand">
       <div class="brand-badge">
         <span class="brand-dot"></span>
-        PulseTrace
+        Plain HTML / CSS UI
       </div>
     </div>
 
@@ -28,15 +28,15 @@
         <h2 class="auth-title">Welcome back</h2>
         <p class="auth-subtitle">Sign in to access your dashboard.</p>
         
-        <form class="auth-form" data-action="login">
+        <form class="auth-form" onsubmit="event.preventDefault();">
           <div class="form-group">
             <label>Email Address</label>
             <div class="input-wrapper">
               <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-              <input name="email" type="email" placeholder="name@company.com" required>
+              <input type="email" placeholder="name@company.com" required>
             </div>
           </div>
-
+          
           <div class="form-group">
             <div class="label-row">
               <label>Password</label>
@@ -44,7 +44,7 @@
             </div>
             <div class="input-wrapper">
               <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <input name="password" type="password" placeholder="••••••••" required>
+              <input type="password" placeholder="••••••••" required>
             </div>
           </div>
           
@@ -58,7 +58,7 @@
           <span>Or continue with</span>
         </div>
 
-        <button type="button" class="btn-google" data-google>
+        <button type="button" class="btn-google">
           <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -78,12 +78,12 @@
         <h2 class="auth-title">Create account</h2>
         <p class="auth-subtitle">Join us to deploy intelligence agents.</p>
         
-        <form class="auth-form" data-action="signup">
+        <form class="auth-form" onsubmit="event.preventDefault();">
           <div class="form-group">
             <label>Full Name</label>
             <div class="input-wrapper">
               <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <input name="name" type="text" placeholder="Jane Doe">
+              <input type="text" placeholder="Jane Doe" required>
             </div>
           </div>
 
@@ -91,15 +91,15 @@
             <label>Email Address</label>
             <div class="input-wrapper">
               <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-              <input name="email" type="email" placeholder="name@company.com" required>
+              <input type="email" placeholder="name@company.com" required>
             </div>
           </div>
-
+          
           <div class="form-group">
             <label>Password</label>
             <div class="input-wrapper">
               <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <input name="password" type="password" placeholder="•••••••• (min 6 chars)" required minlength="6">
+              <input type="password" placeholder="••••••••" required>
             </div>
           </div>
           
@@ -113,7 +113,7 @@
           <span>Or</span>
         </div>
 
-        <button type="button" class="btn-google" data-google>
+        <button type="button" class="btn-google">
           <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -137,15 +137,15 @@
         <h2 class="auth-title">Reset password</h2>
         <p class="auth-subtitle" style="margin-bottom: 2rem;">Enter the email address associated with your account, and we'll send you a link to reset your password.</p>
         
-        <form class="auth-form" data-action="recover">
+        <form class="auth-form" onsubmit="event.preventDefault();">
           <div class="form-group">
             <label>Email Address</label>
             <div class="input-wrapper">
               <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-              <input name="email" type="email" placeholder="name@company.com" required>
+              <input type="email" placeholder="name@company.com" required>
             </div>
           </div>
-
+          
           <button type="submit" class="btn-primary" style="background: var(--color-text-primary); color: var(--color-base-bg); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             Send Reset Link
             <svg class="btn-icon" style="margin-left: 0.25rem;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
@@ -153,11 +153,10 @@
         </form>
       </div>
 
-      <div class="auth-msg" id="auth-msg"></div>
     </div>
 
     <p class="auth-footer">
-      Secure · Per-user workspace
+      Enterprise Grade · Modular Setup
     </p>
   </div>
 
@@ -169,42 +168,10 @@
       });
       const selected = document.getElementById('view-' + viewId);
       selected.classList.remove('hidden');
-      void selected.offsetWidth;
+      // trigger reflow to restart animation sequence
+      void selected.offsetWidth; 
       selected.classList.add('active');
-      setMsg('', '');
     }
-    function setMsg(text, kind) {
-      const m = document.getElementById('auth-msg');
-      m.textContent = text;
-      m.className = 'auth-msg' + (kind ? ' ' + kind : '');
-    }
-    async function postJSON(url, body) {
-      const r = await fetch(url, {
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
-      });
-      let data = {}; try { data = await r.json(); } catch (e) {}
-      return { ok: r.ok && data.ok !== false, data };
-    }
-    document.querySelectorAll('form[data-action]').forEach(form => {
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const action = form.dataset.action;
-        const btn = form.querySelector('button[type=submit]');
-        const fields = Object.fromEntries(new FormData(form).entries());
-        btn.disabled = true; setMsg('Working…', '');
-        const { ok, data } = await postJSON('/auth/' + action, fields);
-        btn.disabled = false;
-        if (ok) {
-          if (action === 'recover') { setMsg('Check your inbox for a reset link.', 'ok'); }
-          else if (action === 'signup') { setMsg(data.message || 'Account created — you can sign in.', 'ok'); switchView('login'); }
-          else { window.location.href = '/#/byok'; }
-        } else {
-          setMsg(data.error || 'Something went wrong.', 'error');
-        }
-      });
-    });
-    document.querySelectorAll('[data-google]').forEach(b =>
-      b.addEventListener('click', () => setMsg('Google sign-in is coming soon.', '')));
   </script>
 </body>
 </html>
