@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PulseTrace — Signing in…</title>
+  <script>document.documentElement.dataset.theme = "dark";</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-background-glow"></div>
+    <div class="auth-background-grid"></div>
+    <div class="auth-card">
+      <div class="auth-card-highlight"></div>
+      <h2 class="auth-title">Completing sign-in…</h2>
+      <p class="auth-subtitle" id="msg">Verifying your account.</p>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const msg = document.getElementById('msg');
+      const fail = (t) => { msg.textContent = t; setTimeout(() => location.href = '/login', 2500); };
+      const params = new URLSearchParams(window.location.hash.slice(1));
+      const token = params.get('access_token');
+      const err = params.get('error_description') || params.get('error');
+      if (err) return fail('Sign-in failed: ' + err);
+      if (!token) return fail('No session was returned. Please try again.');
+      fetch('/auth/oauth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: token }),
+      })
+        .then((r) => r.json())
+        .then((d) => { if (d.ok) location.href = '/'; else fail(d.error || 'Sign-in failed.'); })
+        .catch(() => fail('Network error. Please try again.'));
+    })();
+  </script>
+</body>
+</html>

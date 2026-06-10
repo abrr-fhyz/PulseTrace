@@ -8,6 +8,7 @@ import os
 import threading
 import time
 import subprocess
+from urllib.parse import quote
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context, redirect
 from flask_cors import CORS
 import numpy as np
@@ -187,6 +188,49 @@ def auth_recover():
 def auth_logout():
     auth_lib.logout_user()
     return jsonify({"ok": True})
+
+
+_OAUTH_PROVIDERS = {"google", "github"}
+
+
+def _public_base() -> str:
+    """Externally-reachable origin for OAuth redirects. Honors a deploy override
+    and X-Forwarded-* so HTTPS behind nginx is preserved (Supabase/Google reject
+    plain HTTP for non-localhost)."""
+    base = os.environ.get("PT_PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if base:
+        return base
+    proto = request.headers.get("X-Forwarded-Proto") or request.scheme
+    host = request.headers.get("X-Forwarded-Host") or request.host
+    return f"{proto}://{host}"
+
+
+@app.route("/auth/oauth/<provider>")
+def auth_oauth_start(provider):
+    if provider not in _OAUTH_PROVIDERS:
+        return redirect("/login")
+    sb = (os.environ.get("SUPABASE_URL") or os.environ.get("SUPABASE_PROJECT_URL", "")).rstrip("/")
+    if not sb:
+        return redirect("/login")
+    redirect_to = _public_base() + "/auth/callback"
+    url = (f"{sb}/auth/v1/authorize?provider={provider}"
+           f"&redirect_to={quote(redirect_to, safe='')}")
+    return redirect(url)
+
+
+@app.route("/auth/callback")
+def auth_callback():
+    return render_template("auth_callback.html")
+
+
+@app.route("/auth/oauth", methods=["POST"])
+def auth_oauth_finish():
+    data = request.get_json(force=True, silent=True) or {}
+    res = auth_users.sign_in_with_token((data.get("access_token") or "").strip())
+    if res.ok:
+        auth_lib.login_user(res.email, res.access_token)
+        return jsonify({"ok": True, "email": res.email})
+    return jsonify({"ok": False, "error": res.error or "OAuth sign-in failed."}), 401
 
 
 def _docs_context():

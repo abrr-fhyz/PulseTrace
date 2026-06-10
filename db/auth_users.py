@@ -90,6 +90,26 @@ def sign_up(email: str, password: str) -> AuthResult:
         return AuthResult(False, error=str(exc) or "Could not create the account.")
 
 
+def sign_in_with_token(access_token: str) -> AuthResult:
+    """Validate an OAuth access token (from a Supabase social login) and return
+    the resolved user. Used by the `/auth/callback` bridge after a provider
+    redirect; degrades to AuthResult(ok=False) on any failure."""
+    if not auth_configured():
+        return AuthResult(False, error="Authentication is not configured.")
+    if not access_token:
+        return AuthResult(False, error="Missing access token.")
+    try:
+        res = _make_client().auth.get_user(access_token)
+        user = getattr(res, "user", None)
+        email = getattr(user, "email", None) if user else None
+        if not email:
+            return AuthResult(False, error="Invalid session token.")
+        return AuthResult(True, email=email, access_token=access_token)
+    except Exception as exc:  # gotrue/httpx raise varied types; degrade
+        log.warning("token sign-in failed: %s", exc)
+        return AuthResult(False, error=str(exc) or "Invalid session token.")
+
+
 def reset_password(email: str) -> AuthResult:
     if not auth_configured():
         return AuthResult(False, error="Authentication is not configured.")
