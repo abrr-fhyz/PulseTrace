@@ -136,17 +136,19 @@ class SupabaseClient:
                 cur.execute(
                     """
                     INSERT INTO runs (run_id, topic, topic_id, sources, status,
-                                      started_at, finished_at, n_posts, meta)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                      started_at, finished_at, n_posts, meta, owner_email)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT (run_id) DO UPDATE SET
                         status      = EXCLUDED.status,
                         finished_at = EXCLUDED.finished_at,
                         n_posts     = EXCLUDED.n_posts,
-                        meta        = EXCLUDED.meta
+                        meta        = EXCLUDED.meta,
+                        owner_email = COALESCE(runs.owner_email, EXCLUDED.owner_email)
                     """,
                     (run.run_id, run.topic, run.topic_id, run.sources, run.status,
                      run.started_at, run.finished_at, run.n_posts,
-                     psycopg2.extras.Json(run.meta) if _HAVE_PG else run.meta),
+                     psycopg2.extras.Json(run.meta) if _HAVE_PG else run.meta,
+                     run.owner_email),
                 )
             return True
         except psycopg2.Error as exc:
@@ -309,28 +311,38 @@ class SupabaseClient:
             log.error("get_clusters(%s) failed: %s", run_id, exc)
             return []
 
-    def list_runs(self, *, limit: int = 50) -> list[dict] | None:
+    def list_runs(self, *, owner_email: str | None = None, limit: int = 50) -> list[dict] | None:
         """Returns rows on success (possibly empty), or None if the DB is
-        unreachable so the caller can fall back to disk *only* on failure."""
+        unreachable so the caller can fall back to disk *only* on failure.
+
+        `owner_email=None` lists every run (single-user/local mode); a string
+        scopes to that owner, hiding other users' and legacy NULL-owner runs."""
         if not self.enabled:
             return None
         try:
+            where = "WHERE owner_email = %s" if owner_email else ""
+            params: tuple = (owner_email, limit) if owner_email else (limit,)
             with self._conn() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     "SELECT run_id, topic, started_at, finished_at, n_posts, status "
-                    "FROM runs ORDER BY started_at DESC NULLS LAST LIMIT %s",
-                    (limit,),
+                    f"FROM runs {where} ORDER BY started_at DESC NULLS LAST LIMIT %s",
+                    params,
                 )
                 return [dict(r) for r in cur.fetchall()]
         except psycopg2.Error as exc:
             log.error("list_runs failed: %s", exc)
             return None
 
-    def delete_run(self, run_id: str) -> bool:
+    def delete_run(self, run_id: str, *, owner_email: str | None = None) -> bool:
         if not self.enabled:
             return False
         try:
             with self._conn() as conn, conn.cursor() as cur:
+                if owner_email:
+                    cur.execute("SELECT owner_email FROM runs WHERE run_id=%s", (run_id,))
+                    row = cur.fetchone()
+                    if row and row[0] not in (None, owner_email):
+                        return False
                 for table in ("run_artifacts", "clusters", "posts", "runs"):
                     cur.execute(f"DELETE FROM {table} WHERE run_id=%s", (run_id,))
             return True
