@@ -23,18 +23,22 @@ except ImportError:  # python-dotenv optional
 
 from .models import PostRecord, RunRecord
 from .mongo_client import MongoClient
+from .supabase_auth import SupabaseAuthClient
 from .supabase_client import SupabaseClient
 
 __all__ = [
     "SupabaseClient",
+    "SupabaseAuthClient",
     "MongoClient",
     "PostRecord",
     "RunRecord",
     "get_supabase",
+    "get_supabase_auth",
     "get_mongo",
 ]
 
 _supabase: SupabaseClient | None = None
+_supabase_auth: SupabaseAuthClient | None = None
 _mongo: MongoClient | None = None
 
 
@@ -44,6 +48,14 @@ def get_supabase() -> SupabaseClient:
     if _supabase is None:
         _supabase = SupabaseClient()
     return _supabase
+
+
+def get_supabase_auth() -> SupabaseAuthClient:
+    """Process-wide singleton — one signed-in REST client (authenticated role)."""
+    global _supabase_auth
+    if _supabase_auth is None:
+        _supabase_auth = SupabaseAuthClient()
+    return _supabase_auth
 
 
 def get_mongo() -> MongoClient:
