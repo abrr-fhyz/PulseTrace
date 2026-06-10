@@ -195,6 +195,19 @@ const PL2 = (function () {
 
   function paintCount() {
     const c = el("pl2-count"); if (c) c.textContent = count;
+    // Persistent live tally in pl2-extra — the stage-1 "pl2-count" element is
+    // destroyed when the anim advances (~14s), but fetches (esp. slow FB runs)
+    // land minutes later. This badge survives stage swaps so the number climbs.
+    const extra = el("pl2-extra");
+    if (extra) {
+      let live = el("pl2-livecount");
+      if (!live && count > 0) {
+        live = h("div", { id: "pl2-livecount", style:
+          "margin-top:10px;text-align:center;font-size:14px;font-weight:600;color:var(--muted,#94a3b8)" });
+        extra.appendChild(live);
+      }
+      if (live) live.textContent = "🔎 " + count + " posts found so far";
+    }
     const chips = el("pl2-chips"); if (!chips) return;
     clearNode(chips);
     for (const k in plats) {
