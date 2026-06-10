@@ -89,7 +89,19 @@ async function validateByok() {
     if (j.ok) {
       writeByok({ provider, api_key });
       refreshStatus({ ok: true, provider, persisted: true });
-      setTimeout(() => goto("app"), 700);
+      updateAppBadge();
+      
+      // Check if there's a pending search to resume
+      const pending = getPendingSearch();
+      if (pending) {
+        clearPendingSearch();
+        setTimeout(() => {
+          goto("app");
+          resumePendingSearch();
+        }, 700);
+      } else {
+        setTimeout(() => goto("app"), 700);
+      }
     } else {
       refreshStatus({ ok: false, error: j.error || "invalid key" });
     }
@@ -111,3 +123,48 @@ document.addEventListener("change", e => {
 
 $("#byok-validate").addEventListener("click", validateByok);
 $("#byok-clear").addEventListener("click", clearByok);
+
+/* ── Pending search handling ──────────────────────────────────────────────
+   When user tries to search but has no BYOK key, save search params and
+   navigate to BYOK view. After key validation, resume the search. */
+const PENDING_SEARCH_LS_KEY = "pulsetrace.pending_search.v1";
+
+function setPendingSearch(topic, sources, opinion) {
+  try {
+    localStorage.setItem(PENDING_SEARCH_LS_KEY, JSON.stringify({ topic, sources, opinion }));
+  } catch (e) {}
+}
+
+function getPendingSearch() {
+  try {
+    const data = localStorage.getItem(PENDING_SEARCH_LS_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function clearPendingSearch() {
+  try {
+    localStorage.removeItem(PENDING_SEARCH_LS_KEY);
+  } catch (e) {}
+}
+
+async function resumePendingSearch() {
+  const pending = getPendingSearch();
+  if (!pending) return;
+  clearPendingSearch();
+  
+  // Restore search fields
+  $("#topic").value = pending.topic || "";
+  $("#opinion").value = pending.opinion || "";
+  
+  // Restore source checkboxes
+  const sources = pending.sources || [];
+  document.querySelectorAll('input[id^="src-"]').forEach(cb => {
+    cb.checked = sources.includes(cb.id.replace("src-", ""));
+  });
+  
+  // Small delay to ensure DOM is ready, then trigger search
+  setTimeout(() => start(), 100);
+}

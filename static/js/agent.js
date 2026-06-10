@@ -49,6 +49,19 @@ async function start() {
     if (!ok) return;
   }
 
+  // Check if we have an API key available (BYOK or server default)
+  const byok = readByok();
+  const hasUserKey = byok && byok.provider && byok.api_key;
+  const hasServerKey = window.__SERVER_HAS_API_KEY__;
+  
+  // If neither user has key nor server has default, show BYOK page
+  if (!hasUserKey && !hasServerKey) {
+    const opinion = ($("#opinion").value || "").trim() || null;
+    setPendingSearch(topic, sources, opinion);
+    goto("byok");
+    return;
+  }
+
   $("#go").disabled = true;
   clearNode($("#clusters"));
   if (cy) { cy.destroy(); cy = null; }
@@ -57,8 +70,7 @@ async function start() {
   log("Starting run for \"" + topic + "\" on [" + sources.join(", ") + "]...");
   const opinion = ($("#opinion").value || "").trim() || null;
   const body = { topic, sources, opinion };
-  const byok = readByok();
-  if (byok && byok.provider && byok.api_key) body.byok = byok;
+  if (hasUserKey) body.byok = byok;
   const r = await fetch("/api/agent/run", {
     method: "POST",
     headers: { "content-type": "application/json" },

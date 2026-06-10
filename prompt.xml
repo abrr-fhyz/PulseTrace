@@ -1,0 +1,107 @@
+<task>
+  <title>Authentication, BYOK Flow, and Future Google OAuth Requirements</title>
+
+  <objective>
+    Refine the authentication onboarding flow, improve UX around API key collection,
+    and prepare for future Google OAuth integration without implementing it yet.
+  </objective>
+
+  <requirements>
+
+    <requirement id="byok-flow">
+      <description>
+        Remove the current behavior that immediately redirects users to the BYOK
+        (Bring Your Own Key) page after login.
+
+        Instead:
+
+        1. User logs in successfully.
+        2. User enters the main application directly.
+        3. During the user's first search or first action that requires an API key,
+           check whether a valid key already exists.
+        4. Only if no key is present should the BYOK screen/modal appear.
+        5. After the key is provided, continue the original search automatically.
+      </description>
+
+      <acceptance-criteria>
+        <item>No forced BYOK screen immediately after login.</item>
+        <item>Main application is accessible immediately after authentication.</item>
+        <item>BYOK appears only when actually required.</item>
+        <item>Original user action resumes after key submission.</item>
+      </acceptance-criteria>
+    </requirement>
+
+    <requirement id="email-verification">
+      <description>
+        Ensure email verification works correctly after deployment.
+
+        Current concern:
+        verification links may behave as if they are tied to the device that initiated
+        signup.
+
+        Expected behavior after deployment:
+        a user should be able to open the verification email from any device,
+        browser, or operating system and successfully verify their account.
+
+        Verification must be domain-based and session-safe rather than tied to the
+        original signup device.
+      </description>
+
+      <acceptance-criteria>
+        <item>Verification links function across devices.</item>
+        <item>Verification links function across browsers.</item>
+        <item>No dependency on the originating device.</item>
+        <item>Works correctly when deployed to DigitalOcean.</item>
+      </acceptance-criteria>
+    </requirement>
+
+    <requirement id="google-oauth-future">
+      <description>
+        Google OAuth authentication is planned but should NOT be implemented in this
+        iteration.
+
+        For now:
+        - Document all integration requirements.
+        - Identify required Google Cloud Console configuration.
+        - Identify required redirect URIs.
+        - Identify required Supabase OAuth settings.
+        - Create a clear implementation checklist.
+
+        Implementation should be deferred until after deployment.
+      </description>
+
+      <acceptance-criteria>
+        <item>No Google OAuth code merged yet.</item>
+        <item>Complete implementation plan documented.</item>
+        <item>All required configuration values clearly listed.</item>
+      </acceptance-criteria>
+    </requirement>
+
+    <requirement id="google-oauth-information-request">
+      <description>
+        Review the provided Google OAuth configuration screenshot and determine
+        exactly which values are required from me.
+
+        Present the required fields in a copy-paste-friendly checklist so I can
+        provide the information quickly.
+      </description>
+    </requirement>
+
+  </requirements>
+
+  <deliverables>
+    <item>Updated authentication flow.</item>
+    <item>Deferred BYOK onboarding logic.</item>
+    <item>Cross-device email verification readiness review.</item>
+    <item>Google OAuth implementation plan (not implementation).</item>
+    <item>List of required Google OAuth configuration values.</item>
+  </deliverables>
+
+  <engineering-principles>
+    <item>Minimize onboarding friction.</item>
+    <item>Preserve a premium, modern UX.</item>
+    <item>Avoid unnecessary user interruptions.</item>
+    <item>Keep authentication secure and production-ready.</item>
+    <item>Design for future scalability and OAuth expansion.</item>
+  </engineering-principles>
+</task>

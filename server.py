@@ -132,10 +132,21 @@ def _byok_restore(prior: dict[str, str]) -> None:
             os.environ.pop(k, None)
 
 
+def _server_has_api_key() -> bool:
+    """Check if server has a default API key configured in .env for the active backend."""
+    backend = os.environ.get("PULSETRACE_BACKEND", "gemini").lower().strip()
+    spec = _BYOK_BY_ID.get(backend)
+    if not spec:
+        return False
+    key = os.environ.get(spec["key_env"], "").strip()
+    return bool(key)
+
+
 @app.route("/")
 def index():
     return render_template("index.html", user_email=auth_lib.current_user() or "",
-                           auth_active=auth_lib.auth_active())
+                           auth_active=auth_lib.auth_active(),
+                           server_has_api_key=_server_has_api_key())
 
 
 @app.route("/login")

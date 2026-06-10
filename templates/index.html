@@ -16,6 +16,7 @@
   <script>
     window.__USER__ = "{{ user_email }}";
     window.__AUTH__ = {{ 'true' if auth_active else 'false' }};
+    window.__SERVER_HAS_API_KEY__ = {{ 'true' if server_has_api_key else 'false' }};
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">

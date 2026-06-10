@@ -17,17 +17,22 @@ function goto(name) {
 function routeFromHash() {
   const m = (location.hash || "").match(/^#\/(landing|byok|app|shots)/);
   if (m) { goto(m[1]); return; }
+  
+  // If auth is active and user is logged in, default to app; otherwise landing
+  const user = (window.__USER__ || "").trim();
+  const defaultView = (window.__AUTH__ && user) ? "app" : "landing";
+  
   const cur = VIEWS.find(v => $("#view-" + v).classList.contains("active"));
-  goto(cur || "landing");
+  goto(cur || defaultView);
 }
 window.addEventListener("hashchange", routeFromHash);
 
-// Landing "Launch Platform": gate through auth → BYOK when auth is active.
-// In single-user local mode (auth off) jump straight to BYOK as before.
+// Landing "Launch Platform": gate through auth → app when auth is active.
+// In single-user local mode (auth off) jump straight to app as before.
 function launchPlatform() {
   const user = (window.__USER__ || "").trim();
   if (window.__AUTH__ && !user) { location.href = "/login"; return; }
-  goto("byok");
+  goto("app");
 }
 
 // A run reference (#/app?run=<id>) survives only the first paint: we capture it
