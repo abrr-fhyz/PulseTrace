@@ -1,107 +1,128 @@
 <task>
-  <title>Authentication, BYOK Flow, and Future Google OAuth Requirements</title>
+  <title>Deployment Strategy Cleanup and Production-Grade Redeployment</title>
 
   <objective>
-    Refine the authentication onboarding flow, improve UX around API key collection,
-    and prepare for future Google OAuth integration without implementing it yet.
+    Establish a clean, reproducible, and production-grade deployment process by first auditing the existing deployment script,
+    removing any prior broken or ad-hoc deployment state, and then implementing best-practice deployment procedures.
   </objective>
 
-  <requirements>
+  <instructions>
 
-    <requirement id="byok-flow">
+    <step id="audit-first">
+      <title>Review Existing Deployment Script</title>
       <description>
-        Remove the current behavior that immediately redirects users to the BYOK
-        (Bring Your Own Key) page after login.
+        The first priority is to inspect the current deployment logic.
 
-        Instead:
+        - Open and analyze `deploy.sh` as the single source of truth.
+        - Understand all existing deployment steps (build, install, run, env setup, migrations).
+        - Identify any legacy, duplicated, or unsafe deployment behavior.
+      </description>
+      <rule>
+        Do NOT introduce new deployment logic before fully understanding `deploy.sh`.
+      </rule>
+    </step>
 
-        1. User logs in successfully.
-        2. User enters the main application directly.
-        3. During the user's first search or first action that requires an API key,
-           check whether a valid key already exists.
-        4. Only if no key is present should the BYOK screen/modal appear.
-        5. After the key is provided, continue the original search automatically.
+    <step id="clean-reset">
+      <title>Remove Previous Deployment State</title>
+      <description>
+        Before applying any new deployment strategy:
+
+        - Remove all previously deployed artifacts on the server.
+        - Stop any running services related to the old deployment.
+        - Clear outdated builds, containers, or processes.
+        - Ensure the system is in a clean, reproducible baseline state.
       </description>
 
-      <acceptance-criteria>
-        <item>No forced BYOK screen immediately after login.</item>
-        <item>Main application is accessible immediately after authentication.</item>
-        <item>BYOK appears only when actually required.</item>
-        <item>Original user action resumes after key submission.</item>
-      </acceptance-criteria>
-    </requirement>
+      <rule>
+        Do not layer new deployment on top of existing broken or unknown states.
+      </rule>
+    </step>
 
-    <requirement id="email-verification">
+    <step id="rebuild-strategy">
+      <title>Implement Clean Deployment Pipeline</title>
       <description>
-        Ensure email verification works correctly after deployment.
+        Rebuild deployment using a deterministic and production-safe strategy:
 
-        Current concern:
-        verification links may behave as if they are tied to the device that initiated
-        signup.
-
-        Expected behavior after deployment:
-        a user should be able to open the verification email from any device,
-        browser, or operating system and successfully verify their account.
-
-        Verification must be domain-based and session-safe rather than tied to the
-        original signup device.
+        Core principles:
+        - Single-command deployment via `deploy.sh`.
+        - Idempotent execution (safe to run multiple times).
+        - Explicit environment separation (dev / staging / production).
       </description>
 
-      <acceptance-criteria>
-        <item>Verification links function across devices.</item>
-        <item>Verification links function across browsers.</item>
-        <item>No dependency on the originating device.</item>
-        <item>Works correctly when deployed to DigitalOcean.</item>
-      </acceptance-criteria>
-    </requirement>
+      <best_practices>
 
-    <requirement id="google-oauth-future">
+        <item>
+          Environment Variables:
+          - Use `.env` or secure environment injection.
+          - Never hardcode secrets in scripts.
+        </item>
+
+        <item>
+          Build Process:
+          - Clean build on each deployment.
+          - Avoid stale caches unless explicitly required.
+        </item>
+
+        <item>
+          Process Management:
+          - Use systemd, pm2, or equivalent process manager.
+          - Ensure auto-restart on crash.
+        </item>
+
+        <item>
+          Database Safety:
+          - Run migrations explicitly and safely.
+          - Ensure backward-compatible schema changes where possible.
+        </item>
+
+        <item>
+          Zero-Downtime Strategy:
+          - Prefer rolling restart or blue-green deployment where feasible.
+          - Avoid full service downtime during updates.
+        </item>
+
+        <item>
+          Logging and Observability:
+          - Centralize logs.
+          - Ensure deployment logs are stored and traceable.
+        </item>
+
+        <item>
+          Health Checks:
+          - Add post-deploy health check endpoint validation.
+          - Fail deployment if health checks fail.
+        </item>
+
+      </best_practices>
+    </step>
+
+    <step id="validation">
+      <title>Post-Deployment Verification</title>
       <description>
-        Google OAuth authentication is planned but should NOT be implemented in this
-        iteration.
+        After deployment completes:
 
-        For now:
-        - Document all integration requirements.
-        - Identify required Google Cloud Console configuration.
-        - Identify required redirect URIs.
-        - Identify required Supabase OAuth settings.
-        - Create a clear implementation checklist.
-
-        Implementation should be deferred until after deployment.
+        - Verify service uptime.
+        - Confirm authentication flow works.
+        - Validate API endpoints.
+        - Ensure no regression from previous version.
       </description>
+    </step>
 
-      <acceptance-criteria>
-        <item>No Google OAuth code merged yet.</item>
-        <item>Complete implementation plan documented.</item>
-        <item>All required configuration values clearly listed.</item>
-      </acceptance-criteria>
-    </requirement>
-
-    <requirement id="google-oauth-information-request">
-      <description>
-        Review the provided Google OAuth configuration screenshot and determine
-        exactly which values are required from me.
-
-        Present the required fields in a copy-paste-friendly checklist so I can
-        provide the information quickly.
-      </description>
-    </requirement>
-
-  </requirements>
+  </instructions>
 
   <deliverables>
-    <item>Updated authentication flow.</item>
-    <item>Deferred BYOK onboarding logic.</item>
-    <item>Cross-device email verification readiness review.</item>
-    <item>Google OAuth implementation plan (not implementation).</item>
-    <item>List of required Google OAuth configuration values.</item>
+    <item>Cleaned and understood deployment script (`deploy.sh`).</item>
+    <item>Removed legacy deployment artifacts and state.</item>
+    <item>Rebuilt production-grade deployment pipeline.</item>
+    <item>Verified stable production deployment.</item>
   </deliverables>
 
-  <engineering-principles>
-    <item>Minimize onboarding friction.</item>
-    <item>Preserve a premium, modern UX.</item>
-    <item>Avoid unnecessary user interruptions.</item>
-    <item>Keep authentication secure and production-ready.</item>
-    <item>Design for future scalability and OAuth expansion.</item>
-  </engineering-principles>
+  <engineering_principles>
+    <item>Deterministic deployments over manual steps.</item>
+    <item>Always start from a clean state.</item>
+    <item>Idempotent automation.</item>
+    <item>Production safety over speed.</item>
+    <item>Observability-first deployment design.</item>
+  </engineering_principles>
+
 </task>

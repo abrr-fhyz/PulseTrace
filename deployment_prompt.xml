@@ -1,0 +1,166 @@
+<task>
+  <title>CI/CD Deployment Strategy with Docker + GitHub Integration (Production Ready)</title>
+
+  <objective>
+    Build a fully automated CI/CD pipeline where pushes to the `shyan` branch
+    of the repository trigger deployment to a DigitalOcean droplet.
+    Ensure Docker-based reproducible builds, correct environment configuration,
+    and safe production deployment practices.
+  </objective>
+
+  <repository>
+    <url>https://github.com/abrr-fhyz/PulseTrace</url>
+    <branch>shyan</branch>
+  </repository>
+
+  <core_requirements>
+
+    <requirement id="cicd-flow">
+      <description>
+        Implement CI/CD such that:
+
+        - Every push to `shyan` branch triggers deployment.
+        - Server automatically pulls latest changes.
+        - Application is rebuilt and restarted using Docker Compose.
+        - No manual SSH-based rsync deployment should be used unless explicitly justified.
+      </description>
+    </requirement>
+
+    <requirement id="deployment-evaluation">
+      <description>
+        There is an existing `deploy.sh` using rsync.
+
+        Action required:
+        - Analyze `deploy.sh`.
+        - Compare rsync-based deployment vs Docker-based CI/CD.
+        - Prefer Docker Compose-based deployment for this scenario because:
+          - Reproducibility
+          - Version consistency
+          - Rollback safety
+          - CI/CD compatibility
+      </description>
+
+      <decision_rule>
+        If Docker Compose is available and functional, DISABLE or REMOVE rsync deployment path.
+      </decision_rule>
+    </requirement>
+
+    <requirement id="docker-audit">
+      <description>
+        Before deployment, audit all Docker-related files:
+
+        - Dockerfile(s)
+        - docker-compose.yml
+        - environment configuration files (.env, config maps, etc.)
+
+        Ensure:
+        - No hardcoded localhost or development URLs.
+        - All service URLs point to production droplet domain/IP.
+        - Supabase endpoints and keys are correctly configured for production.
+      </description>
+
+      <critical_check>
+        Replace any:
+        - http://localhost
+        - 127.0.0.1
+        - dev URLs
+        with production-safe endpoints pointing to the droplet or domain.
+      </critical_check>
+    </requirement>
+
+    <requirement id="supabase-config">
+      <description>
+        Validate and update Supabase configuration:
+
+        - Ensure SUPABASE_URL points to production project.
+        - Ensure SUPABASE_ANON_KEY and SERVICE_ROLE_KEY are correctly injected via environment variables.
+        - Ensure no credentials are hardcoded in Docker images or repository.
+      </description>
+    </requirement>
+
+    <requirement id="ci-cd-implementation">
+      <description>
+        Implement CI/CD pipeline using one of the following approaches:
+
+        Preferred (recommended):
+        - GitHub Actions workflow
+
+        Flow:
+        1. On push to `shyan` branch
+        2. SSH into DigitalOcean droplet
+        3. Pull latest code from GitHub
+        4. Rebuild Docker containers using docker-compose
+        5. Restart services safely
+        6. Run health checks
+      </description>
+
+      <alternative>
+        If GitHub Actions is not possible:
+        - Use a server-side webhook listener on droplet
+        - Trigger `git pull && docker compose up -d --build`
+      </alternative>
+    </requirement>
+
+    <requirement id="deployment-sequence">
+      <description>
+        Production deployment must follow this exact order:
+
+        1. SSH into droplet
+        2. Navigate to project directory
+        3. Pull latest `shyan` branch:
+           git fetch origin
+           git checkout shyan
+           git pull origin shyan
+
+        4. Stop existing containers:
+           docker compose down
+
+        5. Rebuild containers:
+           docker compose build --no-cache
+
+        6. Start services:
+           docker compose up -d
+
+        7. Verify health endpoints
+      </description>
+    </requirement>
+
+    <requirement id="environment-strategy">
+      <description>
+        Ensure environment separation:
+
+        - Production environment variables stored on server (.env.production or Docker secrets)
+        - No dev credentials in production build
+        - Explicit config injection at runtime, not build time
+      </description>
+    </requirement>
+
+  </core_requirements>
+
+  <decision-on-deploy-sh>
+    <description>
+      The existing `deploy.sh` using rsync must be evaluated critically.
+
+      Rule:
+      - If Docker Compose CI/CD is adopted → deprecate rsync completely.
+      - rsync deployment is only acceptable for static or non-containerized systems.
+    </description>
+  </decision-on-deploy-sh>
+
+  <deliverables>
+    <item>Full CI/CD pipeline (GitHub → Droplet → Docker Compose).</item>
+    <item>Cleaned Docker configuration with production-safe URLs.</item>
+    <item>Correct Supabase environment integration.</item>
+    <item>Removed or deprecated rsync-based deployment if replaced.</item>
+    <item>Automated, reproducible deployment process.</item>
+  </deliverables>
+
+  <engineering_principles>
+    <item>Infrastructure as code over manual deployment.</item>
+    <item>Reproducible Docker environments.</item>
+    <item>Zero-drift between local and production.</item>
+    <item>Secure secrets via environment injection.</item>
+    <item>Automated verification after deployment.</item>
+  </engineering_principles>
+
+</task>
