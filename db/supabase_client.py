@@ -395,15 +395,17 @@ class SupabaseClient:
                 cur.execute(
                     """
                     INSERT INTO conversations
-                        (id, topic_id, run_id, title, summary, archived_count, updated_at)
-                    VALUES (%s,%s,%s,%s,%s,%s, now())
+                        (id, topic_id, run_id, title, summary, archived_count, owner_email, updated_at)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s, now())
                     ON CONFLICT (id) DO UPDATE SET
                         title=EXCLUDED.title, summary=EXCLUDED.summary,
-                        archived_count=EXCLUDED.archived_count, updated_at=now()
+                        archived_count=EXCLUDED.archived_count,
+                        owner_email=COALESCE(conversations.owner_email, EXCLUDED.owner_email),
+                        updated_at=now()
                     """,
                     (conv["id"], conv["topic_id"], conv["run_id"],
                      conv.get("title", "New chat"), conv.get("summary", ""),
-                     int(conv.get("archived_count", 0))),
+                     int(conv.get("archived_count", 0)), conv.get("owner_email")),
                 )
             return True
         except (psycopg2.Error, KeyError) as exc:
@@ -460,23 +462,25 @@ class SupabaseClient:
             log.error("get_messages(%s) failed: %s", conv_id, exc)
             return []
 
-    def list_conversations(self, topic_id: str) -> list[dict]:
+    def list_conversations(self, topic_id: str, *, owner_email: str | None = None) -> list[dict]:
         if not self.enabled:
             return []
         try:
+            owner_clause = "AND c.owner_email = %s" if owner_email else ""
+            params: tuple = (topic_id, owner_email) if owner_email else (topic_id,)
             with self._conn() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
-                    """
+                    f"""
                     SELECT c.id, c.title,
                            extract(epoch from c.created_at)::bigint AS created,
                            extract(epoch from c.updated_at)::bigint AS updated,
                            (SELECT count(*) FROM messages m
                               WHERE m.conversation_id = c.id) AS message_count
                     FROM conversations c
-                    WHERE c.topic_id = %s
+                    WHERE c.topic_id = %s {owner_clause}
                     ORDER BY c.updated_at DESC
                     """,
-                    (topic_id,),
+                    params,
                 )
                 return [dict(r) for r in cur.fetchall()]
         except psycopg2.Error as exc:
