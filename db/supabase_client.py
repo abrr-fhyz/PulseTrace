@@ -53,6 +53,13 @@ class SupabaseClient:
         self._dsn = dsn or os.environ.get("DATABASE_URL") or os.environ.get("SUPABASE_DB_URL", "")
         minconn = minconn if minconn is not None else int(os.environ.get("PG_POOL_MIN", "1"))
         maxconn = maxconn if maxconn is not None else int(os.environ.get("PG_POOL_MAX", "8"))
+        # Supabase enforces a low per-role statement_timeout (~8s) that kills
+        # bulk inserts + partition DDL. Override per session; lock_timeout caps
+        # the wait for ENABLE ROW LEVEL SECURITY's ACCESS EXCLUSIVE lock so it
+        # fails fast instead of burning the whole statement budget blocking.
+        self._stmt_timeout = os.environ.get("PG_STATEMENT_TIMEOUT", "120s")
+        self._lock_timeout = os.environ.get("PG_LOCK_TIMEOUT", "10s")
+        self._tuned: set[int] = set()
         self._pool: "ThreadedConnectionPool | None" = None
         self.enabled = bool(self._dsn) and _HAVE_PG
         if self._dsn and not _HAVE_PG:
@@ -71,6 +78,12 @@ class SupabaseClient:
             raise RuntimeError("SupabaseClient is not enabled")
         conn = self._pool.getconn()
         try:
+            if id(conn) not in self._tuned:
+                with conn.cursor() as cur:
+                    cur.execute("SET statement_timeout = %s", (self._stmt_timeout,))
+                    cur.execute("SET lock_timeout = %s", (self._lock_timeout,))
+                conn.commit()
+                self._tuned.add(id(conn))
             yield conn
             conn.commit()
         except psycopg2.Error:
@@ -163,38 +176,36 @@ class SupabaseClient:
         if not rows:
             return 0
         written = 0
-        # Pre-create every (month, topic) partition touched by this batch.
-        wanted = {(r.crawl_date, r.topic_id) for r in rows}
+        template = "(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::halfvec,%s)"
+        sql = """
+            INSERT INTO posts (id, run_id, topic_id, source, text, author,
+                url, ts, crawl_date, reactions, comments, shares,
+                embedding, engagement_score)
+            VALUES %s
+            ON CONFLICT (id, topic_id, crawl_date) DO UPDATE SET
+                engagement_score = EXCLUDED.engagement_score,
+                embedding = COALESCE(EXCLUDED.embedding, posts.embedding)
+        """
         try:
-            with self._conn() as conn:
-                with conn.cursor() as cur:
-                    for d, tid in wanted:
-                        self._ensure_partition(cur, d, tid)
-                template = (
-                    "(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::halfvec,%s)"
-                )
-                sql = """
-                    INSERT INTO posts (id, run_id, topic_id, source, text, author,
-                        url, ts, crawl_date, reactions, comments, shares,
-                        embedding, engagement_score)
-                    VALUES %s
-                    ON CONFLICT (id, topic_id, crawl_date) DO UPDATE SET
-                        engagement_score = EXCLUDED.engagement_score,
-                        embedding = COALESCE(EXCLUDED.embedding, posts.embedding)
-                """
-                for i in range(0, len(rows), batch):
-                    chunk = rows[i:i + batch]
-                    values = [
-                        (r.id, r.run_id, r.topic_id, r.source, r.text, r.author,
-                         r.url, r.ts, r.crawl_date, r.reactions, r.comments,
-                         r.shares, _vec_literal(r.embedding), r.engagement_score)
-                        for r in chunk
-                    ]
-                    with self._conn() as conn, conn.cursor() as cur:
-                        for d, tid in {(r.crawl_date, r.topic_id) for r in chunk}:
-                            self._ensure_partition(cur, d, tid)
-                        execute_values(cur, sql, values, template=template, page_size=batch)
-                        written += cur.rowcount if cur.rowcount > 0 else len(chunk)
+            # Partition DDL in its own committed tx so locks release before the
+            # inserts — keeps a connection from sitting idle-in-transaction
+            # across the whole loop.
+            wanted = {(r.crawl_date, r.topic_id) for r in rows}
+            with self._conn() as conn, conn.cursor() as cur:
+                for d, tid in wanted:
+                    self._ensure_partition(cur, d, tid)
+
+            for i in range(0, len(rows), batch):
+                chunk = rows[i:i + batch]
+                values = [
+                    (r.id, r.run_id, r.topic_id, r.source, r.text, r.author,
+                     r.url, r.ts, r.crawl_date, r.reactions, r.comments,
+                     r.shares, _vec_literal(r.embedding), r.engagement_score)
+                    for r in chunk
+                ]
+                with self._conn() as conn, conn.cursor() as cur:
+                    execute_values(cur, sql, values, template=template, page_size=batch)
+                    written += cur.rowcount if cur.rowcount > 0 else len(chunk)
             return written
         except psycopg2.Error as exc:
             log.error("insert_posts failed after %d rows: %s", written, exc)
