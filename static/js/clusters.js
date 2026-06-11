@@ -10,9 +10,12 @@ function typeText(node, text, speed) {
   node.textContent = "";
   node.classList.add("typing");
   let i = 0;
-  const t = setInterval(() => {
+  node._typeTimer = setInterval(() => {
     node.textContent = text.slice(0, ++i);
-    if (i >= text.length) { clearInterval(t); node.classList.remove("typing"); }
+    if (i >= text.length) {
+      clearInterval(node._typeTimer); node._typeTimer = null;
+      node.classList.remove("typing");
+    }
   }, speed || 26);
 }
 
@@ -32,6 +35,7 @@ function dashSkeleton() {
 function renderClusters(cs, opts) {
   const typed = !!(opts && opts.typed);
   const el = $("#clusters");
+  el.querySelectorAll("b").forEach((b) => { if (b._typeTimer) { clearInterval(b._typeTimer); b._typeTimer = null; } });
   clearNode(el);
   const sorted = cs.slice().sort((a, b) => b.n - a.n);
   for (const c of sorted) {

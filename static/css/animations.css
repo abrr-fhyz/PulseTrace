@@ -183,4 +183,5 @@
 @media (prefers-reduced-motion: reduce) {
   .dash-rise { animation: none; }
   .skel-line, .skel-bar { animation: none; }
+  .cluster .hd b.typing::after { animation: none; }
 }
