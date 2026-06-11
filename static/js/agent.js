@@ -90,6 +90,8 @@ async function start() {
   plReset();
   plActivate("seed");
   plStatus("Run starting…");
+  resetTypedLabels();
+  dashSkeleton();
   if (sources.includes("facebook")) {
     $("#nav-shots").style.display = "inline-block";
   }
@@ -239,7 +241,7 @@ function handle(ev) {
       plMeta("cluster", "k=" + ev.k + " · H=" + Number(ev.entropy).toFixed(2));
       break;
     case "labeled":
-      renderClusters(ev.clusters || []);
+      renderClusters(ev.clusters || [], { typed: true });
       renderSentChart(ev.clusters || []);
       plMark("cluster", "done");
       plActivate("label");

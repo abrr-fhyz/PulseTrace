@@ -162,3 +162,25 @@
   .pl2-cards .pc1, .pl2-check .ring,
   .pl2-galaxy::before, .pl2-pearl, .pl2-pearl::after, .pl2-moon { animation: none; }
   .pl2-particle, .pl2-confetti { display: none; } }
+
+/* ===================== Realtime dashboard build ===================== */
+.cluster.skel { pointer-events: none; }
+.skel-line, .skel-bar { border-radius: 6px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--muted) 12%, transparent) 25%,
+    color-mix(in srgb, var(--muted) 22%, transparent) 37%,
+    color-mix(in srgb, var(--muted) 12%, transparent) 63%);
+  background-size: 400% 100%; animation: dash-shimmer 1.4s ease infinite; }
+.skel-line { height: 14px; margin-bottom: 10px; }
+.skel-line.w60 { width: 60%; }
+.skel-bar { height: 10px; width: 100%; }
+@keyframes dash-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.cluster .hd b.typing::after { content: "▍"; color: var(--accent2);
+  animation: dash-caret 0.9s steps(1) infinite; }
+@keyframes dash-caret { 50% { opacity: 0; } }
+.dash-rise { animation: dash-rise-kf 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes dash-rise-kf { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .dash-rise { animation: none; }
+  .skel-line, .skel-bar { animation: none; }
+}

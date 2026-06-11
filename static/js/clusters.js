@@ -1,5 +1,36 @@
 /* clusters list, cluster drawer, voices carousel */
-function renderClusters(cs) {
+
+/* realtime build: typed labels + skeleton placeholders */
+let _shownLabels = new Set();
+function resetTypedLabels() { _shownLabels = new Set(); }
+
+function typeText(node, text, speed) {
+  const rm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (rm || !text) { node.textContent = text || ""; return; }
+  node.textContent = "";
+  node.classList.add("typing");
+  let i = 0;
+  const t = setInterval(() => {
+    node.textContent = text.slice(0, ++i);
+    if (i >= text.length) { clearInterval(t); node.classList.remove("typing"); }
+  }, speed || 26);
+}
+
+function dashSkeleton() {
+  const el = $("#clusters"); if (!el) return;
+  clearNode(el);
+  for (let i = 0; i < 3; i++) {
+    el.appendChild(elem("div", { class: "cluster skel" },
+      elem("div", { class: "skel-line w60" }),
+      elem("div", { class: "skel-bar" })));
+  }
+  const hint = $("#graphHint");
+  if (hint) { hint.classList.remove("hidden");
+    hint.textContent = "Building the graph as posts come in…"; }
+}
+
+function renderClusters(cs, opts) {
+  const typed = !!(opts && opts.typed);
   const el = $("#clusters");
   clearNode(el);
   const sorted = cs.slice().sort((a, b) => b.n - a.n);
@@ -8,11 +39,16 @@ function renderClusters(cs) {
     const pos = Math.round(s.pos * 100);
     const neg = Math.round(s.neg * 100);
     const neu = Math.max(0, 100 - pos - neg);
-    const card = elem("div", { class: "cluster clickable", "data-cid": String(c.id),
-        role: "button", tabindex: "0",
-        "aria-label": "Explore posts in " + String(c.label || "this group") },
+    const label = String(c.label || "General discussion");
+    const isNew = typed && !_shownLabels.has(label);
+    if (isNew) _shownLabels.add(label);
+    const b = elem("b");
+    if (isNew) typeText(b, label); else b.textContent = label;
+    const card = elem("div", { class: "cluster clickable" + (isNew ? " dash-rise" : ""),
+        "data-cid": String(c.id), role: "button", tabindex: "0",
+        "aria-label": "Explore posts in " + label },
       elem("div", { class: "hd" },
-        elem("b", null, String(c.label || "General discussion")),
+        b,
         elem("span", { class: "pill" }, c.n + " posts"),
       ),
       elem("div", { class: "bar" },
