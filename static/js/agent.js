@@ -67,6 +67,8 @@ async function start() {
   if (cy) { cy.destroy(); cy = null; }
   { const h = $("#graphHint"); if (h) h.classList.remove("hidden"); }
   if (sentChart) { sentChart.destroy(); sentChart = null; }
+  { const evp = $("#evidence"); if (evp) { evp.style.display = "none"; evp.classList.remove("reveal"); } }
+  { const vcp = $("#voices"); if (vcp) vcp.classList.remove("reveal"); }
   log("Starting run for \"" + topic + "\" on [" + sources.join(", ") + "]...");
   const opinion = ($("#opinion").value || "").trim() || null;
   const body = { topic, sources, opinion };
