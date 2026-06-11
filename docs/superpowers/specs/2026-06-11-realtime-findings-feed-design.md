@@ -1,148 +1,155 @@
-# Real-Time Findings Feed — Design
+# Live-Building Dashboard (Real-Time Results) — Design
 
-> Status: approved (design). Branch: `feat/realtime`.
+> Status: approved (design, revised). Branch: `feat/realtime`.
 > Date: 2026-06-11
+> Supersedes the earlier "findings feed → handoff" direction.
 
 ## Problem
 
-A run currently shows a full-screen loader animation (`PL2`, `static/js/pipeline.js`)
-for its entire duration (~2–6 min), then reveals the whole dashboard at once when
-the `done` event fires. The wait feels opaque and frustrating — the user gets no
-sense of progress or what is being found.
+A run shows a full-screen loader overlay (`PL2`, `static/js/pipeline.js`) with a
+**fake stage timer** for its entire duration (~2–6 min), then reveals the whole
+dashboard at once when `done` fires. The wait feels like nothing is happening,
+and the actual results only land at the end.
 
-Crucially, the dashboard **already builds progressively** in `static/js/agent.js`
-`handle()`: `posts_fetched` bumps the count, `clustered` updates k/entropy,
-`labeled` calls `renderClusters()` + `renderSentChart()` every iteration,
-`reranked` re-renders with real sentiment. That live build is simply **hidden
-behind the `PL2` overlay**, which covers the screen until `done`.
+Crucially, the dashboard **already builds in real time** under that overlay:
+- `static/js/agent.js` `handle()` bumps KPIs (`#m-posts`, `#m-clusters`,
+  `#m-entropy`) on each event,
+- redraws the sentiment chart (`renderSentChart`) and the talking-points /
+  opinions list (`renderClusters`) on every `labeled` / `reranked`,
+- draws the topic graph at `done` (`drawGraph`),
+- the sidebar **Pipeline** card (`.pl-stage` in `_app_left.html`, driven by the
+  `pl*` helpers) already tracks live stage progress.
 
-A second issue: `PL2` fakes progress with a **simulated stage timer**
-(`startSim` / `APPROX` advancing stages on a clock), which is decoupled from real
-work — the source of the earlier "count stuck at 0" and "badge overlaps later
-stages" bugs.
+All of it is **hidden behind the `PL2` overlay** until `done`. The fake timer is
+also the source of the earlier "count stuck at 0" and "badge overlaps stages"
+bugs.
 
 ## Goal
 
-Replace the fake stage animation with a **real-time, event-driven findings feed**:
-a narrative, chat-like stream of discrete findings as they actually happen. At
-`done`, the feed fades out and the full interactive dashboard takes over (clean
-handoff — feed gone).
+Make the results **build in front of the user in real time**, ChatGPT-style:
+remove the blocking overlay so the dashboard is visible from the start; KPIs
+climb, the sentiment chart draws, opinions/talking points stream in one by one
+with a **typed-text effect**, and the graph renders — as each result is actually
+produced. Skeleton placeholders fill the gap before first data so nothing looks
+broken or empty.
 
-Non-goals: changing the backend agent loop, the SSE event schema, or the
-dashboard rendering in `agent.js`. This is a presentation-layer change to the
-loader only.
+Non-goals: changing the backend agent loop or the SSE event schema; real
+token-by-token streaming of the briefing text (would need backend SSE token
+events — deferred). This is a presentation-layer change to the dashboard reveal.
 
 ## UX
 
 ```
-DURING (overlay):                 AT DONE:
-  Analyzing "life of pi"…           ┌─ dashboard ───────┐
-  ──────────────────────            │ charts   graph    │
-  ✓ 6 search angles                 │ clusters voices   │
-  ✓ 115 posts found · reddit 80…    │ briefing          │
-  ✓ grouped into 7 themes           └───────────────────┘
-  ✓ Theme: Life of Pi meanings (39) (feed faded out)
-  ✓ Theme: VFX industry (6)
-  ⟳ expanding queries…
-  ✓ 65 more posts
-  ✓ Sentiment: 49% negative
-  → Building your dashboard…
+On run start (no overlay — dashboard visible):
+  Pipeline:  ● Seed queries      working…
+  Metrics:   Posts 0   Topics 0   Spread --
+  Main talking points:  [▒▒▒▒▒]  [▒▒▒]  [▒▒▒▒]   (skeleton shimmer)
+  Graph panel: "Building the graph as posts come in…"
+
+As events arrive (live, no reload):
+  Posts 12 → 47 → 115         (KPIs climb)
+  Sentiment chart fades in and redraws
+  ▸ Life of Pi meanings (39)  ← label types in char-by-char, card rises in
+  ▸ VFX industry (6)          ← next one types in
+  Spread 1.83
+  (on done) topic graph renders, briefing/voices/evidence panels fade in
 ```
 
-- Each finding appears with a fade/slide-in.
-- The newest in-progress line carries a spinner; once the next finding arrives,
-  the prior line resolves to a ✓.
-- The feed auto-scrolls to the latest line.
-- Error events render a red line but still let the (partial) dashboard reveal.
+- No full-screen overlay. The existing dashboard is the UI.
+- Each new talking point (opinion) **types in** character-by-character and the
+  card slides/fades up. Re-renders (on `reranked`) update existing cards
+  instantly — only genuinely new labels type in (no flicker / re-typing).
+- Skeleton shimmer placeholders show in the talking-points list until the first
+  real clusters arrive.
+- `prefers-reduced-motion`: typing and rise animations collapse to instant.
 
 ## Architecture
 
-Presentation-only; lives inside the existing `#pl2` overlay shell.
-
-### Components
-
-1. **`feedLineFor(ev, state)` — pure mapper.**
-   Input: one SSE event object + a mutable `state`. Output: array of 0+ line
-   descriptors `{ icon, text, kind }` (`kind` ∈ `info | progress | good | warn |
-   err | final`). No DOM access — unit-reasonable in isolation.
-   `state` holds:
-   - `seenLabels: Set<string>` — so `labeled` emits only *new* themes.
-   - `plats: {source: count}` — running per-source tallies for the posts line.
-   - `iter: number` — current iteration.
-
-2. **Feed renderer.**
-   `pushLine(desc)` appends a node to the feed container with fade-in, resolves
-   the previous `progress` line to ✓, applies a spinner to the new `progress`
-   line, and auto-scrolls. Owns no business logic.
-
-3. **Lifecycle (`PL2` public API).**
-   - `start(topic)` — open overlay, reset state, render header `Analyzing
-     "topic"…`, clear feed.
-   - `event(ev)` — `feedLineFor(ev, state).forEach(pushLine)`.
-   - internal `complete()` — on `done`: push `→ Building your dashboard…`, then
-     fade the overlay out (CSS) and remove `.open`. Dashboard underneath is
-     already rendered by `agent.js`.
-
-### Event → line mapping
-
-| event | line(s) |
-|---|---|
-| `seeded` | `✓ {n} search angles` |
-| `iter_start` (iter > 1) | `⟳ expanding queries…` (progress) |
-| `posts_fetched` | `✓ {n_total} posts found · {src tallies}` (uses `state.plats`) |
-| `low_recall` | `… thin results, broadening search` (warn) |
-| `clustered` | `✓ grouped into {k} themes` |
-| `labeled` | one `✓ Theme: {label} ({n})` per label not in `seenLabels` |
-| `reranked` | `✓ Sentiment: {neg}% negative · {pos}% positive` (avg over clusters) |
-| `briefing_ready` | `✓ Briefing ready` |
-| `evidence_ready` | `✓ Evidence compiled` |
-| `embed_error` / `briefing_error` / `error` | red line; do not block reveal |
-| `done` | `→ Building your dashboard…` (final) → fade |
-
-Sentiment % for `reranked`: average each cluster's `sentiment.{pos,neg}`
-weighted by cluster `n`, ×100, rounded.
-
-### Data flow
-
-```
-SSE /events ─▶ agent.js subscribe ─▶ handle(ev) ─┬─▶ (existing) dashboard render
-                                                  └─▶ PL2.event(ev) ─▶ feedLineFor ─▶ pushLine
-```
-
-Unchanged: `agent.js` continues rendering the dashboard underneath. No new
-endpoints, no event-schema changes.
+Presentation-only. Remove the `PL2` overlay entirely; lean on the dashboard
+renderers that already run live in `handle()`. Add three things: skeletons,
+a typed-label effect, and panel reveal animation.
 
 ### Removed
+- The entire `PL2` IIFE in `static/js/pipeline.js` (lines 32–397): `startSim`,
+  `APPROX`, `setStage`/`setMin`, `renderAnim`, `buildRail`/`paintRail`,
+  `paintCount` + `pl2-livecount`, reassure/eta timers, confetti, the fake stage
+  STAGES array — all of it.
+- `PL2.start()` and `PL2.event(ev)` calls in `agent.js`.
+- The `#pl2` overlay markup in `templates/partials/_loader.html`.
 
-`startSim`, `APPROX`, `setStage`, `setMin`, `renderAnim`, the stage rail
-(`buildRail`/`paintRail`), `paintCount` + the `pl2-livecount` badge, the
-reassure/eta timers tied to the stage sim. The earlier count-race and
-badge-overlap bugs disappear with them.
+### Kept (already live, no change to behavior)
+- The sidebar `pl*` helpers (lines 1–30 of `pipeline.js`) and the Pipeline card —
+  these become the visible live status tracker.
+- All `handle()` dashboard rendering.
+
+### Added
+1. **Skeleton placeholders.** `dashSkeleton()` injects shimmer rows into
+   `#clusters` on run start; the first real `renderClusters` clears them. Graph
+   hint copy switches to a live "building…" message on start.
+2. **Typed-label effect.** `typeText(node, text)` types a string in
+   char-by-char (instant under reduced-motion). `renderClusters(cs, {typed})`
+   types only labels not seen this run (tracked in a module `_shownLabels` set,
+   reset on run start); existing labels render instantly. New cluster cards get a
+   `dash-rise` entrance animation; existing cards don't.
+3. **Panel reveal.** A `reveal` CSS class (fade+rise) added to the voices and
+   evidence panels when they first populate.
+
+### Event → live UI mapping (all already in `handle()` unless noted)
+
+| event | live effect |
+|---|---|
+| `started` | sidebar Pipeline → seed active; `dashSkeleton()` shows; reset `_shownLabels` |
+| `seeded` / `iter_start` | Pipeline → fetch active + meta |
+| `posts_fetched` | `#m-posts` climbs; Pipeline fetch meta |
+| `clustered` | `#m-clusters`, `#m-entropy` set; Pipeline cluster active |
+| `labeled` | `renderClusters(clusters, {typed:true})` → new labels type in + cards rise; `renderSentChart` |
+| `reranked` | `renderClusters(clusters)` instant update; `renderSentChart` |
+| `evidence_ready` | fetch + `renderEvidence` → evidence panel `reveal` |
+| `briefing_ready` | briefing link shown; Pipeline brief done |
+| `done` | `drawGraph` renders the topic graph; voices `reveal` if present |
+| errors | Pipeline stage marked; dashboard keeps whatever it has |
+
+### Data flow (unchanged backbone)
+
+```
+SSE /events ─▶ agent.js subscribe ─▶ handle(ev) ─▶ live dashboard renderers
+                                                    (KPIs, charts, typed clusters, graph)
+```
+
+No new endpoints, no event-schema changes, no overlay.
 
 ## Files
 
-- `static/js/pipeline.js` — rewrite: overlay shell + feed renderer + mapper.
-- `static/css/animations.css` — feed line styles (fade-in, spinner, icon colors).
-- `templates/partials/_loader.html` — slim shell: header + scrollable feed body.
-- `static/js/agent.js` — pass `topic` to `PL2.start(topic)` in `start()`.
+- `static/js/pipeline.js` — delete the `PL2` IIFE (keep sidebar `pl*` helpers).
+- `static/js/agent.js` — drop `PL2.start()`/`PL2.event(ev)`; on run start call
+  `dashSkeleton()` + `resetTypedLabels()`; pass `{typed:true}` to
+  `renderClusters` on `labeled`.
+- `static/js/clusters.js` — add `typeText`, `_shownLabels`/`resetTypedLabels`,
+  `dashSkeleton`; extend `renderClusters(cs, opts)` for typed + rise + skeleton
+  clear; add `reveal` to voices.
+- `static/js/evidence.js` — add `reveal` to the evidence panel on render.
+- `static/css/animations.css` — skeleton shimmer, typed caret, `dash-rise`,
+  `reveal` styles. (Old dead `pl2-*` overlay rules left in place; out of scope.)
+- `templates/partials/_loader.html` — empty the `#pl2` overlay markup.
 
 ## Error handling
 
-- Connector/embedding/briefing errors → a red `warn`/`err` feed line; the run may
-  still emit `done` (graceful backend), which reveals whatever the dashboard has.
-- If SSE drops (`es.onerror` in `agent.js`), existing behavior stays: the feed
-  stops, overlay can be dismissed; no change required here.
+- Connector/embed/briefing errors mark the sidebar Pipeline stage (existing
+  `handle()` behavior) and leave whatever the dashboard already built intact.
+- SSE drop (`es.onerror`) keeps existing behavior (`#go` re-enabled).
 
 ## Testing
 
-Repo has only a pytest harness (no JS runner). `feedLineFor` is kept pure so it
-*could* be unit-tested under node, but we will not fake a pytest for it. Verify
-via `node --check` (syntax) + a manual run on the droplet watching the feed
-against the docker event log. This limitation is acknowledged, not papered over.
+Repo has only a pytest harness (no JS runner). `typeText` and the
+`renderClusters` typed/skeleton logic are DOM-touching, so verification is
+`node --check` (syntax) + a manual run on the droplet watching the dashboard
+build live against the docker event log. Limitation acknowledged, not papered
+over.
 
 ## Risks
 
-- `reranked`/`labeled` cluster shapes must match what `agent.js` already
-  consumes (they do — same events). Mapper reads the same fields.
-- Auto-scroll + many themes: cap nothing; runs emit ~5–8 themes/iter, feed length
-  is bounded and scrollable.
+- Re-render churn: `renderClusters` rebuilds the whole list on both `labeled` and
+  `reranked`. The `_shownLabels` set prevents re-typing / re-animating existing
+  labels, so only genuinely new ones animate. Reset per run.
+- Empty gap before first data → skeletons cover it; KPIs at 0 and Pipeline
+  "working…" make it clear work is underway.
