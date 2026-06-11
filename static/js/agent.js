@@ -90,7 +90,6 @@ async function start() {
   plReset();
   plActivate("seed");
   plStatus("Run starting…");
-  PL2.start();
   if (sources.includes("facebook")) {
     $("#nav-shots").style.display = "inline-block";
   }
@@ -209,7 +208,6 @@ async function setupReplay(rid) {
 }
 
 function handle(ev) {
-  PL2.event(ev);
   switch (ev.type) {
     case "started":
       plReset();
