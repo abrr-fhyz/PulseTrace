@@ -204,6 +204,7 @@ function loadVoices() {
 function fillVoices(d) {
   if (!d || (!(d.voices || []).length && !(d.notable || []).length)) return;
   $("#voices").style.display = "";
+  $("#voices").classList.add("reveal");
 
   const s = d.sentiment || { pos: 0, neu: 1, neg: 0 };
   const pos = Math.round((s.pos || 0) * 100), neg = Math.round((s.neg || 0) * 100);

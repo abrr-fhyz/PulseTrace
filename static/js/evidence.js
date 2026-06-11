@@ -59,6 +59,7 @@ function renderEvidence(ev) {
   if (!ev) return;
   _evidence = ev;
   $("#evidence").style.display = "";
+  $("#evidence").classList.add("reveal");
   const noOp = !ev.opinion;
   $("#evidence").classList.toggle("no-opinion", noOp);
   if (noOp) {
